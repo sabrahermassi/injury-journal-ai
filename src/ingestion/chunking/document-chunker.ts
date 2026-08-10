@@ -1,9 +1,12 @@
+import { getEncoding } from 'js-tiktoken';
 import type { JournalDocument } from '../documents/document-types.js';
 
 const DEFAULT_MAX_TOKENS = 300;
 
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
+const encoding = getEncoding('cl100k_base');
+
+function countTokens(text: string): number {
+  return encoding.encode(text).length;
 }
 
 function splitIntoParagraphs(text: string): string[] {
@@ -40,7 +43,7 @@ export function chunkDocument(
   maxTokens: number = DEFAULT_MAX_TOKENS,
 ): JournalDocument[] {
   // Keep small journal records intact.
-  if (estimateTokens(document.content) <= maxTokens) {
+  if (countTokens(document.content) <= maxTokens) {
     return [document];
   }
 
@@ -55,7 +58,7 @@ export function chunkDocument(
       : paragraph;
 
     // The paragraph fits in the current chunk.
-    if (estimateTokens(paragraphCandidate) <= maxTokens) {
+    if (countTokens(paragraphCandidate) <= maxTokens) {
       currentChunk = paragraphCandidate;
       continue;
     }
@@ -67,7 +70,7 @@ export function chunkDocument(
     }
 
     // The paragraph itself fits in one chunk.
-    if (estimateTokens(paragraph) <= maxTokens) {
+    if (countTokens(paragraph) <= maxTokens) {
       currentChunk = paragraph;
       continue;
     }
@@ -80,7 +83,7 @@ export function chunkDocument(
         ? `${currentChunk} ${sentence}`
         : sentence;
 
-      if (estimateTokens(sentenceCandidate) <= maxTokens) {
+      if (countTokens(sentenceCandidate) <= maxTokens) {
         currentChunk = sentenceCandidate;
       } else {
         if (currentChunk) {

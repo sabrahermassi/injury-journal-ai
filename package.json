@@ -8,7 +8,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -32,10 +32,13 @@
   "homepage": "https://github.com/sabrahermassi/injury-journal-ai#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
     "eslint": "^10.8.0",
+    "jest": "^30.4.2",
     "prettier": "^3.9.6",
     "prisma": "^6.19.3",
+    "ts-jest": "^29.4.12",
     "tsx": "^4.23.10",
     "typescript": "5.9",
     "typescript-eslint": "^8.66.0"
