@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+  
+model Injury {
+  id            Int             @id @default(autoincrement())
+  name          String
+  bodyArea      String
+  side          String?
+  startDate     DateTime
+  cause         String?
+  description   String?
+  status        String?
+  createdAt     DateTime        @default(now())
+  userId        Int
+  User          User            @relation(fields: [userId], references: [id])
+  MedicalVisit  MedicalVisit[]
+  Symptom       Symptom[]
+  TimelineEvent TimelineEvent[]
+  Treatment     Treatment[]
+}
+
+model MedicalVisit {
+  id       Int      @id @default(autoincrement())
+  doctor   String?
+  clinic   String?
+  date     DateTime
+  notes    String?
+  injuryId Int
+  Injury   Injury   @relation(fields: [injuryId], references: [id])
+}
+
+model Symptom {
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  painLevel Int
+  location  String?
+  trigger   String?
+  duration  String?
+  notes     String?
+  injuryId  Int
+  Injury    Injury   @relation(fields: [injuryId], references: [id])
+}
+
+model TimelineEvent {
+  id          Int      @id @default(autoincrement())
+  type        String
+  date        DateTime
+  description String
+  result      String?
+  injuryId    Int
+  Injury      Injury   @relation(fields: [injuryId], references: [id])
+}
+
+model Treatment {
+  id       Int      @id @default(autoincrement())
+  name     String
+  provider String?
+  date     DateTime
+  cost     Float?
+  outcome  String?
+  injuryId Int
+  Injury   Injury   @relation(fields: [injuryId], references: [id])
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Injury    Injury[]
+}

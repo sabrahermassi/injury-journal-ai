@@ -4,3 +4,11 @@ node_modules/
 !.env.example
 dist/
 coverage/
+
+# AI/editor configuration
+.agents/
+.claude/
+.windsurf/
+
+ROADMAP.md
+HIGH-LEVEL-ARCH.md
