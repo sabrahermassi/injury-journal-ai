@@ -9,3 +9,9 @@ coverage/
 .agents/
 .claude/
 .windsurf/
+
+
+# test files
+src/ingestion/test-builder.ts
+src/ingestion/test-reader.ts
+src/test-db.ts

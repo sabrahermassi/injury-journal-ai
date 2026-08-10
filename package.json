@@ -14,7 +14,9 @@
     "start": "node dist/index.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "db:test": "tsx src/test-db.ts"
+    "db:test": "tsx src/test-db.ts",
+    "ingestion:test": "tsx src/ingestion/test-reader.ts",
+    "ingestion:build-test": "tsx src/ingestion/test-builder.ts"
   },
   "repository": {
     "type": "git",
