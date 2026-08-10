@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "db:test": "tsx src/test-db.ts",
     "ingestion:test": "tsx src/ingestion/test-reader.ts",
-    "ingestion:build-test": "tsx src/ingestion/test-builder.ts"
+    "ingestion:build-test": "tsx src/ingestion/test-builder.ts",
+    "ingestion:test-chunker": "tsx src/ingestion/test-chunker.ts"
   },
   "repository": {
     "type": "git",
@@ -41,6 +42,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "js-tiktoken": "^1.0.21"
   }
 }

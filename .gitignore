@@ -10,8 +10,11 @@ coverage/
 .claude/
 .windsurf/
 
-
 # test files
 src/ingestion/test-builder.ts
 src/ingestion/test-reader.ts
+src/ingestion/test-chunker.ts
 src/test-db.ts
+
+# Local arch docs
+CHUNKER-ARCH.md
