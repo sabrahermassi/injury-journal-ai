@@ -6,6 +6,8 @@ const config: Config = {
 
   extensionsToTreatAsEsm: ['.ts'],
 
+  setupFiles: ['<rootDir>/tests/setup.ts'],
+
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
