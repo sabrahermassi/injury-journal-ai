@@ -1,6 +1,6 @@
 import type { JournalDocument } from './document-types.js';
 
-interface InjuryWithRelations {
+export interface InjuryWithRelations {
   id: number;
   name: string;
   bodyArea: string;
