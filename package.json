@@ -8,16 +8,17 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "jest",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "db:test": "tsx src/test-db.ts",
-    "ingestion:test": "tsx src/ingestion/test-reader.ts",
-    "ingestion:build-test": "tsx src/ingestion/test-builder.ts",
-    "ingestion:test-chunker": "tsx src/ingestion/test-chunker.ts"
+    "test": "jest",
+    "test:integration": "cross-env NODE_ENV=test jest tests/integration",
+    "db:test": "tsx src/test-db.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
     "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
+    "cross-env": "^10.1.0",
     "eslint": "^10.8.0",
     "jest": "^30.4.2",
     "prettier": "^3.9.6",
