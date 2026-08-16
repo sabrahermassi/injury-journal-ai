@@ -34,7 +34,9 @@ describe('Postgres reader integration', () => {
 
     expect(data.length).toBe(3);
 
-    expect(data[0]).toMatchObject({
+    const injury = data.find((item) => item.name === 'Lower back pain');
+
+    expect(injury).toMatchObject({
       id: 1,
       userId: 1,
       name: 'Lower back pain',

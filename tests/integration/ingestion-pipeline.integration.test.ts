@@ -1,6 +1,9 @@
 import { readJournalData } from '../../src/ingestion/reader/postgres-reader.js';
 import { buildJournalDocuments } from '../../src/ingestion/documents/document-builder.js';
-import { chunkDocuments } from '../../src/ingestion/chunking/document-chunker.js';
+import {
+  chunkDocuments,
+  countTokens,
+} from '../../src/ingestion/chunking/document-chunker.js';
 import { prisma } from '../../src/lib/prisma.js';
 
 describe('Ingestion pipeline integration', () => {
@@ -28,11 +31,14 @@ describe('Ingestion pipeline integration', () => {
     // needed to identify its original journal record.
     for (const chunk of chunks) {
       expect(chunk.content).toBeTruthy();
-      expect(chunk.metadata.userId).toBeDefined();
-      expect(chunk.metadata.injuryId).toBeDefined();
-      expect(chunk.metadata.sourceType).toBeDefined();
-      expect(chunk.metadata.sourceId).toBeDefined();
+
+      expect(typeof chunk.metadata.userId).toBe('number');
+      expect(typeof chunk.metadata.injuryId).toBe('number');
+      expect(typeof chunk.metadata.sourceType).toBe('string');
+      expect(typeof chunk.metadata.sourceId).toBe('number');
       expect(chunk.metadata.date).toBeInstanceOf(Date);
+
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(300);
     }
   });
 });
