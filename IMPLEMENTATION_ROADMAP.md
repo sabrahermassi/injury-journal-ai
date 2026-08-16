@@ -6,8 +6,6 @@ The architecture grows incrementally. Each step adds one layer to the system.
 
 ---
 
-## Implementation Checklist
-
 # Injury Journal AI — Implementation Checklist
 
 Use this checklist to track implementation progress.
@@ -46,7 +44,7 @@ A step-by-step implementation roadmap for building the project from the initial 
 
 **Goal:** Set up the AI project independently from the existing Injury Journal application.
 
-### Implement
+## Implement
 
 - TypeScript
 - ESLint / Prettier
@@ -56,7 +54,7 @@ A step-by-step implementation roadmap for building the project from the initial 
 - PostgreSQL connection
 - README and documentation
 
-### Architecture
+## Architecture
 
 ```text
 Injury Journal PostgreSQL
@@ -71,7 +69,7 @@ Injury Journal PostgreSQL
       PostgreSQL
 ```
 
-### Result
+## Result
 
 The AI project can safely read data from the existing Injury Journal database.
 
@@ -89,7 +87,7 @@ Existing data:
 - MedicalVisit
 - TimelineEvent
 
-### Implement
+## Implement
 
 Build:
 
@@ -98,7 +96,7 @@ Build:
 - Chunker
 - Ingestion worker
 
-### Architecture
+## Architecture
 
 ```text
 PostgreSQL
@@ -125,7 +123,7 @@ physiotherapy from Clinic A.
 The reported outcome was no improvement."
 ```
 
-### Result
+## Result
 
 The database data has been transformed into text suitable for AI processing.
 
@@ -135,14 +133,14 @@ The database data has been transformed into text suitable for AI processing.
 
 **Goal:** Convert journal chunks into vector representations.
 
-### Implement
+## Implement
 
 - Embedding service
 - Embedding model integration
 - Batch embedding
 - Embedding storage format
 
-### Architecture
+## Architecture
 
 ```text
 Document Chunk
@@ -156,7 +154,7 @@ Vector
 
 Each chunk receives an embedding representing its semantic meaning.
 
-### Result
+## Result
 
 Journal text can now be represented mathematically for semantic search.
 
@@ -170,7 +168,7 @@ Use:
 
 **PostgreSQL + pgvector**
 
-### Implement
+## Implement
 
 Create RAG-specific storage containing:
 
@@ -187,7 +185,7 @@ metadata
 createdAt
 ```
 
-### Architecture
+## Architecture
 
 ```text
 Document Chunks
@@ -204,7 +202,7 @@ PostgreSQL + pgvector
 
 Metadata should allow the system to trace a chunk back to its original journal record.
 
-### Result
+## Result
 
 The project now has a vector database for semantic retrieval.
 
@@ -218,7 +216,7 @@ Example:
 
 > What treatments didn't work?
 
-### Implement
+## Implement
 
 - Query embedding
 - pgvector similarity search
@@ -226,7 +224,7 @@ Example:
 - Metadata filtering
 - Retrieval service
 
-### Architecture
+## Architecture
 
 ```text
 User Question
@@ -248,7 +246,7 @@ Possible filters:
 - Source type
 - Date range
 
-### Result
+## Result
 
 The system can find relevant journal information based on meaning rather than exact keywords.
 
@@ -291,7 +289,7 @@ LLM
 Grounded Answer
 ```
 
-### Implement
+## Implement
 
 - Context builder
 - Prompt
@@ -299,7 +297,7 @@ Grounded Answer
 - RAG service
 - RAG API endpoint
 
-### Result
+## Result
 
 This is the project's **first complete AI application**.
 
@@ -309,7 +307,7 @@ This is the project's **first complete AI application**.
 
 **Goal:** Make generated answers traceable to the original journal records.
 
-### Implement
+## Implement
 
 Store source metadata with every chunk:
 
@@ -327,7 +325,7 @@ Build:
 - Source mapping
 - Citation verification
 
-### Architecture
+## Architecture
 
 ```text
 Retrieved Chunk
@@ -355,7 +353,7 @@ Sources:
 - Treatment #42 — June 2026
 ```
 
-### Result
+## Result
 
 The RAG system becomes source-backed and more resistant to unsupported claims.
 
@@ -367,14 +365,14 @@ The RAG system becomes source-backed and more resistant to unsupported claims.
 
 The system organizes and summarizes the user's information. It does not diagnose medical conditions.
 
-### Implement
+## Implement
 
 - Safety rules
 - Input boundary checks
 - Safe refusal responses
 - Optional output checks
 
-### Architecture
+## Architecture
 
 ```text
 Question
@@ -400,7 +398,7 @@ Example:
 → Boundary violation
 ```
 
-### Result
+## Result
 
 The AI application has explicit healthcare safety boundaries.
 
@@ -412,7 +410,7 @@ The AI application has explicit healthcare safety boundaries.
 
 Do **not** build the agent before the underlying tools exist.
 
-### Implement
+## Implement
 
 Create tools such as:
 
@@ -426,7 +424,7 @@ Use either:
 - LangGraph
 - Hand-rolled state machine
 
-### Architecture
+## Architecture
 
 ```text
 User Question
@@ -457,7 +455,7 @@ User Question
 
 The agent decides which tools are necessary.
 
-### Example
+## Example
 
 > Generate a summary of my injury history for my doctor.
 
@@ -481,7 +479,7 @@ Verify citations
 Return summary
 ```
 
-### Result
+## Result
 
 The project now demonstrates **agentic AI**, rather than simply calling an LLM.
 
@@ -491,7 +489,7 @@ The project now demonstrates **agentic AI**, rather than simply calling an LLM.
 
 **Goal:** Measure whether the AI system actually works.
 
-### Implement
+## Implement
 
 Create an evaluation dataset containing:
 
@@ -507,7 +505,7 @@ Evaluate:
 - Citation accuracy
 - Safety adherence
 
-### Architecture
+## Architecture
 
 ```text
 Test Questions
@@ -530,7 +528,7 @@ Evaluation
       └── Safety
 ```
 
-### Result
+## Result
 
 You can measure changes to the AI system instead of relying only on manually testing it.
 
@@ -540,7 +538,7 @@ You can measure changes to the AI system instead of relying only on manually tes
 
 **Goal:** Understand what happens during every AI request.
 
-### Implement
+## Implement
 
 Track:
 
@@ -555,7 +553,7 @@ Track:
 - Cost
 - Final result
 
-### Architecture
+## Architecture
 
 ```text
                   AI Workflow
@@ -573,7 +571,7 @@ Track:
            CloudWatch      DynamoDB
 ```
 
-### Result
+## Result
 
 You can see **how** the AI reached an answer and where failures occur.
 
@@ -585,7 +583,7 @@ You can see **how** the AI reached an answer and where failures occur.
 
 This is an additional AI layer, not basic observability.
 
-### Example questions
+## Example questions
 
 ```text
 Why are retrieval scores dropping?
@@ -599,7 +597,7 @@ Which agent steps are slow?
 Which requests repeatedly trigger safety boundaries?
 ```
 
-### Architecture
+## Architecture
 
 ```text
 AI Workflow
@@ -614,7 +612,7 @@ AI Observability Analyzer
 Findings / Recommendations
 ```
 
-### Result
+## Result
 
 The system can use AI to help analyze its own operational behavior.
 
@@ -624,7 +622,7 @@ The system can use AI to help analyze its own operational behavior.
 
 **Goal:** Move the multi-step agent workflow toward a production architecture.
 
-### Implement
+## Implement
 
 Use:
 
@@ -632,7 +630,7 @@ Use:
 - Lambda
 - Step Functions
 
-### Architecture
+## Architecture
 
 ```text
                  API Gateway
@@ -665,7 +663,7 @@ Step Functions provides:
 - Failure handling
 - Multi-step orchestration
 
-### Result
+## Result
 
 The agent workflow becomes more reliable and production-oriented.
 
@@ -675,7 +673,7 @@ The agent workflow becomes more reliable and production-oriented.
 
 **Goal:** Make the infrastructure reproducible.
 
-### Implement
+## Implement
 
 Use Terraform for:
 
@@ -695,7 +693,7 @@ dev
 prod
 ```
 
-### Architecture
+## Architecture
 
 ```text
 Terraform
@@ -710,7 +708,7 @@ Terraform
    └── Secrets Manager
 ```
 
-### Result
+## Result
 
 The infrastructure can be recreated consistently rather than configured manually.
 
@@ -720,7 +718,7 @@ The infrastructure can be recreated consistently rather than configured manually
 
 **Goal:** Protect personal journal information.
 
-### Implement
+## Implement
 
 - Authentication
 - Authorization
@@ -744,7 +742,7 @@ User A's journal data
 
 The RAG system must never expose another user's information.
 
-### Result
+## Result
 
 Security applies across both the normal database and AI retrieval layers.
 
@@ -855,7 +853,7 @@ AI Agent
 
 Not every component is AI.
 
-### AI / AI-specific
+## AI / AI-specific
 
 ```text
 LLM
@@ -871,7 +869,7 @@ AI Evaluation
 AI Observability Analyzer
 ```
 
-### Infrastructure / Engineering
+## Infrastructure / Engineering
 
 ```text
 PostgreSQL
