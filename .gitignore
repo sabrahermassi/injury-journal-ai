@@ -12,6 +12,3 @@ coverage/
 
 # test files
 tests/test-db-not-to-commit.ts
-
-# Local arch docs
-CHUNKER-ARCH.md
