@@ -54,21 +54,6 @@ A step-by-step implementation roadmap for building the project from the initial 
 - PostgreSQL connection
 - README and documentation
 
-## Architecture
-
-```text
-Injury Journal PostgreSQL
-          │
-          ▼
-   Injury Journal AI
-      TypeScript
-          │
-        Prisma
-          │
-          ▼
-      PostgreSQL
-```
-
 ## Result
 
 The AI project can safely read data from the existing Injury Journal database.
@@ -139,6 +124,17 @@ The database data has been transformed into text suitable for AI processing.
 - Embedding model integration
 - Batch embedding
 - Embedding storage format
+
+## Embedding Versioning
+
+When embeddings are stored, record:
+
+- embedding model
+- model version
+- vector dimension
+- embedding version/compatibility key
+
+If the embedding model or vector dimension changes, existing documents must be re-embedded before using the new embedding configuration.
 
 ## Architecture
 
@@ -312,9 +308,10 @@ This is the project's **first complete AI application**.
 Store source metadata with every chunk:
 
 ```text
+userId
+injuryId
 sourceType
 sourceId
-injuryId
 date
 ```
 
@@ -426,32 +423,38 @@ Use either:
 
 ## Architecture
 
-```text
 User Question
-      │
-      ▼
-   AI Agent
-      │
-      ├──────────────┐
-      ▼              ▼
-   RAG Tool      Journal Tool
-      │              │
-      ▼              ▼
-  pgvector       PostgreSQL
-      │              │
-      └──────┬───────┘
-             ▼
-        Safety Tool
-             │
-             ▼
-            LLM
-             │
-             ▼
-      Citation Check
-             │
-             ▼
-       Answer + Sources
-```
+│
+▼
+AI Agent
+│
+▼
+Safety Check
+│
+├───────────────┐
+│ │
+Boundary OK Violation
+│ │
+▼ ▼
+Per-tool Refuse /
+authorization Redirect
+│
+├──────────────┐
+▼ ▼
+RAG Tool Journal Tool
+│ │
+▼ ▼
+pgvector PostgreSQL
+│ │
+└──────┬───────┘
+▼
+LLM
+│
+▼
+Citation Check
+│
+▼
+Answer + Sources
 
 The agent decides which tools are necessary.
 
@@ -464,18 +467,25 @@ Possible workflow:
 ```text
 Agent
  ↓
+Initial safety check
+ ↓
+Is request within healthcare boundaries?
+ ├── No → Refuse / Redirect
+ │
+ └── Yes
+      ↓
+Per-tool authorization
+      ↓
 Retrieve relevant timeline events
- ↓
+      ↓
 Retrieve treatments
- ↓
+      ↓
 Retrieve symptoms
- ↓
-Check safety boundaries
- ↓
+      ↓
 Generate summary
- ↓
+      ↓
 Verify citations
- ↓
+      ↓
 Return summary
 ```
 
@@ -545,13 +555,23 @@ Track:
 - Request ID
 - Agent step
 - Retrieval latency
-- Retrieved chunks
+- Retrieved chunk identifiers and metadata, not raw journal content
 - Similarity scores
 - LLM calls
 - Token usage
 - Errors
 - Cost
-- Final result
+- Final result metadata, not raw journal content
+
+## Safe Logging
+
+- Do not log raw journal content by default.
+- Do not log retrieved chunks or final results as raw content by default.
+- Prefer identifiers and metadata over content.
+- Redact sensitive information when content must be logged.
+- Encrypt telemetry in transit and at rest.
+- Restrict access to telemetry through appropriate access controls.
+- Define and enforce a retention and deletion policy.
 
 ## Architecture
 
@@ -629,6 +649,16 @@ Use:
 - API Gateway
 - Lambda
 - Step Functions
+
+## Idempotency & Retries
+
+Define retry behavior for each side-effecting workflow step.
+
+- Use stable idempotency keys for ingestion runs and persisted records.
+- Make chunk persistence idempotent so retries do not create duplicate chunks.
+- Make embedding/LLM operations retry-safe where possible.
+- Define checkpoints or workflow state so completed steps do not unnecessarily run again.
+- Document which steps are safe to retry and which steps require deduplication.
 
 ## Architecture
 
