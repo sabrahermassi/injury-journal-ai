@@ -4,7 +4,7 @@ AI-powered injury journal assistant exploring RAG, LLMs, agent orchestration, em
 
 ## Architecture
 
-### Offline — Ingestion & Indexing
+### Offline — Ingestion & Indexing (WIP: Generate embeddings)
 
 ```mermaid
 flowchart TD
@@ -16,28 +16,31 @@ flowchart TD
 
 The offline pipeline prepares journal data for retrieval.
 
-### Online — RAG & Agent Workflow
+### Online — RAG & Agent Workflow (Future)
 
 ```mermaid
 flowchart TD
     U["User"] --> API["AI Assistant API"]
     API --> A["AI Agent"]
 
-    A --> R["RAG Tool"]
-    R --> V["pgvector"]
+    A --> S["Safety Check"]
+
+    S -->|Allowed| AUTH["Tool Authorization"]
+    S -->|Boundary Violation| REF["Refuse / Redirect"]
+
+    AUTH --> R["RAG Tool"]
+    R --> V["PostgreSQL + pgvector"]
     V --> R
 
-    A --> S["Safety Check"]
-    A --> G["LLM"]
+    R --> G["LLM"]
     G --> CV["Citation Verification"]
-
-    R --> G
-    S --> G
     CV --> OUT["Answer + Sources"]
+
+    REF --> OUT
     OUT --> U
 ```
 
-### Observability & Evaluation
+### Observability & Evaluation (Future)
 
 ```mermaid
 flowchart TD
@@ -50,13 +53,20 @@ flowchart TD
 
 ## Tech Stack
 
+### Implemented
+
 - TypeScript / Node.js
-- PostgreSQL + pgvector
+- PostgreSQL
+- Prisma
+- Terraform
+
+### Planned
+
+- pgvector
+- Embedding model
 - LLM API
-- Embedding models
 - RAG
 - AI agents
 - AWS Lambda
 - AWS Step Functions
 - CloudWatch / DynamoDB
-- Terraform
