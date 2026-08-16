@@ -5,7 +5,7 @@ const DEFAULT_MAX_TOKENS = 300;
 
 const encoding = getEncoding('cl100k_base');
 
-function countTokens(text: string): number {
+export function countTokens(text: string): number {
   return encoding.encode(text).length;
 }
 
