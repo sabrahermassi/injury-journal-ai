@@ -12,7 +12,7 @@ Use this checklist to track implementation progress.
 Click a step to jump directly to that section.
 
 - [x] [Step 0 — Project Foundation](#step-0--project-foundation)
-- [ ] [Step 1 — Offline Ingestion Pipeline](#step-1--offline-ingestion-pipeline)
+- [x] [Step 1 — Offline Ingestion Pipeline](#step-1--offline-ingestion-pipeline)
 - [ ] [Step 2 — Embeddings](#step-2--embeddings)
 - [ ] [Step 3 — Vector Storage with pgvector](#step-3--vector-storage-with-pgvector)
 - [ ] [Step 4 — Semantic Retrieval](#step-4--semantic-retrieval)
