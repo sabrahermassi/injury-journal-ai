@@ -42,6 +42,18 @@ The user later received shockwave therapy. The reported outcome was no significa
   },
 };
 
+const oversizedSentenceDocument: JournalDocument = {
+  content:
+    'The user reported persistent lower back pain after exercising and described burning discomfort spreading through the lower back and left hip with symptoms becoming significantly worse after prolonged standing, walking for extended periods, sitting for long periods, and performing physical activities that placed additional stress on the affected area, despite having previously tried several treatments without significant improvement.',
+  metadata: {
+    userId: 1,
+    injuryId: 1,
+    sourceType: 'medical_visit',
+    sourceId: 1,
+    date: new Date('2025-01-15'),
+  },
+};
+
 describe('Document Chunker', () => {
   it('keeps a small document as a single chunk', () => {
     const chunks = chunkDocument(smallDocument, 100);
@@ -50,14 +62,10 @@ describe('Document Chunker', () => {
     expect(chunks[0].content).toBe(smallDocument.content);
   });
 
-  it('splits a large document into multiple chunks', () => {
+  it('splits a large document into chunks within the token limit', () => {
     const chunks = chunkDocument(largeDocument, 30);
 
     expect(chunks.length).toBeGreaterThan(1);
-  });
-
-  it('ensures every chunk stays within the token limit', () => {
-    const chunks = chunkDocument(largeDocument, 30);
 
     chunks.forEach((chunk) => {
       expect(countTokens(chunk.content)).toBeLessThanOrEqual(30);
@@ -82,5 +90,17 @@ describe('Document Chunker', () => {
     );
 
     expect(chunks.length).toBeGreaterThan(2);
+  });
+
+  it('splits a sentence that exceeds the token limit', () => {
+    const chunks = chunkDocument(oversizedSentenceDocument, 20);
+
+    console.log(chunks);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (const chunk of chunks) {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(20);
+    }
   });
 });

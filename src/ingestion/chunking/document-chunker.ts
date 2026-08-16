@@ -85,12 +85,41 @@ export function chunkDocument(
 
       if (countTokens(sentenceCandidate) <= maxTokens) {
         currentChunk = sentenceCandidate;
-      } else {
-        if (currentChunk) {
-          addChunk(chunks, document, currentChunk);
-        }
+        continue;
+      }
 
+      // Sentence candidate doesn't fit.
+      if (currentChunk) {
+        addChunk(chunks, document, currentChunk);
+        currentChunk = '';
+      }
+
+      // Now we're starting with the sentence alone.
+      if (countTokens(sentence) <= maxTokens) {
         currentChunk = sentence;
+        continue;
+      }
+
+      // The sentence itself is too large.
+      const words = sentence.split(/\s+/);
+      let sentenceChunk = '';
+
+      for (const word of words) {
+        const candidate = sentenceChunk ? `${sentenceChunk} ${word}` : word;
+
+        if (countTokens(candidate) <= maxTokens) {
+          sentenceChunk = candidate;
+        } else {
+          if (sentenceChunk) {
+            addChunk(chunks, document, sentenceChunk);
+          }
+
+          sentenceChunk = word;
+        }
+      }
+
+      if (sentenceChunk) {
+        currentChunk = sentenceChunk;
       }
     }
   }
