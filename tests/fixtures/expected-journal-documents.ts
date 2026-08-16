@@ -43,7 +43,7 @@ export const expectedJournalDocuments: JournalDocument[] = [
   // User 1 - Treatments
   {
     content:
-      'On 2025-01-10, the user received Physiotherapy. Provider: Rehab Center. Reported outcome: Limited improvement.',
+      'On 2025-01-10, the user received Physiotherapy. Provider: Rehab Center. Cost: 80. Reported outcome: Limited improvement.',
     metadata: {
       userId: 1,
       injuryId: 1,
@@ -54,7 +54,7 @@ export const expectedJournalDocuments: JournalDocument[] = [
   },
   {
     content:
-      'On 2025-03-01, the user received Shockwave therapy. Provider: Rehab Center. Reported outcome: No significant improvement.',
+      'On 2025-03-01, the user received Shockwave therapy. Provider: Rehab Center. Cost: 120. Reported outcome: No significant improvement.',
     metadata: {
       userId: 1,
       injuryId: 1,
@@ -143,7 +143,7 @@ export const expectedJournalDocuments: JournalDocument[] = [
   // User 2 - Treatment
   {
     content:
-      'On 2024-07-01, the user received Physical therapy. Provider: Sports Clinic. Reported outcome: Some improvement.',
+      'On 2024-07-01, the user received Physical therapy. Provider: Sports Clinic. Cost: 90. Reported outcome: Some improvement.',
     metadata: {
       userId: 2,
       injuryId: 2,
@@ -232,7 +232,7 @@ export const expectedJournalDocuments: JournalDocument[] = [
   // User 3 - Treatment
   {
     content:
-      'On 2023-09-20, the user received Rest. Provider: Self-managed. Reported outcome: Symptoms improved significantly.',
+      'On 2023-09-20, the user received Rest. Provider: Self-managed. Cost: 0. Reported outcome: Symptoms improved significantly.',
     metadata: {
       userId: 3,
       injuryId: 3,

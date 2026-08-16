@@ -178,6 +178,10 @@ function buildTreatmentDocument(
     parts.push(`Provider: ${treatment.provider}.`);
   }
 
+  if (treatment.cost !== null) {
+    parts.push(`Cost: ${treatment.cost}.`);
+  }
+
   if (treatment.outcome) {
     parts.push(`Reported outcome: ${treatment.outcome}.`);
   }
