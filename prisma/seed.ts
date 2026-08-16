@@ -1,8 +1,16 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const url = process.env.DATABASE_URL ?? '';
+  if (!url.includes('test')) {
+    throw new Error(
+      'Refusing to seed: DATABASE_URL does not point at a test database.',
+    );
+  }
+
   // Clean existing test data
   await prisma.medicalVisit.deleteMany();
   await prisma.treatment.deleteMany();
@@ -14,17 +22,16 @@ async function main() {
   // -------------------------
   // User 1
   // -------------------------
+  const passwordHash = await bcrypt.hash('test-password', 10);
 
   await prisma.user.create({
     data: {
-      id: 1,
       email: 'test-user-1@example.com',
-      password: 'test-password',
+      password: passwordHash,
       updatedAt: new Date(),
 
       Injury: {
         create: {
-          id: 1,
           name: 'Lower back pain',
           bodyArea: 'Lower back',
           side: 'Left',
@@ -36,7 +43,6 @@ async function main() {
           Symptom: {
             create: [
               {
-                id: 1,
                 date: new Date('2025-01-05'),
                 painLevel: 7,
                 location: 'Lower back',
@@ -45,7 +51,6 @@ async function main() {
                 notes: 'Burning pain after standing for a long time.',
               },
               {
-                id: 2,
                 date: new Date('2025-02-01'),
                 painLevel: 5,
                 location: 'Lower back',
@@ -59,7 +64,6 @@ async function main() {
           Treatment: {
             create: [
               {
-                id: 1,
                 name: 'Physiotherapy',
                 provider: 'Rehab Center',
                 date: new Date('2025-01-10'),
@@ -67,7 +71,6 @@ async function main() {
                 outcome: 'Limited improvement',
               },
               {
-                id: 2,
                 name: 'Shockwave therapy',
                 provider: 'Rehab Center',
                 date: new Date('2025-03-01'),
@@ -80,7 +83,6 @@ async function main() {
           MedicalVisit: {
             create: [
               {
-                id: 1,
                 doctor: 'Dr. Smith',
                 clinic: 'Rehab Center',
                 date: new Date('2025-01-15'),
@@ -92,14 +94,12 @@ async function main() {
           TimelineEvent: {
             create: [
               {
-                id: 1,
                 type: 'injury',
                 date: new Date('2025-01-01'),
                 description: 'Injury started after deadlifting.',
                 result: null,
               },
               {
-                id: 2,
                 type: 'treatment',
                 date: new Date('2025-03-01'),
                 description: 'Received shockwave therapy.',
@@ -118,14 +118,12 @@ async function main() {
 
   await prisma.user.create({
     data: {
-      id: 2,
       email: 'test-user-2@example.com',
-      password: 'test-password',
+      password: passwordHash,
       updatedAt: new Date(),
 
       Injury: {
         create: {
-          id: 2,
           name: 'Right shoulder pain',
           bodyArea: 'Shoulder',
           side: 'Right',
@@ -137,7 +135,6 @@ async function main() {
           Symptom: {
             create: [
               {
-                id: 3,
                 date: new Date('2024-06-16'),
                 painLevel: 8,
                 location: 'Right shoulder',
@@ -146,7 +143,6 @@ async function main() {
                 notes: 'Sharp pain when lifting the arm overhead.',
               },
               {
-                id: 4,
                 date: new Date('2024-07-01'),
                 painLevel: 6,
                 location: 'Right shoulder',
@@ -160,7 +156,6 @@ async function main() {
           Treatment: {
             create: [
               {
-                id: 3,
                 name: 'Physical therapy',
                 provider: 'Sports Clinic',
                 date: new Date('2024-07-01'),
@@ -173,7 +168,6 @@ async function main() {
           MedicalVisit: {
             create: [
               {
-                id: 2,
                 doctor: 'Dr. Johnson',
                 clinic: 'Sports Clinic',
                 date: new Date('2024-06-20'),
@@ -185,14 +179,12 @@ async function main() {
           TimelineEvent: {
             create: [
               {
-                id: 3,
                 type: 'injury',
                 date: new Date('2024-06-15'),
                 description: 'Pain started during overhead press.',
                 result: null,
               },
               {
-                id: 4,
                 type: 'treatment',
                 date: new Date('2024-07-01'),
                 description: 'Started physical therapy.',
@@ -211,14 +203,12 @@ async function main() {
 
   await prisma.user.create({
     data: {
-      id: 3,
       email: 'test-user-3@example.com',
-      password: 'test-password',
+      password: passwordHash,
       updatedAt: new Date(),
 
       Injury: {
         create: {
-          id: 3,
           name: 'Right knee pain',
           bodyArea: 'Knee',
           side: 'Right',
@@ -230,7 +220,6 @@ async function main() {
           Symptom: {
             create: [
               {
-                id: 5,
                 date: new Date('2023-09-11'),
                 painLevel: 6,
                 location: 'Right knee',
@@ -239,7 +228,6 @@ async function main() {
                 notes: 'Mild swelling after running.',
               },
               {
-                id: 6,
                 date: new Date('2023-09-15'),
                 painLevel: 5,
                 location: 'Right knee',
@@ -253,7 +241,6 @@ async function main() {
           Treatment: {
             create: [
               {
-                id: 4,
                 name: 'Rest',
                 provider: 'Self-managed',
                 date: new Date('2023-09-20'),
@@ -266,7 +253,6 @@ async function main() {
           MedicalVisit: {
             create: [
               {
-                id: 3,
                 doctor: 'Dr. Williams',
                 clinic: 'Orthopedic Clinic',
                 date: new Date('2023-09-15'),
@@ -278,7 +264,6 @@ async function main() {
           TimelineEvent: {
             create: [
               {
-                id: 5,
                 type: 'injury',
                 date: new Date('2023-09-10'),
                 description:
@@ -286,7 +271,6 @@ async function main() {
                 result: null,
               },
               {
-                id: 6,
                 type: 'recovery',
                 date: new Date('2023-10-01'),
                 description: 'Symptoms resolved after rest.',
