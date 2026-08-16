@@ -11,7 +11,7 @@ coverage/
 .windsurf/
 
 # test files
-src/test-db.ts
+tests/test-db-not-to-commit.ts
 
 # Local arch docs
 CHUNKER-ARCH.md
