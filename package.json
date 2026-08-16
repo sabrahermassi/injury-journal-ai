@@ -14,8 +14,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "jest",
-    "test:integration": "cross-env NODE_ENV=test jest tests/integration",
-    "db:test": "tsx src/test-db.ts"
+    "test:integration": "cross-env NODE_ENV=test jest tests/integration"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -33,6 +32,7 @@
   "homepage": "https://github.com/sabrahermassi/injury-journal-ai#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
     "cross-env": "^10.1.0",
@@ -47,6 +47,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "js-tiktoken": "^1.0.21"
   }
