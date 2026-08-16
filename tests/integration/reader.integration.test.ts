@@ -34,8 +34,6 @@ describe('Postgres reader integration', () => {
 
     expect(data.length).toBe(3);
 
-    console.log(data[0]);
-
     expect(data[0]).toMatchObject({
       id: 1,
       userId: 1,
