@@ -1,4 +1,4 @@
-import type { InjuryWithRelations } from '../../src/ingestion/documents/document-builder';
+import type { InjuryWithRelations } from '../../src/ingestion/documents/document-builder.js';
 
 export const journalData: InjuryWithRelations[] = [
   // --------------------------------------------------
