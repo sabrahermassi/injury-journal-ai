@@ -13,7 +13,5 @@ if (result.error) {
 }
 
 if (!process.env.DATABASE_URL?.includes('testing_injury_ai')) {
-  throw new Error(
-    'Integration tests must use the testing_injury_journal database',
-  );
+  throw new Error('Integration tests must use the testing_injury_ai database');
 }
