@@ -18,11 +18,14 @@ model Injury {
   status        String?
   createdAt     DateTime        @default(now())
   userId        Int
+  
   User          User            @relation(fields: [userId], references: [id])
   MedicalVisit  MedicalVisit[]
   Symptom       Symptom[]
   TimelineEvent TimelineEvent[]
   Treatment     Treatment[]
+
+  @@index([userId])
 }
 
 model MedicalVisit {
@@ -33,6 +36,8 @@ model MedicalVisit {
   notes    String?
   injuryId Int
   Injury   Injury   @relation(fields: [injuryId], references: [id])
+
+   @@index([injuryId])
 }
 
 model Symptom {
@@ -45,6 +50,8 @@ model Symptom {
   notes     String?
   injuryId  Int
   Injury    Injury   @relation(fields: [injuryId], references: [id])
+
+   @@index([injuryId])
 }
 
 model TimelineEvent {
@@ -55,6 +62,8 @@ model TimelineEvent {
   result      String?
   injuryId    Int
   Injury      Injury   @relation(fields: [injuryId], references: [id])
+
+   @@index([injuryId])
 }
 
 model Treatment {
@@ -66,6 +75,8 @@ model Treatment {
   outcome  String?
   injuryId Int
   Injury   Injury   @relation(fields: [injuryId], references: [id])
+
+   @@index([injuryId])
 }
 
 model User {
