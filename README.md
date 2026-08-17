@@ -8,24 +8,10 @@ The project is being built incrementally, starting with the offline ingestion pi
 
 ## Documentation
 
-- [Product](01-product.md) — Product goals, scope, features, and intended use.
-- [Architecture](02-architecture.md) — Overall system architecture and technical design.
-- [Chunker Architecture](03-chunker-architecture.md) — Detailed design of the document chunking component.
-- [Implementation Roadmap](04-implementation-roadmap.md) — Step-by-step implementation plan and progress.
-
-## Current implemented Architecture
-
-### Offline — Ingestion & Indexing
-
-```mermaid
-flowchart TD
-    DB["Injury Journal<br/>PostgreSQL"] --> W["Ingestion Worker"]
-    W --> C["Clean & Chunk"]
-    C --> E["Generate Embeddings"]
-    E --> V["PostgreSQL + pgvector"]
-```
-
-The offline pipeline transforms structured journal records into searchable documents, chunks them, and prepares them for embedding and vector storage.
+- [Product](docs/01-product.md) — Product goals, scope, features, and intended use.
+- [Architecture](docs/02-architecture.md) — Overall system architecture and technical design.
+- [Chunker Architecture](docs/03-chunker-architecture.md) — Detailed design of the document chunking component.
+- [Implementation Roadmap](docs/04-implementation-roadmap.md) — Step-by-step implementation plan and progress.
 
 ## Tech Stack
 

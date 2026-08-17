@@ -26,7 +26,6 @@ Click a step to jump directly to its section.
 - [ ] [Step 12 — Production Workflow with AWS](#step-12--production-workflow-with-aws)
 - [ ] [Step 13 — Infrastructure as Code](#step-13--infrastructure-as-code)
 - [ ] [Step 14 — Security and Production Hardening](#step-14--security-and-production-hardening)
-- [ ] [Step 15 — Final End-to-End Architecture](#step-15--final-end-to-end-architecture)
 
 ---
 

@@ -45,13 +45,9 @@ Long-term or complex injuries can generate large amounts of fragmented informati
 As this information grows, it becomes difficult to quickly answer questions such as:
 
 > What treatments have I tried?
-
 > Which treatments did not help?
-
 > When did my symptoms become worse?
-
 > What happened after a particular treatment?
-
 > Can I summarize my injury history for my doctor?
 
 The product makes this information easier to explore through natural-language questions while keeping answers grounded in the user's existing journal.
@@ -278,13 +274,13 @@ Embeddings
      ↓
 Vector Storage
      ↓
+Safety
+     ↓
 Semantic Retrieval
      ↓
 RAG
      ↓
 Citations
-     ↓
-Safety
      ↓
 Agent
      ↓
@@ -306,7 +302,3 @@ Future capabilities may include:
 - AI-assisted observability
 - Production AWS orchestration
 - Reproducible infrastructure
-
-```
-
-```

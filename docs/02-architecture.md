@@ -281,7 +281,7 @@ flowchart TD
 ### 7.2 AI-Assisted Observability
 
 ```mermaid
-flowchartTD
+flowchart TD
     W["AI Workflow"] --> T["Logs / Metrics / Traces"]
     T --> A["AI Observability Analyzer"]
     A --> F["Findings / Recommendations"]
@@ -342,7 +342,7 @@ flowchart TD
     ENV --> PROD["prod"]
 ```
 
-## 10. Security Architecture
+## 10. Security Architecture: Partial authorization
 
 ```mermaid
 flowchart TD
