@@ -12,3 +12,6 @@ coverage/
 
 # test files
 tests/test-db-not-to-commit.ts
+
+# Personal files
+TECHNOLOGIES.md
