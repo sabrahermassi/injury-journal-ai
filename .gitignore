@@ -5,6 +5,9 @@ node_modules/
 dist/
 coverage/
 
+# Python virtual environment
+.venv/
+
 # AI/editor configuration
 .agents/
 .claude/
