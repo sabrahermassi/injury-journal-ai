@@ -1,0 +1,181 @@
+{
+  "documents": [
+    {
+      "id": "treatment-1",
+      "content": "On June 1, 2026, the user received physiotherapy at Clinic A. The treatment provided limited improvement."
+    },
+    {
+      "id": "treatment-2",
+      "content": "On July 10, 2026, the user received shockwave therapy. The reported outcome was no significant improvement."
+    },
+    {
+      "id": "treatment-3",
+      "content": "On August 5, 2026, the user received a corticosteroid injection for hip pain. The treatment reduced pain temporarily."
+    },
+    {
+      "id": "treatment-4",
+      "content": "Between March and April 2026, the user completed six sessions of manual therapy. The treatment did not produce meaningful long-term improvement."
+    },
+    {
+      "id": "treatment-5",
+      "content": "In May 2026, the user tried stretching and mobility exercises. These exercises provided some short-term relief but symptoms returned afterward."
+    },
+    {
+      "id": "treatment-6",
+      "content": "In February 2026, the user received a local anesthetic injection for hip pain. The injection provided temporary pain reduction."
+    },
+    {
+      "id": "treatment-7",
+      "content": "In January 2026, the user started a strengthening exercise program. The user reported that the exercises sometimes increased discomfort."
+    },
+
+    {
+      "id": "symptom-1",
+      "content": "The user reported burning pain in the lower back and left hip, which became worse after prolonged standing."
+    },
+    {
+      "id": "symptom-2",
+      "content": "The user reported pain radiating from the lower back into the left thigh and buttock."
+    },
+    {
+      "id": "symptom-3",
+      "content": "The user experiences burning discomfort around the outside of the left hip, particularly after prolonged activity."
+    },
+    {
+      "id": "symptom-4",
+      "content": "The user reported anterior hip pain together with discomfort around the lateral hip."
+    },
+    {
+      "id": "symptom-5",
+      "content": "The user reported that sitting for long periods can aggravate symptoms in the lower back and hip."
+    },
+    {
+      "id": "symptom-6",
+      "content": "The user described pain extending from the lower back toward the left buttock and upper leg."
+    },
+
+    {
+      "id": "visit-1",
+      "content": "During a medical visit in September 2026, the physician reviewed the user's previous treatments and ongoing symptoms."
+    },
+    {
+      "id": "visit-2",
+      "content": "During a medical appointment in May 2026, the physician reviewed the user's persistent hip and lower-back symptoms."
+    },
+    {
+      "id": "visit-3",
+      "content": "At a follow-up appointment in July 2026, the user discussed the lack of improvement after previous conservative treatments."
+    },
+
+    {
+      "id": "timeline-1",
+      "content": "In January 2026, the user began a new strengthening program for persistent hip and lower-back symptoms."
+    },
+    {
+      "id": "timeline-2",
+      "content": "In June 2026, the user continued experiencing persistent hip pain despite previous physiotherapy."
+    },
+    {
+      "id": "timeline-3",
+      "content": "In August 2026, the user reported temporary relief after receiving an injection for hip pain."
+    },
+    {
+      "id": "timeline-4",
+      "content": "By September 2026, the user continued to report ongoing symptoms despite trying multiple treatments."
+    }
+  ],
+
+  "queries": [
+    {
+      "question": "What treatments didn't improve my symptoms?",
+      "expected_documents": ["treatment-1", "treatment-2", "treatment-4"]
+    },
+    {
+      "question": "Which therapies failed to provide meaningful improvement?",
+      "expected_documents": ["treatment-1", "treatment-2", "treatment-4"]
+    },
+    {
+      "question": "What makes the pain worse?",
+      "expected_documents": ["symptom-1", "symptom-5"]
+    },
+    {
+      "question": "What activities aggravate my symptoms?",
+      "expected_documents": ["symptom-1", "symptom-5"]
+    },
+    {
+      "question": "What treatment only helped temporarily?",
+      "expected_documents": ["treatment-3", "treatment-6"]
+    },
+    {
+      "question": "Which treatment gave me temporary pain relief?",
+      "expected_documents": ["treatment-3", "treatment-6"]
+    },
+    {
+      "question": "Where does the pain radiate?",
+      "expected_documents": ["symptom-2", "symptom-6"]
+    },
+    {
+      "question": "Where does the pain spread from my back?",
+      "expected_documents": ["symptom-2", "symptom-6"]
+    },
+    {
+      "question": "Where around my hip do I experience burning pain?",
+      "expected_documents": ["symptom-1", "symptom-3"]
+    },
+    {
+      "question": "What kind of pain do I have around the outside of my hip?",
+      "expected_documents": ["symptom-1", "symptom-3"]
+    },
+    {
+      "question": "What treatment did I receive in June 2026?",
+      "expected_documents": ["treatment-1", "timeline-2"]
+    },
+    {
+      "question": "What happened in August 2026?",
+      "expected_documents": ["treatment-3", "timeline-3"]
+    },
+    {
+      "question": "What did the doctor review during my September visit?",
+      "expected_documents": ["visit-1", "timeline-4"]
+    },
+    {
+      "question": "What happened during the July follow-up?",
+      "expected_documents": ["visit-3"]
+    },
+    {
+      "question": "What treatments have I tried for my hip pain?",
+      "expected_documents": [
+        "treatment-1",
+        "treatment-2",
+        "treatment-3",
+        "treatment-4",
+        "treatment-6"
+      ]
+    },
+    {
+      "question": "Which treatments provided little or no lasting improvement?",
+      "expected_documents": [
+        "treatment-1",
+        "treatment-2",
+        "treatment-4",
+        "treatment-5"
+      ]
+    },
+    {
+      "question": "Did physiotherapy improve my symptoms?",
+      "expected_documents": ["treatment-1", "timeline-2"]
+    },
+    {
+      "question": "Did sitting for a long time affect my pain?",
+      "expected_documents": ["symptom-5"]
+    },
+    {
+      "question": "What symptoms were still present later in 2026?",
+      "expected_documents": ["visit-1", "timeline-4"]
+    },
+    {
+      "question": "Did the strengthening exercises help or make things worse?",
+      "expected_documents": ["treatment-7", "timeline-1"]
+    }
+  ]
+}
