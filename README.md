@@ -2,9 +2,20 @@
 
 AI-powered injury journal assistant exploring RAG, LLMs, agent orchestration, embeddings, vector search, safety guardrails, evaluation, and AI observability.
 
-## Architecture
+## Project Status
 
-### Offline — Ingestion & Indexing (WIP: Generate embeddings)
+The project is being built incrementally, starting with the offline ingestion pipeline and embeddings before adding semantic retrieval, RAG, agents, and production infrastructure.
+
+## Documentation
+
+- [Product](01-product.md) — Product goals, scope, features, and intended use.
+- [Architecture](02-architecture.md) — Overall system architecture and technical design.
+- [Chunker Architecture](03-chunker-architecture.md) — Detailed design of the document chunking component.
+- [Implementation Roadmap](04-implementation-roadmap.md) — Step-by-step implementation plan and progress.
+
+## Current implemented Architecture
+
+### Offline — Ingestion & Indexing
 
 ```mermaid
 flowchart TD
@@ -14,42 +25,7 @@ flowchart TD
     E --> V["PostgreSQL + pgvector"]
 ```
 
-The offline pipeline prepares journal data for retrieval.
-
-### Online — RAG & Agent Workflow (Future)
-
-```mermaid
-flowchart TD
-    U["User"] --> API["AI Assistant API"]
-    API --> A["AI Agent"]
-
-    A --> S["Safety Check"]
-
-    S -->|Allowed| AUTH["Tool Authorization"]
-    S -->|Boundary Violation| REF["Refuse / Redirect"]
-
-    AUTH --> R["RAG Tool"]
-    R --> V["PostgreSQL + pgvector"]
-    V --> R
-
-    R --> G["LLM"]
-    G --> CV["Citation Verification"]
-    CV --> OUT["Answer + Sources"]
-
-    REF --> OUT
-    OUT --> U
-```
-
-### Observability & Evaluation (Future)
-
-```mermaid
-flowchart TD
-    A["AI Workflow"] --> O["Observability"]
-    O --> C["CloudWatch / DynamoDB"]
-    C --> AI["AI Observability Analyzer"]
-
-    E["Evaluation Harness"] --> M["Retrieval<br/>Faithfulness<br/>Citations<br/>Safety"]
-```
+The offline pipeline transforms structured journal records into searchable documents, chunks them, and prepares them for embedding and vector storage.
 
 ## Tech Stack
 
@@ -58,15 +34,36 @@ flowchart TD
 - TypeScript / Node.js
 - PostgreSQL
 - Prisma
-- Terraform
+
+### In Progress
+
+- Embedding model integration
 
 ### Planned
 
 - pgvector
-- Embedding model
-- LLM API
-- RAG
+- Semantic retrieval
+- Retrieval-Augmented Generation (RAG)
+- Citations
+- Safety guardrails
 - AI agents
+- Evaluation
+- AI observability
+- Terraform
 - AWS Lambda
 - AWS Step Functions
 - CloudWatch / DynamoDB
+
+## Project Goal
+
+Build a production-oriented AI assistant that can:
+
+- Answer questions about a user's injury journal
+- Retrieve relevant historical information
+- Generate grounded summaries
+- Cite the underlying journal records
+- Apply healthcare safety boundaries
+- Evaluate retrieval and answer quality
+- Monitor AI workflows and operational behavior
+
+The system is designed to be built one layer at a time, with the data and retrieval foundations established before introducing agentic workflows.

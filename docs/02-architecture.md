@@ -2,6 +2,24 @@
 
 ## 1. Overview
 
+Injury Journal AI is an AI assistant built on top of an existing Injury Journal PostgreSQL application.
+
+The system is designed to transform structured journal data into searchable AI context and use that context to generate grounded answers about the user's injury history.
+
+The architecture is divided into two main flows:
+
+- **Offline flow** — prepares journal data for AI retrieval by transforming records into documents, chunking them, generating embeddings, and storing the resulting vectors.
+- **Online flow** — processes user questions through safety checks, authorization, retrieval, RAG, LLM generation, and citation verification.
+
+The architecture also includes supporting systems for:
+
+- **Evaluation** — measuring retrieval and answer quality.
+- **Observability** — monitoring AI workflows and operational behavior.
+- **Production infrastructure** — AWS services and infrastructure as code.
+- **Security** — authentication, authorization, data isolation, and protection of journal data.
+
+The system is intentionally built incrementally. The offline data and retrieval foundations are implemented before introducing the AI agent and production workflow.
+
 ## 2. Technology Stack
 
 | Area            | Technology                |
