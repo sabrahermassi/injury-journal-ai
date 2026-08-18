@@ -5,6 +5,9 @@ node_modules/
 dist/
 coverage/
 
+# Python virtual environment
+.venv/
+
 # AI/editor configuration
 .agents/
 .claude/
@@ -15,3 +18,4 @@ tests/test-db-not-to-commit.ts
 
 # Personal files
 TECHNOLOGIES.md
+__pycache__/
