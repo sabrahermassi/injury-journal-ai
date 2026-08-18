@@ -127,12 +127,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    C["Document Chunk"]
-    E["Embedding Model"]
-    V["Vector"]
-
-    C --> E
-    E --> V
+    C["Document Chunk"] --> S["Embedding Service"]
+    S --> M["Qwen3-Embedding-0.6B"]
+    M --> V["1024-Dimensional Vector"]
+    V --> E["Embedded Document"]
 ```
 
 ### 4.3. Vector Storage with pgvector Architecture
