@@ -12,11 +12,10 @@ print("Embedding version:", EMBEDDING_VERSION)
 
 service = EmbeddingService()
 
-
 texts = [
-    "The treatment provided limited improvement.",
-    "The user reported burning pain in the lower back.",
-    "The pain became worse after prolonged standing.",
+    "The patient reported lower back pain.",
+    "Physiotherapy provided limited improvement.",
+    "The pain worsened after prolonged sitting.",
 ]
 
 embeddings = service.embed_batch(texts)
@@ -24,5 +23,5 @@ embeddings = service.embed_batch(texts)
 print("Number of embeddings:", len(embeddings))
 print("Embedding dimensions:", len(embeddings[0]))
 
-for i, embedding in enumerate(embeddings):
-    print(f"Chunk {i + 1}: {len(embedding)} dimensions")
+for index, embedding in enumerate(embeddings, start=1):
+    print(f"Chunk {index}: {len(embedding)} dimensions")
