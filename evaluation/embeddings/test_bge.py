@@ -15,7 +15,10 @@ queries = dataset["queries"]
 
 
 # Load embedding model
-model = SentenceTransformer("BAAI/bge-m3")
+model = SentenceTransformer(
+    "BAAI/bge-m3",
+    revision="5617a9f61b028005a4858fdac845db406aefb181",
+)
 
 
 # Embed all documents once

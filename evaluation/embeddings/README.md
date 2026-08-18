@@ -10,6 +10,16 @@ The goal is to compare embedding models using the same dataset, queries, and ret
 - BGE-M3
 - Nomic Embed v1.5
 
+### Model Revisions
+
+The benchmark uses pinned Hugging Face model revisions to ensure that results are reproducible.
+
+| Model                | Hugging Face Revision                      |
+| -------------------- | ------------------------------------------ |
+| Qwen3-Embedding-0.6B | `97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` |
+| BGE-M3               | `5617a9f61b028005a4858fdac845db406aefb181` |
+| Nomic Embed v1.5     | `e9b6763023c676ca8431644204f50c2b100d9aab` |
+
 ## Evaluation Method
 
 For each model:

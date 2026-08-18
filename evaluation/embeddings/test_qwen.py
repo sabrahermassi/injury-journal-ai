@@ -15,7 +15,10 @@ queries = dataset["queries"]
 
 
 # Load embedding model
-model = SentenceTransformer("Qwen/Qwen3-Embedding-0.6B")
+model = SentenceTransformer(
+    "Qwen/Qwen3-Embedding-0.6B",
+    revision="97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+)
 
 
 # Embed all documents once
