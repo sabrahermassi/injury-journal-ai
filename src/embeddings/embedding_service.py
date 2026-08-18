@@ -8,7 +8,10 @@ EMBEDDING_VERSION = "qwen3-embedding-0.6b-v1"
 
 class EmbeddingService:
     def __init__(self):
-        self.model = SentenceTransformer(MODEL_NAME)
+        self.model = SentenceTransformer(
+            MODEL_NAME,
+            revision="97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+        )
 
     def embed_document(self, text: str) -> list[float]:
         embedding = self.model.encode(

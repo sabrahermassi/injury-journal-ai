@@ -15,7 +15,10 @@ queries = dataset["queries"]
 
 
 # Load embedding model
-model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5")
+model = SentenceTransformer(
+    "nomic-ai/nomic-embed-text-v1.5",
+    revision="e9b6763023c676ca8431644204f50c2b100d9aab",
+)
 
 
 # Embed all documents once
