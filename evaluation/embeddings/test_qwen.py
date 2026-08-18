@@ -39,6 +39,7 @@ recall_at_5_total = 0
 for query in queries:
     query_embedding = model.encode(
         query["question"],
+        prompt_name="query",
         normalize_embeddings=True,
     )
 
