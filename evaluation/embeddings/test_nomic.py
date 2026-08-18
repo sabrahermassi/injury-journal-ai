@@ -19,7 +19,10 @@ model = SentenceTransformer("nomic-ai/nomic-embed-text-v1.5")
 
 
 # Embed all documents once
-document_texts = [document["content"] for document in documents]
+document_texts = [
+    f"search_document: {document['content']}"
+    for document in documents
+]
 
 document_embeddings = model.encode(
     document_texts,
@@ -38,7 +41,7 @@ recall_at_5_total = 0
 # Evaluate every query
 for query in queries:
     query_embedding = model.encode(
-        query["question"],
+        f"search_query: {query['question']}",
         normalize_embeddings=True,
     )
 
