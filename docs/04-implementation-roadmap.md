@@ -13,8 +13,8 @@ Click a step to jump directly to its section.
 
 - [x] [Step 0 — Project Foundation](#step-0--project-foundation)
 - [x] [Step 1 — Offline Ingestion Pipeline](#step-1--offline-ingestion-pipeline)
-- [ ] [Step 2 — Embeddings](#step-2--embeddings)
-- [ ] [Step 3 — Vector Storage with pgvector](#step-3--vector-storage-with-pgvector)
+- [x] [Step 2 — Embeddings](#step-2--embeddings)
+- [x] [Step 3 — Vector Storage with pgvector](#step-3--vector-storage-with-pgvector)
 - [ ] [Step 4 — Semantic Retrieval](#step-4--semantic-retrieval)
 - [ ] [Step 5 — Basic RAG](#step-5--basic-rag)
 - [ ] [Step 6 — Citations](#step-6--citations)
