@@ -227,10 +227,15 @@ date
 
 Build:
 
-- Citation generation
+- Citation generation from retrieved chunks
+- Citation mapper:
 - Citation formatting
 - Source mapping
-- Citation verification
+- Citation metadata preservation
+
+(Optional later):
+
+- Claim-level citation verification
 
 ## Example:
 

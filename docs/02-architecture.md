@@ -197,10 +197,12 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    C["Retrieved Chunk"] --> L["LLM"]
-    L --> G["Generated Claims"]
-    G --> V["Citation Verification"]
-    V --> A["Answer + Sources"]
+    C["Retrieved Chunks"] --> L["LLM Context"]
+    C --> M["Source Metadata"]
+    L --> A["Generated Answer"]
+    A --> V["Citation Mapping"]
+    M --> V
+    V --> R["Answer + Sources"]
 ```
 
 ### 5.3. Safety Guardrails Architecture
