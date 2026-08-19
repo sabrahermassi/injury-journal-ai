@@ -18,6 +18,7 @@ class BatchEmbeddingRequest(BaseModel):
     texts: list[str] = Field(max_length=32)
 
 
+
 @app.post("/embed")
 def embed(request: EmbeddingRequest):
     embedding = embedding_service.embed_document(request.text)
