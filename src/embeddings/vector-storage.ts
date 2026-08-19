@@ -73,3 +73,44 @@ export async function deleteDocumentChunksExcept(
     `,
   );
 }
+
+export async function searchSimilarChunks(
+  embedding: number[],
+  limit = 5,
+  injuryId?: number,
+) {
+  const vector = `[${embedding.join(',')}]`;
+
+  return prisma.$queryRaw<
+    Array<{
+      id: number;
+      injuryId: number;
+      sourceType: string;
+      sourceId: number;
+      chunkIndex: number;
+      content: string;
+      metadata: unknown;
+      distance: number;
+    }>
+  >(
+    Prisma.sql`
+      SELECT
+        "id",
+        "injuryId",
+        "sourceType",
+        "sourceId",
+        "chunkIndex",
+        "content",
+        "metadata",
+        "embedding" <=> ${vector}::vector AS "distance"
+      FROM "DocumentChunk"
+      ${
+        injuryId !== undefined
+          ? Prisma.sql`WHERE "injuryId" = ${injuryId}`
+          : Prisma.empty
+      }
+      ORDER BY "embedding" <=> ${vector}::vector
+      LIMIT ${limit}
+    `,
+  );
+}
