@@ -1,8 +1,8 @@
-import { embedText } from './embedding-client.js';
+import { embedText } from '../embedding-client.js';
 import {
   storeDocumentChunk,
   disconnectVectorStorage,
-} from './vector-storage.js';
+} from '../../storage/vector-storage.js';
 
 const content = 'The patient received physiotherapy with limited improvement.';
 

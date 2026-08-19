@@ -1,6 +1,6 @@
-import { buildJournalDocuments } from '../src/ingestion/documents/document-builder';
-import { journalData } from './fixtures/journal-data';
-import { expectedJournalDocuments } from './fixtures/expected-journal-documents';
+import { buildJournalDocuments } from '../../src/ingestion/documents/document-builder';
+import { journalData } from '../fixtures/journal-data';
+import { expectedJournalDocuments } from '../fixtures/expected-journal-documents';
 
 describe('Document builder', () => {
   it('builds the expected journal documents', () => {

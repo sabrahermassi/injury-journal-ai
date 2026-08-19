@@ -1,12 +1,12 @@
-import type { JournalDocument } from './documents/document-types.js';
-import { chunkDocument } from './chunking/document-chunker.js';
+import type { JournalDocument } from '../ingestion/documents/document-types.js';
+import { chunkDocument } from '../ingestion/chunking/document-chunker.js';
 import { embedText } from '../embeddings/embedding-client.js';
 import {
   storeDocumentChunk,
   deleteDocumentChunksExcept,
-} from '../embeddings/vector-storage.js';
+} from '../storage/vector-storage.js';
 import type { EmbeddedDocument } from '../embeddings/embedding-types.js';
-import { withIngestionLock } from './ingestion-lock.js';
+import { withIngestionLock } from '../ingestion/ingestion-lock.js';
 
 export async function embedAndStoreDocument(
   document: JournalDocument,

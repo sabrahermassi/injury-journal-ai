@@ -2,8 +2,8 @@ import { getEncoding } from 'js-tiktoken';
 import {
   chunkDocument,
   chunkDocuments,
-} from '../src/ingestion/chunking/document-chunker';
-import type { JournalDocument } from '../src/ingestion/documents/document-types';
+} from '../../src/ingestion/chunking/document-chunker';
+import type { JournalDocument } from '../../src/ingestion/documents/document-types';
 
 const encoding = getEncoding('cl100k_base');
 

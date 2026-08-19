@@ -1,4 +1,4 @@
-import { embedText } from './embedding-client.js';
+import { embedText } from '../embedding-client.js';
 
 const result = await embedText(
   'The patient received physiotherapy with no improvement.',
