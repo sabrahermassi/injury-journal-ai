@@ -11,6 +11,8 @@ async function loadEmbeddingClient() {
   return import('../src/embeddings/embedding-client.js');
 }
 
+const TEST_EMBEDDING = Array.from({ length: 1024 }, (_, i) => i / 1024);
+
 function makeResponse(
   overrides: Partial<{
     ok: boolean;
@@ -23,7 +25,13 @@ function makeResponse(
     ok: true,
     status: 200,
     statusText: 'OK',
-    json: async () => ({}),
+    json: async () => ({
+      embedding: TEST_EMBEDDING,
+      model: 'Qwen/Qwen3-Embedding-0.6B',
+      modelVersion: 'abc123',
+      dimension: 1024,
+      version: 'qwen3-embedding-0.6b-v1',
+    }),
     ...overrides,
   } as unknown as Response;
 }
@@ -49,14 +57,15 @@ describe('embedText', () => {
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
-          embedding: [0.1, 0.2, 0.3],
+          embedding: TEST_EMBEDDING,
           model: 'Qwen/Qwen3-Embedding-0.6B',
           modelVersion: 'abc123',
-          dimension: 3,
+          dimension: 1024,
           version: 'qwen3-embedding-0.6b-v1',
         }),
       }),
     );
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
@@ -72,11 +81,12 @@ describe('embedText', () => {
         body: JSON.stringify({ text: 'hello world' }),
       }),
     );
+
     expect(result).toEqual({
-      embedding: [0.1, 0.2, 0.3],
+      embedding: TEST_EMBEDDING,
       model: 'Qwen/Qwen3-Embedding-0.6B',
       modelVersion: 'abc123',
-      dimension: 3,
+      dimension: 1024,
       version: 'qwen3-embedding-0.6b-v1',
     });
   });
@@ -84,17 +94,8 @@ describe('embedText', () => {
   it('uses a custom EMBEDDING_API_URL when configured', async () => {
     process.env.EMBEDDING_API_URL = 'http://embedding-service:9000';
 
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-      makeResponse({
-        json: async () => ({
-          embedding: [],
-          model: '',
-          modelVersion: '',
-          dimension: 0,
-          version: '',
-        }),
-      }),
-    );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
@@ -107,36 +108,27 @@ describe('embedText', () => {
   });
 
   it('passes an AbortSignal to fetch', async () => {
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-      makeResponse({
-        json: async () => ({
-          embedding: [],
-          model: '',
-          modelVersion: '',
-          dimension: 0,
-          version: '',
-        }),
-      }),
-    );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
     await embedText('hi');
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('throws a descriptive error when the response is not ok', async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValue(
-        makeResponse({
-          ok: false,
-          status: 500,
-          statusText: 'Internal Server Error',
-        }),
-      );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
+      makeResponse({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      }),
+    );
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
@@ -150,6 +142,7 @@ describe('embedText', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockRejectedValue(new Error('network down'));
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
@@ -158,18 +151,10 @@ describe('embedText', () => {
   });
 
   it('clears the timeout after a successful request', async () => {
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-      makeResponse({
-        json: async () => ({
-          embedding: [1],
-          model: 'm',
-          modelVersion: 'v',
-          dimension: 1,
-          version: 'v1',
-        }),
-      }),
-    );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
     global.fetch = fetchMock as unknown as typeof fetch;
+
     const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
 
     const { embedText } = await loadEmbeddingClient();
@@ -182,10 +167,13 @@ describe('embedText', () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockRejectedValue(new Error('network down'));
+
     global.fetch = fetchMock as unknown as typeof fetch;
+
     const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
 
     const { embedText } = await loadEmbeddingClient();
+
     await expect(embedText('hi')).rejects.toThrow('network down');
 
     expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
@@ -194,18 +182,10 @@ describe('embedText', () => {
   it('uses the default 30 second timeout when EMBEDDING_API_TIMEOUT_MS is not set', async () => {
     delete process.env.EMBEDDING_API_TIMEOUT_MS;
 
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-      makeResponse({
-        json: async () => ({
-          embedding: [],
-          model: '',
-          modelVersion: '',
-          dimension: 0,
-          version: '',
-        }),
-      }),
-    );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
     global.fetch = fetchMock as unknown as typeof fetch;
+
     const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
 
     const { embedText } = await loadEmbeddingClient();
@@ -219,18 +199,12 @@ describe('embedText', () => {
     async (value) => {
       process.env.EMBEDDING_API_TIMEOUT_MS = value;
 
-      const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-        makeResponse({
-          json: async () => ({
-            embedding: [],
-            model: '',
-            modelVersion: '',
-            dimension: 0,
-            version: '',
-          }),
-        }),
-      );
+      const fetchMock = jest
+        .fn<typeof fetch>()
+        .mockResolvedValue(makeResponse());
+
       global.fetch = fetchMock as unknown as typeof fetch;
+
       const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
 
       const { embedText } = await loadEmbeddingClient();
@@ -243,18 +217,10 @@ describe('embedText', () => {
   it('uses a valid custom EMBEDDING_API_TIMEOUT_MS when provided', async () => {
     process.env.EMBEDDING_API_TIMEOUT_MS = '5000';
 
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-      makeResponse({
-        json: async () => ({
-          embedding: [],
-          model: '',
-          modelVersion: '',
-          dimension: 0,
-          version: '',
-        }),
-      }),
-    );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
     global.fetch = fetchMock as unknown as typeof fetch;
+
     const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
 
     const { embedText } = await loadEmbeddingClient();
@@ -276,11 +242,13 @@ describe('embedText', () => {
         });
       });
     });
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
 
     const promise = embedText('hi');
+
     const expectation = expect(promise).rejects.toThrow(
       'This operation was aborted',
     );
@@ -294,23 +262,14 @@ describe('embedText', () => {
     jest.useFakeTimers();
     process.env.EMBEDDING_API_TIMEOUT_MS = '10000';
 
-    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
-      makeResponse({
-        json: async () => ({
-          embedding: [0.5],
-          model: 'm',
-          modelVersion: 'v',
-          dimension: 1,
-          version: 'v1',
-        }),
-      }),
-    );
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
 
     const result = await embedText('hi');
 
-    expect(result.embedding).toEqual([0.5]);
+    expect(result.embedding).toEqual(TEST_EMBEDDING);
   });
 });

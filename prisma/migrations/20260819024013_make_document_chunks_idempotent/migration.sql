@@ -1,12 +1,34 @@
 /*
-  Warnings:
+  Backfill chunkIndex before making it NOT NULL.
 
-  - A unique constraint covering the columns `[sourceType,sourceId,chunkIndex]` on the table `DocumentChunk` will be added. If there are existing duplicate values, this will fail.
-  - Added the required column `chunkIndex` to the `DocumentChunk` table without a default value. This is not possible if the table is not empty.
-
+  Existing chunks are numbered independently within each
+  (sourceType, sourceId) group so that the unique constraint
+  on (sourceType, sourceId, chunkIndex) can be created safely.
 */
--- AlterTable
-ALTER TABLE "DocumentChunk" ADD COLUMN     "chunkIndex" INTEGER NOT NULL;
 
--- CreateIndex
-CREATE UNIQUE INDEX "DocumentChunk_sourceType_sourceId_chunkIndex_key" ON "DocumentChunk"("sourceType", "sourceId", "chunkIndex");
+-- Add the column as nullable first.
+ALTER TABLE "DocumentChunk"
+ADD COLUMN "chunkIndex" INTEGER;
+
+-- Number existing chunks within each document/source.
+WITH numbered_chunks AS (
+  SELECT
+    id,
+    ROW_NUMBER() OVER (
+      PARTITION BY "sourceType", "sourceId"
+      ORDER BY id
+    ) - 1 AS "chunkIndex"
+  FROM "DocumentChunk"
+)
+UPDATE "DocumentChunk" AS dc
+SET "chunkIndex" = nc."chunkIndex"
+FROM numbered_chunks AS nc
+WHERE dc.id = nc.id;
+
+-- Now that every existing row has a value, make it required.
+ALTER TABLE "DocumentChunk"
+ALTER COLUMN "chunkIndex" SET NOT NULL;
+
+-- Enforce idempotency.
+CREATE UNIQUE INDEX "DocumentChunk_sourceType_sourceId_chunkIndex_key"
+ON "DocumentChunk"("sourceType", "sourceId", "chunkIndex");
