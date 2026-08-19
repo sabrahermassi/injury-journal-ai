@@ -50,7 +50,13 @@ Recall@k =
 relevant documents retrieved in top-k
 -------------------------------------
 total relevant documents
+<<<<<<< HEAD
 ````
+
+=======
+
+```
+>>>>>>> origin/main
 
 This is particularly important for RAG because multiple relevant chunks may need to be retrieved before constructing the context supplied to the LLM.
 
@@ -105,9 +111,15 @@ The same dataset, expected results, cosine-similarity calculation, and Recall@k 
 
 | Model                | Dimensions |  Recall@1 |  Recall@3 |  Recall@5 |
 | -------------------- | ---------: | --------: | --------: | --------: |
+<<<<<<< HEAD
 | Qwen3-Embedding-0.6B |       1024 | **45.0%** |     63.6% | **89.9%** |
 | BGE-M3               |       1024 |     42.1% | **71.2%** |     82.4% |
 | Nomic Embed v1.5     |        768 |     39.3% |     69.5% |     78.2% |
+=======
+| Qwen3-Embedding-0.6B |       1024 | **46.7%** |     66.0% | **93.2%** |
+| BGE-M3               |       1024 |     42.9% | **71.2%** |     81.6% |
+| Nomic Embed v1.5     |        768 |     37.7% |     67.8% |     77.4% |
+>>>>>>> origin/main
 
 ### Results
 
@@ -149,3 +161,4 @@ The initial benchmark results were generated before model-specific query/documen
 The benchmark was subsequently rerun using the recommended retrieval encoding for each model. The results below supersede the original main benchmark results and are the results used for model selection.
 
 The original smoke-test results are retained above as a historical technical validation only.
+```
