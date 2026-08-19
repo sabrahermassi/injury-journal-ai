@@ -12,6 +12,7 @@ async function main() {
   }
 
   // Clean existing test data
+  await prisma.documentChunk.deleteMany();
   await prisma.medicalVisit.deleteMany();
   await prisma.treatment.deleteMany();
   await prisma.symptom.deleteMany();

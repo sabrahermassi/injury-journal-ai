@@ -2,6 +2,10 @@ import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+export async function disconnectVectorStorage() {
+  await prisma.$disconnect();
+}
+
 export async function storeDocumentChunk(
   injuryId: number,
   sourceType: string,
