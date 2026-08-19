@@ -17,6 +17,7 @@ export async function embedAndStoreDocument(
       embedding: embedding.embedding,
       embeddingMetadata: {
         model: embedding.model,
+        modelVersion: embedding.modelVersion,
         vectorDimension: embedding.dimension,
         embeddingVersion: embedding.version,
       },

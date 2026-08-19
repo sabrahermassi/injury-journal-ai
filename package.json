@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "jest",
-    "test:integration": "cross-env NODE_ENV=test jest tests/integration"
+    "test:integration": "cross-env NODE_ENV=test jest tests/integration",
+    "seed:dev": "tsx prisma/seed-dev.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
