@@ -14,5 +14,10 @@ export async function answerQuestion(
 
   const prompt = buildPrompt(question, context);
 
-  return generateAnswer(prompt);
+  const answer = await generateAnswer(prompt);
+
+  return {
+    answer,
+    chunks,
+  };
 }

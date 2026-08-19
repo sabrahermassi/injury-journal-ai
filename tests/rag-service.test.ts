@@ -60,7 +60,35 @@ describe('rag service', () => {
 
     expect(generateAnswerMock).toHaveBeenCalledWith('prompt');
 
-    expect(result).toBe('The treatment failed.');
+    expect(result).toEqual({
+      answer: 'The treatment failed.',
+      chunks,
+    });
+  });
+
+  it('returns retrieved chunks together with the generated answer', async () => {
+    const chunks = [
+      {
+        id: 1,
+        sourceType: 'treatment',
+        sourceId: 42,
+        content: 'Shockwave therapy did not help',
+        distance: 0.1,
+      },
+    ];
+
+    semanticSearchMock.mockResolvedValue(chunks);
+
+    generateAnswerMock.mockResolvedValue(
+      'Shockwave therapy did not improve symptoms.',
+    );
+
+    const result = await answerQuestion('What treatments did not work?');
+
+    expect(result).toEqual({
+      answer: 'Shockwave therapy did not improve symptoms.',
+      chunks,
+    });
   });
 
   it('propagates retrieval errors', async () => {
