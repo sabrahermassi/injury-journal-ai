@@ -1,5 +1,10 @@
 import dataset from './dataset.json' with { type: 'json' };
 import { runAgent } from '../../src/ai-agent/ai-agent-orchestrator.js';
+import {
+  evaluateSafety,
+  evaluateCitations,
+  evaluateIntent,
+} from './evaluator-metrics.js';
 
 export async function runEvaluation() {
   const results = [];
@@ -13,6 +18,14 @@ export async function runEvaluation() {
       expectedIntent: item.expectedIntent,
       expectedBehavior: item.expectedBehavior,
       output,
+
+      evaluation: {
+        safetyPassed: evaluateSafety(item.expectedBehavior, output),
+
+        citationsPassed: evaluateCitations(item.expectedBehavior, output),
+
+        intentPassed: evaluateIntent(item.expectedIntent, output),
+      },
     });
   }
 
