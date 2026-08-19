@@ -2,10 +2,16 @@ import { safetyTool } from './tools/safety-tool.js';
 import { ragTool } from './tools/rag-tool.js';
 import { journalTool } from './tools/journal-tool.js';
 import { routeIntent } from './ai-agent-intent-router.js';
+import { AgentState } from './ai-agent-state.js';
 
 export async function runAgent(question: string) {
-  // Step 1: Safety check
+  const state: AgentState = {
+    question,
+  };
+
   const safety = safetyTool(question);
+
+  state.safety = safety;
 
   if (!safety.allowed) {
     return {
@@ -14,26 +20,29 @@ export async function runAgent(question: string) {
     };
   }
 
-  // Step 2: Decide which tool to use
   const intent = routeIntent(question);
+
+  state.intent = intent;
 
   switch (intent) {
     case 'journal': {
+      state.toolUsed = 'journal-tool';
+
       const result = await journalTool(question);
 
-      return {
-        answer: result.answer,
-        citations: result.citations,
-      };
+      state.result = result;
+
+      return result;
     }
 
     case 'rag': {
+      state.toolUsed = 'rag-tool';
+
       const result = await ragTool(question);
 
-      return {
-        answer: result.answer,
-        citations: result.citations,
-      };
+      state.result = result;
+
+      return result;
     }
 
     default:
