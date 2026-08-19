@@ -24,14 +24,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - pgvector
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
+- Citations
 
 ### In Progress
 
-- Citations
+- Safety guardrails
 
 ### Planned
 
-- Safety guardrails
 - AI agents
 - Evaluation
 - AI observability
@@ -79,7 +79,7 @@ PostgreSQL advisory locks or source revision/versioning.
 Database transactions should not remain open while waiting for embedding API
 requests.
 
-## Semantic Retrieval
+### Semantic Retrieval
 
 Implemented:
 
@@ -100,7 +100,7 @@ User Question
 → Similarity Ranking
 → Top-k Relevant Chunks
 
-### Future Retrieval Improvements
+#### Future Retrieval Improvements
 
 The current retrieval implementation is intentionally minimal. Revisit and extend it when retrieval requirements become clearer.
 
@@ -120,3 +120,45 @@ Potential retrieval improvements:
 - Reranking if needed
 
 Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
+
+### Citation Verification
+
+The current implementation performs source-level verification.
+(answers the question: Does this citation point to a real source that belongs to this injury?)
+
+It verifies:
+
+- The referenced source exists
+- The source belongs to the requested injury
+- The source can be safely exposed to the requesting user
+
+#### Future Citation Improvements
+
+Advanced claim-level citation verification can be added later.
+
+Goal:
+
+Verify that individual generated claims are supported by the retrieved evidence.
+
+Future flow:
+
+Generated Answer
+→ Claim Extraction
+→ Evidence Matching
+→ Claim Support Verification
+→ Verified Answer
+
+Example:
+
+Generated claim:
+
+"The patient improved after physiotherapy."
+
+Evidence:
+
+Treatment #42:
+"Physiotherapy completed. Outcome: improved."
+
+Verification:
+
+✓ Claim supported by source

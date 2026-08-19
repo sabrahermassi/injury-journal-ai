@@ -17,7 +17,7 @@ Click a step to jump directly to its section.
 - [x] [Step 3 — Vector Storage with pgvector](#step-3--vector-storage-with-pgvector)
 - [x] [Step 4 — Semantic Retrieval](#step-4--semantic-retrieval)
 - [x] [Step 5 — Basic RAG](#step-5--basic-rag)
-- [ ] [Step 6 — Citations](#step-6--citations)
+- [x] [Step 6 — Citations](#step-6--citations)
 - [ ] [Step 7 — Safety Guardrails](#step-7--safety-guardrails)
 - [ ] [Step 8 — AI Agent](#step-8--ai-agent)
 - [ ] [Step 9 — Evaluation](#step-9--evaluation)
