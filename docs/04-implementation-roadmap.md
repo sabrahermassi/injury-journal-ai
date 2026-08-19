@@ -228,7 +228,7 @@ date
 Build:
 
 - Citation generation from retrieved chunks
-- Citation mapper:
+- Citation mapper
 - Citation formatting
 - Source mapping
 - Citation metadata preservation
