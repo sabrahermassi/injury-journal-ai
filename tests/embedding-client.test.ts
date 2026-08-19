@@ -46,7 +46,7 @@ describe('embedText', () => {
   it('sends a POST request to the default embedding API URL with the expected payload', async () => {
     delete process.env.EMBEDDING_API_URL;
 
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [0.1, 0.2, 0.3],
@@ -84,7 +84,7 @@ describe('embedText', () => {
   it('uses a custom EMBEDDING_API_URL when configured', async () => {
     process.env.EMBEDDING_API_URL = 'http://embedding-service:9000';
 
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [],
@@ -107,7 +107,7 @@ describe('embedText', () => {
   });
 
   it('passes an AbortSignal to fetch', async () => {
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [],
@@ -131,7 +131,11 @@ describe('embedText', () => {
     const fetchMock = jest
       .fn()
       .mockResolvedValue(
-        makeResponse({ ok: false, status: 500, statusText: 'Internal Server Error' }),
+        makeResponse({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+        }),
       );
     global.fetch = fetchMock as unknown as typeof fetch;
 
@@ -143,7 +147,9 @@ describe('embedText', () => {
   });
 
   it('propagates network errors thrown by fetch', async () => {
-    const fetchMock = jest.fn().mockRejectedValue(new Error('network down'));
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockRejectedValue(new Error('network down'));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const { embedText } = await loadEmbeddingClient();
@@ -152,7 +158,7 @@ describe('embedText', () => {
   });
 
   it('clears the timeout after a successful request', async () => {
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [1],
@@ -173,7 +179,9 @@ describe('embedText', () => {
   });
 
   it('clears the timeout even when the request fails', async () => {
-    const fetchMock = jest.fn().mockRejectedValue(new Error('network down'));
+    const fetchMock = jest
+      .fn<typeof fetch>()
+      .mockRejectedValue(new Error('network down'));
     global.fetch = fetchMock as unknown as typeof fetch;
     const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
 
@@ -186,7 +194,7 @@ describe('embedText', () => {
   it('uses the default 30 second timeout when EMBEDDING_API_TIMEOUT_MS is not set', async () => {
     delete process.env.EMBEDDING_API_TIMEOUT_MS;
 
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [],
@@ -211,7 +219,7 @@ describe('embedText', () => {
     async (value) => {
       process.env.EMBEDDING_API_TIMEOUT_MS = value;
 
-      const fetchMock = jest.fn().mockResolvedValue(
+      const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
         makeResponse({
           json: async () => ({
             embedding: [],
@@ -235,7 +243,7 @@ describe('embedText', () => {
   it('uses a valid custom EMBEDDING_API_TIMEOUT_MS when provided', async () => {
     process.env.EMBEDDING_API_TIMEOUT_MS = '5000';
 
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [],
@@ -273,7 +281,9 @@ describe('embedText', () => {
     const { embedText } = await loadEmbeddingClient();
 
     const promise = embedText('hi');
-    const expectation = expect(promise).rejects.toThrow('This operation was aborted');
+    const expectation = expect(promise).rejects.toThrow(
+      'This operation was aborted',
+    );
 
     await jest.advanceTimersByTimeAsync(100);
 
@@ -284,7 +294,7 @@ describe('embedText', () => {
     jest.useFakeTimers();
     process.env.EMBEDDING_API_TIMEOUT_MS = '10000';
 
-    const fetchMock = jest.fn().mockResolvedValue(
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         json: async () => ({
           embedding: [0.5],

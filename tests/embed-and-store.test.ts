@@ -10,14 +10,53 @@ import type { JournalDocument } from '../src/ingestion/documents/document-types.
  * which is the behavior this PR introduces.
  */
 
-const chunkDocumentMock = jest.fn();
-const embedTextMock = jest.fn();
-const storeDocumentChunkMock = jest.fn();
-const deleteDocumentChunksExceptMock = jest.fn();
+const chunkDocumentMock =
+  jest.fn<
+    (
+      document: JournalDocument,
+    ) => ReturnType<
+      typeof import('../src/ingestion/chunking/document-chunker.js').chunkDocument
+    >
+  >();
 
-jest.unstable_mockModule('../src/ingestion/chunking/document-chunker.js', () => ({
-  chunkDocument: chunkDocumentMock,
-}));
+const embedTextMock = jest.fn<
+  (text: string) => Promise<{
+    embedding: number[];
+    model: string;
+    modelVersion: string;
+    dimension: number;
+    version: string;
+  }>
+>();
+
+const storeDocumentChunkMock =
+  jest.fn<
+    (
+      injuryId: number,
+      sourceType: string,
+      sourceId: number,
+      chunkIndex: number,
+      content: string,
+      embedding: number[],
+      metadata?: Record<string, unknown>,
+    ) => Promise<void>
+  >();
+
+const deleteDocumentChunksExceptMock =
+  jest.fn<
+    (
+      sourceType: string,
+      sourceId: number,
+      chunkIndexes: number[],
+    ) => Promise<void>
+  >();
+
+jest.unstable_mockModule(
+  '../src/ingestion/chunking/document-chunker.js',
+  () => ({
+    chunkDocument: chunkDocumentMock,
+  }),
+);
 
 jest.unstable_mockModule('../src/embeddings/embedding-client.js', () => ({
   embedText: embedTextMock,
@@ -28,7 +67,8 @@ jest.unstable_mockModule('../src/embeddings/vector-storage.js', () => ({
   deleteDocumentChunksExcept: deleteDocumentChunksExceptMock,
 }));
 
-const { embedAndStoreDocument } = await import('../src/ingestion/embed-and-store.js');
+const { embedAndStoreDocument } =
+  await import('../src/ingestion/embed-and-store.js');
 
 function makeDocument(
   overrides: Partial<JournalDocument['metadata']> = {},
@@ -162,7 +202,8 @@ describe('embedAndStoreDocument', () => {
 
     // Delete must happen after every chunk has been stored.
     const lastStoreOrder = storeDocumentChunkMock.mock.invocationCallOrder[2];
-    const deleteOrder = deleteDocumentChunksExceptMock.mock.invocationCallOrder[0];
+    const deleteOrder =
+      deleteDocumentChunksExceptMock.mock.invocationCallOrder[0];
     expect(deleteOrder).toBeGreaterThan(lastStoreOrder);
   });
 
@@ -187,7 +228,9 @@ describe('embedAndStoreDocument', () => {
     const chunk2 = { content: 'b', metadata: document.metadata };
 
     chunkDocumentMock.mockReturnValue([chunk1, chunk2]);
-    embedTextMock.mockRejectedValueOnce(new Error('embedding service unavailable'));
+    embedTextMock.mockRejectedValueOnce(
+      new Error('embedding service unavailable'),
+    );
 
     await expect(embedAndStoreDocument(document)).rejects.toThrow(
       'embedding service unavailable',
@@ -200,11 +243,15 @@ describe('embedAndStoreDocument', () => {
 
   it('propagates a storage error without pruning stale chunks', async () => {
     const document = makeDocument();
-    chunkDocumentMock.mockReturnValue([{ content: 'a', metadata: document.metadata }]);
+    chunkDocumentMock.mockReturnValue([
+      { content: 'a', metadata: document.metadata },
+    ]);
     embedTextMock.mockResolvedValue(fakeEmbedding());
     storeDocumentChunkMock.mockRejectedValueOnce(new Error('db unavailable'));
 
-    await expect(embedAndStoreDocument(document)).rejects.toThrow('db unavailable');
+    await expect(embedAndStoreDocument(document)).rejects.toThrow(
+      'db unavailable',
+    );
 
     expect(deleteDocumentChunksExceptMock).not.toHaveBeenCalled();
   });
