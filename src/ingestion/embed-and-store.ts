@@ -9,7 +9,7 @@ export async function embedAndStoreDocument(
 ): Promise<void> {
   const chunks = chunkDocument(document);
 
-  for (const chunk of chunks) {
+  for (const [chunkIndex, chunk] of chunks.entries()) {
     const embedding = await embedText(chunk.content);
 
     const embeddedDocument: EmbeddedDocument = {
@@ -27,6 +27,7 @@ export async function embedAndStoreDocument(
       embeddedDocument.document.metadata.injuryId,
       embeddedDocument.document.metadata.sourceType,
       embeddedDocument.document.metadata.sourceId,
+      chunkIndex,
       embeddedDocument.document.content,
       embeddedDocument.embedding,
       {

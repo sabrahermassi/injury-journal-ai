@@ -12,6 +12,7 @@ await storeDocumentChunk(
   7,
   'treatment',
   7,
+  0,
   content,
   embeddingResult.embedding,
   {
