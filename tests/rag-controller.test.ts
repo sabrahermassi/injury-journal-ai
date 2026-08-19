@@ -48,7 +48,10 @@ describe('rag controller', () => {
 
     await askQuestion(req, res);
 
-    expect(answerQuestionMock).toHaveBeenCalled();
+    expect(answerQuestionMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+    );
 
     expect(res.json).toHaveBeenCalledWith({
       answer: 'Shockwave therapy failed.',
