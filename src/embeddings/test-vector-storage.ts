@@ -9,15 +9,15 @@ const content = 'The patient received physiotherapy with limited improvement.';
 const embeddingResult = await embedText(content);
 
 await storeDocumentChunk(
-  7,
+  1,
   'treatment',
-  7,
+  1,
   0,
   content,
   embeddingResult.embedding,
   {
-    userId: 7,
-    injuryId: 7,
+    userId: 1,
+    injuryId: 1,
     sourceType: 'treatment',
     sourceId: 1,
     date: '2025-01-10',

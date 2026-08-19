@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from pydantic import BaseModel
 
-from embedding_service import EmbeddingService
+from .embedding_service import EmbeddingService
 
 
 app = FastAPI()
