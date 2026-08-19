@@ -1,9 +1,14 @@
 const EMBEDDING_API_URL =
   process.env.EMBEDDING_API_URL ?? 'http://127.0.0.1:8000';
 
-const EMBEDDING_API_TIMEOUT_MS = Number(
-  process.env.EMBEDDING_API_TIMEOUT_MS ?? 30_000,
-);
+const DEFAULT_EMBEDDING_API_TIMEOUT_MS = 30_000;
+
+const configuredTimeout = Number(process.env.EMBEDDING_API_TIMEOUT_MS);
+
+const EMBEDDING_API_TIMEOUT_MS =
+  Number.isFinite(configuredTimeout) && configuredTimeout > 0
+    ? configuredTimeout
+    : DEFAULT_EMBEDDING_API_TIMEOUT_MS;
 
 type EmbeddingResponse = {
   embedding: number[];
