@@ -105,4 +105,30 @@ describe('vector storage integration', () => {
 
     expect(results).toHaveLength(2);
   });
+
+  it('filters results by injuryId when provided', async () => {
+    await storeDocumentChunk(
+      1,
+      'integration-test',
+      3,
+      0,
+      'Injury 1 relevant chunk',
+      vectorWith(1, 0, 0),
+    );
+
+    await storeDocumentChunk(
+      2,
+      'integration-test',
+      4,
+      0,
+      'Injury 2 relevant chunk',
+      vectorWith(1, 0, 0),
+    );
+
+    const results = await searchSimilarChunks(vectorWith(1, 0, 0), 5, 1);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].content).toBe('Injury 1 relevant chunk');
+    expect(results[0].injuryId).toBe(1);
+  });
 });

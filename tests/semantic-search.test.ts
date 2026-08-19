@@ -47,7 +47,11 @@ describe('semanticSearch', () => {
       'Why does my lower back hurt after sitting?',
     );
 
-    expect(searchSimilarChunksMock).toHaveBeenCalledWith(embedding, 5);
+    expect(searchSimilarChunksMock).toHaveBeenCalledWith(
+      embedding,
+      5,
+      undefined,
+    );
 
     expect(result).toEqual(chunks);
   });
@@ -65,7 +69,27 @@ describe('semanticSearch', () => {
 
     await semanticSearch('lower back pain', 10);
 
-    expect(searchSimilarChunksMock).toHaveBeenCalledWith([0.1, 0.2], 10);
+    expect(searchSimilarChunksMock).toHaveBeenCalledWith(
+      [0.1, 0.2],
+      10,
+      undefined,
+    );
+  });
+
+  it('passes injuryId to vector search when provided', async () => {
+    embedTextMock.mockResolvedValue({
+      embedding: [0.1, 0.2],
+      model: 'test-model',
+      modelVersion: 'v1',
+      dimension: 2,
+      version: 'test-version',
+    });
+
+    searchSimilarChunksMock.mockResolvedValue([]);
+
+    await semanticSearch('lower back pain', 5, 42);
+
+    expect(searchSimilarChunksMock).toHaveBeenCalledWith([0.1, 0.2], 5, 42);
   });
 
   it('propagates embedding errors', async () => {
