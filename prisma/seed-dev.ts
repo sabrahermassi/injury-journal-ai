@@ -4,14 +4,17 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const url = process.env.DATABASE_URL ?? '';
-  if (!url.includes('test')) {
+  if (process.env.DATABASE_ENV !== 'development') {
+    throw new Error('Refusing to seed: DATABASE_ENV must be "development".');
+  }
+
+  if (process.env.SEED_DEV_CONFIRM !== 'true') {
     throw new Error(
-      'Refusing to seed: DATABASE_URL does not point at a test database.',
+      'Refusing to seed: set SEED_DEV_CONFIRM=true to confirm destructive development seeding.',
     );
   }
 
-  // Clean existing test data
+  // Clean existing development data
   await prisma.documentChunk.deleteMany();
   await prisma.medicalVisit.deleteMany();
   await prisma.treatment.deleteMany();
@@ -284,7 +287,7 @@ async function main() {
     },
   });
 
-  console.log('Test database seeded successfully.');
+  console.log('Development database seeded successfully.');
 }
 
 main()

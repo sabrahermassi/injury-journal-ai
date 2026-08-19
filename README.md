@@ -20,15 +20,15 @@ The project is being built incrementally, starting with the offline ingestion pi
 - TypeScript / Node.js
 - PostgreSQL
 - Prisma
+- Embedding model integration
+- pgvector
 
 ### In Progress
 
-- Embedding model integration
+- Semantic retrieval
 
 ### Planned
 
-- pgvector
-- Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
 - Citations
 - Safety guardrails
@@ -53,3 +53,26 @@ Build a production-oriented AI assistant that can:
 - Monitor AI workflows and operational behavior
 
 The system is designed to be built one layer at a time, with the data and retrieval foundations established before introducing agentic workflows.
+
+### Offline Ingestion Pipeline
+
+- [x] Document chunking
+- [x] Generate embeddings
+- [x] Store embeddings in pgvector
+- [x] Make document-chunk ingestion idempotent
+- [x] Serialize ingestion per `(sourceType, sourceId)` to prevent concurrent prune races
+- [ ] Add distributed ingestion locking/versioning for production deployments
+
+#### Ingestion Concurrency
+
+The current implementation uses an in-process lock keyed by
+`(sourceType, sourceId)`. This prevents overlapping ingestions for the same
+source from racing during stale-chunk cleanup.
+
+This is sufficient for the current single-process development architecture.
+For production deployments with multiple workers, containers, or Lambda
+instances, replace or supplement this with distributed coordination such as
+PostgreSQL advisory locks or source revision/versioning.
+
+Database transactions should not remain open while waiting for embedding API
+requests.

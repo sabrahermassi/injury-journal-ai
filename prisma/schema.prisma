@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [vector]
 }
   
 model Injury {
@@ -24,6 +26,7 @@ model Injury {
   Symptom       Symptom[]
   TimelineEvent TimelineEvent[]
   Treatment     Treatment[]
+  DocumentChunk DocumentChunk[]
 
   @@index([userId])
 }
@@ -86,4 +89,22 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime
   Injury    Injury[]
+}
+
+model DocumentChunk {
+  id          Int      @id @default(autoincrement())
+  injuryId    Int
+  sourceType  String
+  sourceId    Int
+  chunkIndex  Int
+  content     String
+  embedding   Unsupported("vector(1024)")?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  Injury Injury @relation(fields: [injuryId], references: [id])
+
+  @@index([injuryId])
+  @@index([sourceType, sourceId])
+  @@unique([sourceType, sourceId, chunkIndex])
 }
