@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "jest",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:integration": "cross-env NODE_ENV=test jest tests/integration",
     "seed:dev": "tsx prisma/seed-dev.ts"
   },

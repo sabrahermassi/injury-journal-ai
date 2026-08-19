@@ -14,6 +14,18 @@ async function main() {
     );
   }
 
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error('Refusing to seed: DATABASE_URL is not set.');
+  }
+
+  const databaseName = new URL(databaseUrl).pathname.slice(1);
+
+  if (databaseName !== 'injury-journal-ai-db') {
+    throw new Error(`Refusing to seed: unexpected database "${databaseName}".`);
+  }
+
   // Clean existing development data
   await prisma.documentChunk.deleteMany();
   await prisma.medicalVisit.deleteMany();
