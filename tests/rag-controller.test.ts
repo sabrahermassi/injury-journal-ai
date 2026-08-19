@@ -33,8 +33,8 @@ describe('rag controller', () => {
     jest.clearAllMocks();
   });
 
-  it('returns generated answer', async () => {
-    const req: MockRequest = {
+  it('returns generated answer with citations', async () => {
+    const req = {
       body: {
         question: 'What treatments failed?',
       },
@@ -44,7 +44,13 @@ describe('rag controller', () => {
 
     answerQuestionMock.mockResolvedValue({
       answer: 'Shockwave therapy failed.',
-      citations: [],
+      citations: [
+        {
+          sourceType: 'treatment',
+          sourceId: 42,
+          label: 'Treatment #42',
+        },
+      ],
     });
 
     await askQuestion(req as Request, res as Response);
@@ -56,6 +62,42 @@ describe('rag controller', () => {
 
     expect(res.json).toHaveBeenCalledWith({
       answer: 'Shockwave therapy failed.',
+      citations: [
+        {
+          sourceType: 'treatment',
+          sourceId: 42,
+          label: 'Treatment #42',
+        },
+      ],
+    });
+  });
+
+  it('returns safe response for blocked questions', async () => {
+    const req = {
+      body: {
+        question: 'Do I have cancer?',
+      },
+    } as any;
+
+    const res = mockResponse();
+
+    answerQuestionMock.mockResolvedValue({
+      answer: 'I cannot diagnose medical conditions.',
+      chunks: [],
+      citations: [],
+    });
+
+    await askQuestion(req, res);
+
+    expect(answerQuestionMock).toHaveBeenCalledWith(
+      'Do I have cancer?',
+      5,
+      undefined,
+    );
+
+    expect(res.json).toHaveBeenCalledWith({
+      answer: 'I cannot diagnose medical conditions.',
+      chunks: [],
       citations: [],
     });
   });
