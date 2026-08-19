@@ -22,14 +22,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Prisma
 - Embedding model integration
 - pgvector
+- Semantic retrieval
 
 ### In Progress
 
-- Semantic retrieval
+- Retrieval-Augmented Generation (RAG)
 
 ### Planned
 
-- Retrieval-Augmented Generation (RAG)
 - Citations
 - Safety guardrails
 - AI agents
@@ -54,6 +54,8 @@ Build a production-oriented AI assistant that can:
 
 The system is designed to be built one layer at a time, with the data and retrieval foundations established before introducing agentic workflows.
 
+## Future Improvements
+
 ### Offline Ingestion Pipeline
 
 - [x] Document chunking
@@ -76,3 +78,46 @@ PostgreSQL advisory locks or source revision/versioning.
 
 Database transactions should not remain open while waiting for embedding API
 requests.
+
+## Semantic Retrieval
+
+Implemented:
+
+- Embed the user's question using the embedding service
+- Search `DocumentChunk` using pgvector cosine distance
+- Rank results by vector similarity
+- Retrieve configurable top-k results
+- Filter retrieval by `injuryId`
+- Unit tests for the semantic retrieval service
+- Integration tests for pgvector similarity search
+
+Current retrieval flow:
+
+User Question
+→ Question Embedding
+→ Metadata Filtering
+→ pgvector Similarity Search
+→ Similarity Ranking
+→ Top-k Relevant Chunks
+
+### Future Retrieval Improvements
+
+The current retrieval implementation is intentionally minimal. Revisit and extend it when retrieval requirements become clearer.
+
+Potential filters:
+
+- `userId`
+- `injuryId`
+- `sourceType`
+- Date range
+
+Potential retrieval improvements:
+
+- Metadata filtering
+- Similarity threshold
+- Hybrid keyword + vector search
+- Retrieval evaluation
+- Query-specific retrieval tuning
+- Reranking if needed
+
+Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
