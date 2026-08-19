@@ -30,7 +30,13 @@ The project is being built incrementally, starting with the offline ingestion pi
 
 ### In Progress
 
+<<<<<<< HEAD
+
 - Evaluation
+  \=======
+- AI agent
+
+> > > > > > > 8482339 (feat: add initial AI agent orchestration layer)
 
 ### Planned
 

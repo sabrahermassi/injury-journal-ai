@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { jest } from '@jest/globals';
 
 const ragToolMock = jest.fn();
@@ -43,4 +44,17 @@ describe('AI agent service', () => {
 
     expect(ragToolMock).toHaveBeenCalledWith('Summarize treatments', 5, 42);
   });
+=======
+import { runAgent } from '../src/ai-agent/ai-agent-service.js';
+
+describe('agent service', () => {
+  it('returns a RAG action for a user request', async () => {
+    const result = await runAgent('What treatments did not work?');
+
+    expect(result).toEqual({
+      action: 'rag',
+      request: 'What treatments did not work?',
+    });
+  });
+>>>>>>> 8482339 (feat: add initial AI agent orchestration layer)
 });

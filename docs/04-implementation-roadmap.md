@@ -300,8 +300,11 @@ Create tools such as:
 
 Start with a hand-written orchestration layer.
 Introduce LangGraph or another framework only when workflows become more complex.
+<<<<<<< HEAD
 
 ## Current MVP Agent Architecture
+=======
+>>>>>>> 8482339 (feat: add initial AI agent orchestration layer)
 
 The MVP uses deterministic orchestration.
 
