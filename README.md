@@ -25,14 +25,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
 - Citations
-- Safety guardrails
 
 ### In Progress
 
-- AI agents
+- Safety guardrails
 
 ### Planned
 
+- AI agents
 - Evaluation
 - AI observability
 - Terraform
@@ -123,8 +123,10 @@ Do not add these prematurely. The current `semanticSearch()` service provides th
 
 ### Citation Generation
 
-The current implementation performs citation generation from retrieved chunks.
-(answers the question: Which journal records support this answer?)
+#### Current Implementation:
+
+It performs source-level verification.
+(answers the question: Does this citation point to a real source that belongs to this injury?)
 
 It currently provides:
 
@@ -191,12 +193,10 @@ User Question
 
 Implemented:
 
-- Detect common direct diagnosis request patterns
-- Block matching unsafe medical diagnosis questions
+- Detect direct diagnosis requests
+- Block unsafe medical diagnosis questions
 - Provide safe redirect responses
-- Allow other questions to continue through the RAG pipeline
-
-The current safety layer uses deterministic pattern matching and does not represent a complete medical safety classifier. It should be extended with additional intent detection and safety evaluation before production use.
+- Allow journal summarization and history-based questions
 
 #### Future Safety Improvements
 
