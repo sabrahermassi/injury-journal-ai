@@ -50,7 +50,7 @@ Recall@k =
 relevant documents retrieved in top-k
 -------------------------------------
 total relevant documents
-````
+```
 
 This is particularly important for RAG because multiple relevant chunks may need to be retrieved before constructing the context supplied to the LLM.
 
@@ -160,3 +160,4 @@ The original smoke-test results are retained above as a historical technical val
 ```
 
 ```
+````
