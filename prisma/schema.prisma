@@ -96,6 +96,7 @@ model DocumentChunk {
   injuryId    Int
   sourceType  String
   sourceId    Int
+  chunkIndex  Int
   content     String
   embedding   Unsupported("vector(1024)")?
   metadata    Json?
@@ -105,4 +106,5 @@ model DocumentChunk {
 
   @@index([injuryId])
   @@index([sourceType, sourceId])
+  @@unique([sourceType, sourceId, chunkIndex])
 }
