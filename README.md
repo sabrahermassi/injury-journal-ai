@@ -20,15 +20,15 @@ The project is being built incrementally, starting with the offline ingestion pi
 - TypeScript / Node.js
 - PostgreSQL
 - Prisma
+- Embedding model integration
+- pgvector
 
 ### In Progress
 
-- Embedding model integration
+- Semantic retrieval
 
 ### Planned
 
-- pgvector
-- Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
 - Citations
 - Safety guardrails
