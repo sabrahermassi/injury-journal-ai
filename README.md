@@ -25,14 +25,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
 - Citations
+- Safety guardrails
 
 ### In Progress
 
-- Safety guardrails
+- AI agents
 
 ### Planned
 
-- AI agents
 - Evaluation
 - AI observability
 - Terraform
