@@ -1,7 +1,10 @@
 import type { JournalDocument } from './documents/document-types.js';
 import { chunkDocument } from './chunking/document-chunker.js';
 import { embedText } from '../embeddings/embedding-client.js';
-import { storeDocumentChunk } from '../embeddings/vector-storage.js';
+import {
+  storeDocumentChunk,
+  deleteDocumentChunksExcept,
+} from '../embeddings/vector-storage.js';
 import type { EmbeddedDocument } from '../embeddings/embedding-types.js';
 
 export async function embedAndStoreDocument(
@@ -36,4 +39,10 @@ export async function embedAndStoreDocument(
       },
     );
   }
+
+  await deleteDocumentChunksExcept(
+    document.metadata.sourceType,
+    document.metadata.sourceId,
+    chunks.map((_, index) => index),
+  );
 }
