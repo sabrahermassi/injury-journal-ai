@@ -16,7 +16,7 @@ Click a step to jump directly to its section.
 - [x] [Step 2 — Embeddings](#step-2--embeddings)
 - [x] [Step 3 — Vector Storage with pgvector](#step-3--vector-storage-with-pgvector)
 - [x] [Step 4 — Semantic Retrieval](#step-4--semantic-retrieval)
-- [ ] [Step 5 — Basic RAG](#step-5--basic-rag)
+- [x] [Step 5 — Basic RAG](#step-5--basic-rag)
 - [ ] [Step 6 — Citations](#step-6--citations)
 - [ ] [Step 7 — Safety Guardrails](#step-7--safety-guardrails)
 - [ ] [Step 8 — AI Agent](#step-8--ai-agent)
@@ -180,7 +180,7 @@ The system can find relevant journal information based on meaning rather than ex
 
 # Step 5 — Basic RAG
 
-**Goal:** Combine retrieval with an LLM.
+**Goal:** Combine semantic retrieval with an LLM to generate grounded answers from the user's injury journal.
 
 Without RAG:
 
@@ -191,15 +191,16 @@ Question → LLM → Answer
 With RAG:
 
 ```text
-Question → Retrieval → Relevant Journal Chunks → Context Construction → LLM → Grounded Answer
+Question → Semantic Retrieval → Relevant Journal Chunks → Context Construction → Prompt Construction → LLM → Grounded Answer
 ```
 
 ## Implement
 
 - Context builder
-- Prompt
+- Prompt builder
 - LLM service
-- RAG service
+- RAG orchestration service
+- RAG controller
 - RAG API endpoint
 
 ## Result
