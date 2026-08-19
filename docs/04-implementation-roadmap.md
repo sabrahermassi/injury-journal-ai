@@ -303,11 +303,6 @@ Introduce LangGraph or another framework only when workflows become more complex
 <<<<<<< HEAD
 
 ## Current MVP Agent Architecture
-<<<<<<< HEAD
-=======
->>>>>>> 8482339 (feat: add initial AI agent orchestration layer)
-=======
->>>>>>> 4bfeb0b (docs: update docs for the AI agent impl)
 
 The MVP uses deterministic orchestration.
 

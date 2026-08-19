@@ -30,17 +30,7 @@ The project is being built incrementally, starting with the offline ingestion pi
 
 ### In Progress
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-- Evaluation
-  \=======
-- AI agent
-=======
-- Evaluation
->>>>>>> 4bfeb0b (docs: update docs for the AI agent impl)
-
-> > > > > > > 8482339 (feat: add initial AI agent orchestration layer)
+- AI system Evaluation
 
 ### Planned
 
@@ -277,3 +267,16 @@ Introduce LangGraph or another framework when workflows become more complex and 
 - Advanced state management
 - Workflow persistence
 - More dynamic tool selection
+
+### AI System evaluation
+
+The project includes an evaluation approach to measure AI system quality beyond manual testing.
+
+#### Future AI System evaluation Improvements
+
+They may introduce more advanced evaluation metrics:
+
+- Recall@k
+- Mean Reciprocal Rank (MRR)
+- RAGAS
+- LLM-as-a-judge evaluation
