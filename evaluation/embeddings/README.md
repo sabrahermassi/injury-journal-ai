@@ -4,6 +4,17 @@ This directory evaluates candidate embedding models for the semantic retrieval c
 
 The goal is to compare embedding models using the same dataset, queries, and retrieval procedure before selecting a model for the RAG pipeline.
 
+## Run the benchmarks
+
+From this directory:
+
+````bash
+python -m pip install -r requirements.txt
+
+python test_qwen.py
+python test_bge.py
+python test_nomic.py
+
 ## Models Evaluated
 
 - Qwen3-Embedding-0.6B
@@ -39,7 +50,7 @@ Recall@k =
 relevant documents retrieved in top-k
 -------------------------------------
 total relevant documents
-```
+````
 
 This is particularly important for RAG because multiple relevant chunks may need to be retrieved before constructing the context supplied to the LLM.
 
@@ -94,9 +105,9 @@ The same dataset, expected results, cosine-similarity calculation, and Recall@k 
 
 | Model                | Dimensions |  Recall@1 |  Recall@3 |  Recall@5 |
 | -------------------- | ---------: | --------: | --------: | --------: |
-| Qwen3-Embedding-0.6B |       1024 | **46.7%** |     66.0% | **93.2%** |
-| BGE-M3               |       1024 |     42.9% | **71.2%** |     81.6% |
-| Nomic Embed v1.5     |        768 |     37.7% |     67.8% |     77.4% |
+| Qwen3-Embedding-0.6B |       1024 | **45.0%** |     63.6% | **89.9%** |
+| BGE-M3               |       1024 |     42.1% | **71.2%** |     82.4% |
+| Nomic Embed v1.5     |        768 |     39.3% |     69.5% |     78.2% |
 
 ### Results
 

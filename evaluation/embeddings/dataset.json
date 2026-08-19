@@ -104,11 +104,11 @@
     },
     {
       "question": "What treatment only helped temporarily?",
-      "expected_documents": ["treatment-3", "treatment-6"]
+      "expected_documents": ["treatment-3", "treatment-5", "treatment-6"]
     },
     {
       "question": "Which treatment gave me temporary pain relief?",
-      "expected_documents": ["treatment-3", "treatment-6"]
+      "expected_documents": ["treatment-3", "treatment-5", "treatment-6"]
     },
     {
       "question": "Where does the pain radiate?",
