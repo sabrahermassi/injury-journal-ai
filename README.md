@@ -25,15 +25,15 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
 - Citations
+- Safety guardrails
+- AI agent
 
 ### In Progress
 
-- AI agent
+- Evaluation
 
 ### Planned
 
-- AI agents
-- Evaluation
 - AI observability
 - Terraform
 - AWS Lambda
@@ -219,10 +219,44 @@ Do not introduce AI-based classification prematurely. The current safety layer p
 
 ### AI Agent
 
-#### Current Implementation:
+#### Current Implementation
 
-Start with a hand-written orchestration layer. The initial agent implementation should focus on establishing clear tool boundaries and orchestration flow before introducing additional agent frameworks.
+The project uses a hand-written orchestration layer to coordinate AI tools.
+
+Implemented components:
+
+- RAG tool (wraps the existing RAG service)
+- Journal tool (queries structured injury data)
+- Safety tool (wraps safety checks)
+- Citation tool (provides source references)
+
+Current agent flow:
+
+```text
+User Question
+→ Safety Check
+→ Intent Routing
+→ Tool Execution
+→ Answer + Sources
+```
+
+The agent maintains request-scoped state during orchestration.
+
+Current state tracks:
+
+- User question
+- Safety result
+- Selected intent
+- Tool used
+- Result metadata
+
+The MVP uses deterministic orchestration instead of an LLM planner or agent framework.
 
 #### Future AI Agent Improvements
 
-Introduce LangGraph or another framework only when workflows become more complex.
+Introduce LangGraph or another framework when workflows become more complex and require:
+
+- Multi-step workflows
+- Advanced state management
+- Workflow persistence
+- More dynamic tool selection

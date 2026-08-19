@@ -301,30 +301,29 @@ Create tools such as:
 Start with a hand-written orchestration layer.
 Introduce LangGraph or another framework only when workflows become more complex.
 
-## Example
+## Current MVP Agent Architecture
 
-> Generate a summary of my injury history for my doctor.
+The MVP uses deterministic orchestration.
 
-Possible workflow:
+The agent flow is:
 
-```mermaid
+````mermaid
 flowchart TD
-    A["AI Agent"] --> S["Initial Safety Check"]
+    U["User Question"] --> A["AI Agent Orchestrator"]
 
-    S -->|No| R["Refuse / Redirect"]
-    S -->|Yes| AUTH["Per-tool Authorization"]
+    A --> S["Safety Check"]
 
-    AUTH --> T["Retrieve Timeline Events"]
-    AUTH --> TR["Retrieve Treatments"]
-    AUTH --> SY["Retrieve Symptoms"]
+    S -->|Blocked| R["Refuse / Redirect"]
 
-    T --> G["Generate Summary"]
-    TR --> G
-    SY --> G
+    S -->|Allowed| I["Intent Router"]
 
-    G --> C["Verify Citations"]
-    C --> OUT["Return Summary"]
-```
+    I --> RT["RAG Tool"]
+    I --> JT["Journal Tool"]
+
+    RT --> ST["Agent State"]
+    JT --> ST["Agent State"]
+
+    ST --> OUT["Answer + Sources"]
 
 ## Result
 
@@ -411,7 +410,7 @@ Which answers have citation problems?
 Which agent steps are slow?
 
 Which requests repeatedly trigger safety boundaries?
-```
+````
 
 ## Result
 
