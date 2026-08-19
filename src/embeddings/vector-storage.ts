@@ -46,3 +46,30 @@ export async function storeDocumentChunk(
     `,
   );
 }
+
+export async function deleteDocumentChunksExcept(
+  sourceType: string,
+  sourceId: number,
+  chunkIndexes: number[],
+): Promise<void> {
+  if (chunkIndexes.length === 0) {
+    await prisma.$executeRaw(
+      Prisma.sql`
+        DELETE FROM "DocumentChunk"
+        WHERE "sourceType" = ${sourceType}
+          AND "sourceId" = ${sourceId}
+      `,
+    );
+
+    return;
+  }
+
+  await prisma.$executeRaw(
+    Prisma.sql`
+      DELETE FROM "DocumentChunk"
+      WHERE "sourceType" = ${sourceType}
+        AND "sourceId" = ${sourceId}
+        AND "chunkIndex" NOT IN (${Prisma.join(chunkIndexes)})
+    `,
+  );
+}
