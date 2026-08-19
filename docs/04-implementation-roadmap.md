@@ -293,15 +293,13 @@ Do **not** build the agent before the underlying tools exist.
 
 Create tools such as:
 
-- RAG tool
-- Journal/database tool
-- Safety tool
-- Citation tool
+- RAG tool (wrap existing RAG service)
+- Journal/database tool (query structured injury data)
+- Safety tool (wrap existing safety service)
+- Citation tool (wrap existing citation generation)
 
-Use either:
-
-- LangGraph
-- Hand-rolled state machine
+Start with a hand-written orchestration layer.
+Introduce LangGraph or another framework only when workflows become more complex.
 
 ## Example
 

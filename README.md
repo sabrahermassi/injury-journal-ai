@@ -28,7 +28,7 @@ The project is being built incrementally, starting with the offline ingestion pi
 
 ### In Progress
 
-- Safety guardrails
+- AI agent
 
 ### Planned
 
@@ -216,3 +216,13 @@ User Question
 → RAG / Safe Response
 
 Do not introduce AI-based classification prematurely. The current safety layer provides explicit healthcare boundaries before adding more complex agent behavior.
+
+### AI Agent
+
+#### Current Implementation:
+
+Start with a hand-written orchestration layer. The initial agent implementation should focus on establishing clear tool boundaries and orchestration flow before introducing additional agent frameworks.
+
+#### Future AI Agent Improvements
+
+Introduce LangGraph or another framework only when workflows become more complex.
