@@ -18,7 +18,7 @@ Click a step to jump directly to its section.
 - [x] [Step 4 — Semantic Retrieval](#step-4--semantic-retrieval)
 - [x] [Step 5 — Basic RAG](#step-5--basic-rag)
 - [x] [Step 6 — Citations](#step-6--citations)
-- [ ] [Step 7 — Safety Guardrails](#step-7--safety-guardrails)
+- [x] [Step 7 — Safety Guardrails](#step-7--safety-guardrails)
 - [ ] [Step 8 — AI Agent](#step-8--ai-agent)
 - [ ] [Step 9 — Evaluation](#step-9--evaluation)
 - [ ] [Step 10 — AI Observability](#step-10--ai-observability)
@@ -514,7 +514,7 @@ The RAG system must never expose another user's information.
 - Integrate citation source verification into the RAG response pipeline
 - Verify that cited journal records still exist
 - Verify citation ownership before exposing sources
-- git Add claim-level citation verification
+- Add claim-level citation verification
 
 Security applies across:
 

@@ -5,6 +5,7 @@ const buildContextMock = jest.fn();
 const buildPromptMock = jest.fn();
 const generateAnswerMock = jest.fn();
 const buildCitationsMock = jest.fn();
+const checkSafetyMock = jest.fn();
 
 jest.unstable_mockModule('../src/rag/citation-builder.js', () => ({
   buildCitations: buildCitationsMock,
@@ -26,11 +27,19 @@ jest.unstable_mockModule('../src/llm/llm-client.js', () => ({
   generateAnswer: generateAnswerMock,
 }));
 
+jest.unstable_mockModule('../src/safety/safety-service.js', () => ({
+  checkSafety: checkSafetyMock,
+}));
+
 const { answerQuestion } = await import('../src/rag/rag-service.js');
 
 describe('rag service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+
+    checkSafetyMock.mockReturnValue({
+      allowed: true,
+    });
   });
 
   it('retrieves context builds prompt generates answer and builds citations', async () => {
@@ -62,6 +71,8 @@ describe('rag service', () => {
     buildCitationsMock.mockReturnValue(citations);
 
     const result = await answerQuestion('What treatments failed?');
+
+    expect(checkSafetyMock).toHaveBeenCalledWith('What treatments failed?');
 
     expect(semanticSearchMock).toHaveBeenCalledWith(
       'What treatments failed?',
@@ -121,6 +132,28 @@ describe('rag service', () => {
       answer: 'Shockwave therapy did not improve symptoms.',
       citations,
     });
+  });
+
+  it('blocks unsafe diagnosis requests', async () => {
+    checkSafetyMock.mockReturnValue({
+      allowed: false,
+      reason: 'diagnosis_request',
+      message: 'I cannot diagnose medical conditions.',
+    });
+
+    const result = await answerQuestion('Do I have cancer?');
+
+    expect(checkSafetyMock).toHaveBeenCalledWith('Do I have cancer?');
+
+    expect(result).toEqual({
+      answer: 'I cannot diagnose medical conditions.',
+      chunks: [],
+      citations: [],
+    });
+
+    expect(semanticSearchMock).not.toHaveBeenCalled();
+    expect(generateAnswerMock).not.toHaveBeenCalled();
+    expect(buildCitationsMock).not.toHaveBeenCalled();
   });
 
   it('propagates retrieval errors', async () => {

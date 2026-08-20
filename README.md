@@ -25,14 +25,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
 - Citations
+- Safety guardrails
 
 ### In Progress
 
-- Safety guardrails
+- AI agents
 
 ### Planned
 
-- AI agents
 - Evaluation
 - AI observability
 - Terraform
@@ -81,7 +81,7 @@ requests.
 
 ### Semantic Retrieval
 
-Implemented:
+#### Current Implementation:
 
 - Embed the user's question using the embedding service
 - Search `DocumentChunk` using pgvector cosine distance
@@ -169,3 +169,50 @@ Treatment #42:
 Verification:
 
 ✓ Claim supported by source
+
+### Safety Guardrails
+
+#### Current Implementation:
+
+The first safety layer uses deterministic rules to enforce healthcare boundaries. This is intentional because safety boundaries should be:
+
+- Predictable
+- Testable
+- Easy to audit
+
+The goal is not to diagnose medical conditions. The assistant organizes and summarizes the user's journal information.
+
+Current safety flow:
+
+User Question
+→ Safety Check
+→ Allowed Request → RAG Pipeline
+→ Unsafe Request → Safe Response
+
+Implemented:
+
+- Detect common direct diagnosis request patterns
+- Block matching unsafe medical diagnosis questions
+- Provide safe redirect responses
+- Allow other questions to continue through the RAG pipeline
+
+The current safety layer uses deterministic pattern matching and does not represent a complete medical safety classifier. It should be extended with additional intent detection and safety evaluation before production use.
+
+#### Future Safety Improvements
+
+- AI-based intent classification
+- More comprehensive medical safety categories
+- Context-aware risk assessment
+- Prompt injection detection
+- Output safety checks
+- Safety evaluation dataset
+
+Future safety architecture:
+
+User Question
+→ Rule-Based Checks
+→ AI Safety Classifier
+→ Policy Decision
+→ RAG / Safe Response
+
+Do not introduce AI-based classification prematurely. The current safety layer provides explicit healthcare boundaries before adding more complex agent behavior.

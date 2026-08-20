@@ -3,12 +3,23 @@ import { buildContext } from './context-builder.js';
 import { buildPrompt } from './prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
 import { buildCitations } from '../rag/citation-builder.js';
+import { checkSafety } from '../safety/safety-service.js';
 
 export async function answerQuestion(
   question: string,
   injuryId?: number,
   limit = 5,
 ) {
+  const safety = checkSafety(question);
+
+  if (!safety.allowed) {
+    return {
+      answer: safety.message,
+      chunks: [],
+      citations: [],
+    };
+  }
+
   const chunks = await semanticSearch(question, limit, injuryId);
 
   const context = buildContext(chunks);
@@ -17,8 +28,10 @@ export async function answerQuestion(
 
   const answer = await generateAnswer(prompt);
 
+  const citations = buildCitations(chunks);
+
   return {
     answer,
-    citations: buildCitations(chunks),
+    citations,
   };
 }
