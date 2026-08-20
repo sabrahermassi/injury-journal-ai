@@ -16,7 +16,7 @@ Click a step to jump directly to its section.
 - [x] [Step 2 — Embeddings](#step-2--embeddings)
 - [x] [Step 3 — Vector Storage with pgvector](#step-3--vector-storage-with-pgvector)
 - [x] [Step 4 — Semantic Retrieval](#step-4--semantic-retrieval)
-- [ ] [Step 5 — Basic RAG](#step-5--basic-rag)
+- [x] [Step 5 — Basic RAG](#step-5--basic-rag)
 - [ ] [Step 6 — Citations](#step-6--citations)
 - [ ] [Step 7 — Safety Guardrails](#step-7--safety-guardrails)
 - [ ] [Step 8 — AI Agent](#step-8--ai-agent)
@@ -180,7 +180,7 @@ The system can find relevant journal information based on meaning rather than ex
 
 # Step 5 — Basic RAG
 
-**Goal:** Combine retrieval with an LLM.
+**Goal:** Combine semantic retrieval with an LLM to generate grounded answers from the user's injury journal.
 
 Without RAG:
 
@@ -191,15 +191,16 @@ Question → LLM → Answer
 With RAG:
 
 ```text
-Question → Retrieval → Relevant Journal Chunks → Context Construction → LLM → Grounded Answer
+Question → Semantic Retrieval → Relevant Journal Chunks → Context Construction → Prompt Construction → LLM → Grounded Answer
 ```
 
 ## Implement
 
 - Context builder
-- Prompt
+- Prompt builder
 - LLM service
-- RAG service
+- RAG orchestration service
+- RAG controller
 - RAG API endpoint
 
 ## Result
@@ -487,18 +488,44 @@ The infrastructure can be recreated consistently rather than configured manually
 - Secure API endpoints
 - Safe logging
 - Vector-level authorization
+- Retrieval authorization checks
+- Regression tests for data isolation boundaries
 
 Critical rule:
 
 ```text
-User A
-  ↓
-Can only retrieve
-  ↓
-User A's journal data
+    User A
+      ↓
+    Can only retrieve
+      ↓
+    User A's journal data
 ```
 
 The RAG system must never expose another user's information.
+
+Security applies across:
+
+- Database queries
+- Journal tools
+- RAG retrieval
+- Vector similarity search
+- AI agent tool execution
+
+Example security flow:
+
+```text
+    User Request
+          ↓
+    Authentication
+          ↓
+    Authorization
+          ↓
+    Retrieve only authorized injury data
+          ↓
+    RAG / Agent processing
+          ↓
+    Answer
+```
 
 ## Result
 
@@ -624,3 +651,9 @@ Potential improvements:
 - Tune the number of candidates retrieved before reranking
 
 Reranking should be introduced only after evaluating the baseline retrieval system and identifying retrieval quality limitations.
+
+### Future API Improvements
+
+- Add schema-based request validation (for example Zod) as the API surface grows
+- Standardize API error responses
+- Add stricter input validation across all endpoints

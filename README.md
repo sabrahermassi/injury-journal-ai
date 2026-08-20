@@ -23,14 +23,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Embedding model integration
 - pgvector
 - Semantic retrieval
+- Retrieval-Augmented Generation (RAG)
 
 ### In Progress
 
-- Retrieval-Augmented Generation (RAG)
+- Citations
 
 ### Planned
 
-- Citations
 - Safety guardrails
 - AI agents
 - Evaluation
