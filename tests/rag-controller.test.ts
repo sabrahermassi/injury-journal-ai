@@ -8,11 +8,23 @@ jest.unstable_mockModule('../src/rag/rag-service.js', () => ({
 
 const { askQuestion } = await import('../src/rag/rag-controller.js');
 
-function mockResponse() {
+type MockRequest = {
+  body?: {
+    question?: unknown;
+    injuryId?: number;
+  };
+};
+
+type MockResponse = {
+  status: jest.Mock;
+  json: jest.Mock;
+};
+
+function mockResponse(): MockResponse {
   return {
     status: jest.fn().mockReturnThis(),
     json: jest.fn(),
-  } as any;
+  };
 }
 
 describe('rag controller', () => {
@@ -21,11 +33,11 @@ describe('rag controller', () => {
   });
 
   it('returns generated answer', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {
         question: 'What treatments failed?',
       },
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -40,10 +52,33 @@ describe('rag controller', () => {
     });
   });
 
+  it('passes injuryId to RAG service filtering', async () => {
+    answerQuestionMock.mockResolvedValue({
+      answer: 'Result',
+      citations: [],
+    });
+
+    const req: MockRequest = {
+      body: {
+        question: 'What treatments failed?',
+        injuryId: 42,
+      },
+    };
+
+    const res = mockResponse();
+
+    await askQuestion(req, res);
+
+    expect(answerQuestionMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      42,
+    );
+  });
+
   it('returns 400 without question', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {},
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -52,12 +87,24 @@ describe('rag controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
+  it('returns 400 when body is missing', async () => {
+    const req: MockRequest = {};
+
+    const res = mockResponse();
+
+    await askQuestion(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+
+    expect(answerQuestionMock).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when generation fails', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {
         question: 'test',
       },
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -66,5 +113,21 @@ describe('rag controller', () => {
     await askQuestion(req, res);
 
     expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it('returns 400 when question is not a string', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 123,
+      },
+    };
+
+    const res = mockResponse();
+
+    await askQuestion(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+
+    expect(answerQuestionMock).not.toHaveBeenCalled();
   });
 });

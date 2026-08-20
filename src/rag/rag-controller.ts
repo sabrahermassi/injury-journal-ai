@@ -3,11 +3,11 @@ import { answerQuestion } from './rag-service.js';
 
 export async function askQuestion(req: Request, res: Response) {
   try {
-    const { question, injuryId } = req.body;
+    const { question, injuryId } = req.body ?? {};
 
-    if (!question) {
+    if (typeof question !== 'string' || question.trim().length === 0) {
       return res.status(400).json({
-        error: 'Question is required',
+        error: 'Question must be a non-empty string',
       });
     }
 

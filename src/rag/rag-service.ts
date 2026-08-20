@@ -5,8 +5,8 @@ import { generateAnswer } from '../llm/llm-client.js';
 
 export async function answerQuestion(
   question: string,
-  limit = 5,
   injuryId?: number,
+  limit = 5,
 ) {
   const chunks = await semanticSearch(question, limit, injuryId);
 

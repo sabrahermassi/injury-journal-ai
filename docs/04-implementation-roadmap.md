@@ -488,18 +488,40 @@ The infrastructure can be recreated consistently rather than configured manually
 - Secure API endpoints
 - Safe logging
 - Vector-level authorization
+- Retrieval authorization checks
+- Regression tests for data isolation boundaries
 
 Critical rule:
 
-```text
-User A
-  ↓
-Can only retrieve
-  ↓
-User A's journal data
-```
+    User A
+      ↓
+    Can only retrieve
+      ↓
+    User A's journal data
 
 The RAG system must never expose another user's information.
+
+Security applies across:
+
+- Database queries
+- Journal tools
+- RAG retrieval
+- Vector similarity search
+- AI agent tool execution
+
+Example security flow:
+
+    User Request
+          ↓
+    Authentication
+          ↓
+    Authorization
+          ↓
+    Retrieve only authorized injury data
+          ↓
+    RAG / Agent processing
+          ↓
+    Answer
 
 ## Result
 
@@ -625,3 +647,9 @@ Potential improvements:
 - Tune the number of candidates retrieved before reranking
 
 Reranking should be introduced only after evaluating the baseline retrieval system and identifying retrieval quality limitations.
+
+### Future API Improvements
+
+- Add schema-based request validation (for example Zod) as the API surface grows
+- Standardize API error responses
+- Add stricter input validation across all endpoints
