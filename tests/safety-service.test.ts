@@ -170,4 +170,18 @@ describe('safety service', () => {
       ).allowed,
     ).toBe(false);
   });
+
+  it('blocks direct "is this" diagnosis requests', () => {
+    const questions = [
+      'Is this cancer?',
+      'Is this a tumor?',
+      'Is this a fracture?',
+      'Is this an injury?',
+      'Is this a tear?',
+    ];
+
+    questions.forEach((question) => {
+      expect(checkSafety(question).allowed).toBe(false);
+    });
+  });
 });

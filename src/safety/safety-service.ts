@@ -54,7 +54,10 @@ const diagnosisPatterns = [
 
   /what(?:'s| is) wrong with me/i,
 
-  /is this (cancer|an illness|a disease|a condition|an injury|serious|dangerous|an infection|a concussion|arthritis)/i,
+  new RegExp(
+    `is this (?:a|an)?\\s*(?:${CONDITION_KEYWORDS}|illness|serious|dangerous)\\b`,
+    'i',
+  ),
 
   /could this be (cancer|a tumor|a tumour|an illness|a disease|a condition|an injury|a fracture|a tear|a syndrome|a disorder|an infection|a concussion|arthritis|a sprain|a broken bone)/i,
 
