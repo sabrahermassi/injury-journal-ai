@@ -99,6 +99,22 @@ describe('rag controller', () => {
     expect(answerQuestionMock).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when injuryId is invalid', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 'What treatments failed?',
+        injuryId: '42',
+      },
+    };
+
+    const res = mockResponse();
+
+    await askQuestion(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(answerQuestionMock).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when generation fails', async () => {
     const req: MockRequest = {
       body: {

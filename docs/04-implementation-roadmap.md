@@ -493,11 +493,13 @@ The infrastructure can be recreated consistently rather than configured manually
 
 Critical rule:
 
+```text
     User A
       ↓
     Can only retrieve
       ↓
     User A's journal data
+```
 
 The RAG system must never expose another user's information.
 
@@ -511,6 +513,7 @@ Security applies across:
 
 Example security flow:
 
+```text
     User Request
           ↓
     Authentication
@@ -522,6 +525,7 @@ Example security flow:
     RAG / Agent processing
           ↓
     Answer
+```
 
 ## Result
 

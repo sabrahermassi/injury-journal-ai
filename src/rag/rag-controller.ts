@@ -11,6 +11,15 @@ export async function askQuestion(req: Request, res: Response) {
       });
     }
 
+    if (
+      injuryId !== undefined &&
+      (!Number.isInteger(injuryId) || injuryId <= 0)
+    ) {
+      return res.status(400).json({
+        error: 'injuryId must be a positive integer',
+      });
+    }
+
     const answer = await answerQuestion(question, injuryId);
 
     return res.json({
