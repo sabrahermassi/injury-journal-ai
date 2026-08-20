@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import {
   searchSimilarChunks,
   storeDocumentChunk,
+  disconnectVectorStorage,
 } from '../../src/embeddings/vector-storage.js';
 
 const prisma = new PrismaClient();
@@ -29,6 +30,8 @@ describe('vector storage integration', () => {
       DELETE FROM "DocumentChunk"
       WHERE "sourceType" = 'integration-test'
     `;
+
+    await disconnectVectorStorage();
 
     await prisma.$disconnect();
   });

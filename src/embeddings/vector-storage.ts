@@ -2,6 +2,19 @@ import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+type SearchSimilarChunk = Pick<
+  Prisma.DocumentChunkGetPayload<{}>,
+  | 'id'
+  | 'injuryId'
+  | 'sourceType'
+  | 'sourceId'
+  | 'chunkIndex'
+  | 'content'
+  | 'metadata'
+> & {
+  distance: number;
+};
+
 export async function disconnectVectorStorage() {
   await prisma.$disconnect();
 }
@@ -81,18 +94,7 @@ export async function searchSimilarChunks(
 ) {
   const vector = `[${embedding.join(',')}]`;
 
-  return prisma.$queryRaw<
-    Array<{
-      id: number;
-      injuryId: number;
-      sourceType: string;
-      sourceId: number;
-      chunkIndex: number;
-      content: string;
-      metadata: unknown;
-      distance: number;
-    }>
-  >(
+  return prisma.$queryRaw<SearchSimilarChunk[]>(
     Prisma.sql`
       SELECT
         "id",

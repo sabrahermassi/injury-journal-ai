@@ -107,7 +107,6 @@ The current retrieval implementation is intentionally minimal. Revisit and exten
 Potential filters:
 
 - `userId`
-- `injuryId`
 - `sourceType`
 - Date range
 
