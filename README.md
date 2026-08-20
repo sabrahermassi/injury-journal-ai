@@ -26,14 +26,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - Retrieval-Augmented Generation (RAG)
 - Citations
 - Safety guardrails
+- AI agent
 
 ### In Progress
 
-- AI agents
+- Evaluation
 
 ### Planned
 
-- Evaluation
 - AI observability
 - Terraform
 - AWS Lambda
@@ -123,8 +123,10 @@ Do not add these prematurely. The current `semanticSearch()` service provides th
 
 ### Citation Generation
 
-The current implementation performs citation generation from retrieved chunks.
-(answers the question: Which journal records support this answer?)
+#### Current Implementation:
+
+It performs source-level verification.
+(answers the question: Does this citation point to a real source that belongs to this injury?)
 
 It currently provides:
 
@@ -184,19 +186,24 @@ The goal is not to diagnose medical conditions. The assistant organizes and summ
 
 Current safety flow:
 
+```text
 User Question
 → Safety Check
-→ Allowed Request → RAG Pipeline
 → Unsafe Request → Safe Response
+→ Allowed Request → Intent Routing
+                         ↓
+                    ┌────┴────┐
+                    ↓         ↓
+                    RAG Pipeline Journal Tool
+```
 
 Implemented:
 
 - Detect common direct diagnosis request patterns
 - Block matching unsafe medical diagnosis questions
 - Provide safe redirect responses
-- Allow other questions to continue through the RAG pipeline
-
-The current safety layer uses deterministic pattern matching and does not represent a complete medical safety classifier. It should be extended with additional intent detection and safety evaluation before production use.
+- Allow safe questions to continue through intent routing
+- Allow journal summarization and history-based questions
 
 #### Future Safety Improvements
 
@@ -216,3 +223,47 @@ User Question
 → RAG / Safe Response
 
 Do not introduce AI-based classification prematurely. The current safety layer provides explicit healthcare boundaries before adding more complex agent behavior.
+
+### AI Agent
+
+#### Current Implementation
+
+The project uses a hand-written orchestration layer to coordinate AI tools.
+
+Implemented components:
+
+- RAG tool (wraps the existing RAG service)
+- Journal tool (queries structured injury data)
+- Safety tool (wraps safety checks)
+- Citation tool (provides source references)
+
+Current agent flow:
+
+```text
+User Question
+→ Safety Check
+→ Intent Routing
+→ Tool Execution
+→ Answer + Sources
+```
+
+The agent maintains request-scoped state during orchestration.
+
+Current state tracks:
+
+- User question
+- Safety result
+- Selected intent
+- Tool used
+- Result metadata
+
+The MVP uses deterministic orchestration instead of an LLM planner or agent framework.
+
+#### Future AI Agent Improvements
+
+Introduce LangGraph or another framework when workflows become more complex and require:
+
+- Multi-step workflows
+- Advanced state management
+- Workflow persistence
+- More dynamic tool selection

@@ -293,40 +293,37 @@ Do **not** build the agent before the underlying tools exist.
 
 Create tools such as:
 
-- RAG tool
-- Journal/database tool
-- Safety tool
-- Citation tool
+- RAG tool (wrap existing RAG service)
+- Journal/database tool (query structured injury data)
+- Safety tool (wrap existing safety service)
+- Citation tool (wrap existing citation generation)
 
-Use either:
+Start with a hand-written orchestration layer.
+Introduce LangGraph or another framework only when workflows become more complex.
 
-- LangGraph
-- Hand-rolled state machine
+## Current MVP Agent Architecture
 
-## Example
+The MVP uses deterministic orchestration.
 
-> Generate a summary of my injury history for my doctor.
+The agent flow is:
 
-Possible workflow:
-
-```mermaid
+````mermaid
 flowchart TD
-    A["AI Agent"] --> S["Initial Safety Check"]
+    U["User Question"] --> A["AI Agent Orchestrator"]
 
-    S -->|No| R["Refuse / Redirect"]
-    S -->|Yes| AUTH["Per-tool Authorization"]
+    A --> S["Safety Check"]
 
-    AUTH --> T["Retrieve Timeline Events"]
-    AUTH --> TR["Retrieve Treatments"]
-    AUTH --> SY["Retrieve Symptoms"]
+    S -->|Blocked| R["Refuse / Redirect"]
 
-    T --> G["Generate Summary"]
-    TR --> G
-    SY --> G
+    S -->|Allowed| I["Intent Router"]
 
-    G --> C["Verify Citations"]
-    C --> OUT["Return Summary"]
-```
+    I --> RT["RAG Tool"]
+    I --> JT["Journal Tool"]
+
+    RT --> ST["Agent State"]
+    JT --> ST["Agent State"]
+
+    ST --> OUT["Answer + Sources"]
 
 ## Result
 
@@ -413,7 +410,7 @@ Which answers have citation problems?
 Which agent steps are slow?
 
 Which requests repeatedly trigger safety boundaries?
-```
+````
 
 ## Result
 
