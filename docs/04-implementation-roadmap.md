@@ -766,22 +766,29 @@ Potential retrieval improvements:
 
 Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
 
-### Citation Verification
+### Citation Generation
 
 #### Current Implementation:
 
 It performs source-level verification.
 (answers the question: Does this citation point to a real source that belongs to this injury?)
 
-It verifies:
+It currently provides:
 
-- The referenced source exists
-- The source belongs to the requested injury
-- The source can be safely exposed to the requesting user
+- Citation generation from retrieved chunks
+- Citation mapper
+- Citation formatting
+- Source mapping
+- Citation metadata preservation
+
+Implemented helper:
+
+- Source-level citation verification utility (tested independently)
 
 #### Future Citation Improvements
 
-Advanced claim-level citation verification can be added later.
+- Integrate citation verification into the RAG response pipeline
+- Advanced claim-level citation verification can be added later.
 
 Goal:
 
@@ -824,16 +831,23 @@ The goal is not to diagnose medical conditions. The assistant organizes and summ
 
 Current safety flow:
 
+```text
 User Question
 → Safety Check
-→ Allowed Request → RAG Pipeline
 → Unsafe Request → Safe Response
+→ Allowed Request → Intent Routing
+                         ↓
+                    ┌────┴────┐
+                    ↓         ↓
+                    RAG Pipeline Journal Tool
+```
 
 Implemented:
 
-- Detect direct diagnosis requests
-- Block unsafe medical diagnosis questions
+- Detect common direct diagnosis request patterns
+- Block matching unsafe medical diagnosis questions
 - Provide safe redirect responses
+- Allow safe questions to continue through intent routing
 - Allow journal summarization and history-based questions
 
 #### Future Safety Improvements
