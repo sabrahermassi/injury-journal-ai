@@ -121,27 +121,27 @@ Potential retrieval improvements:
 
 Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
 
-### Citation Verification
+### Citation Generation
 
 The current implementation performs citation generation from retrieved chunks.
 (answers the question: Which journal records support this answer?)
 
 It currently provides:
 
-- Source type mapping
-- Source ID mapping
+- Citation generation from retrieved chunks
+- Citation mapper
 - Citation formatting
+- Source mapping
 - Citation metadata preservation
 
-Future improvements:
+Implemented helper:
 
-- Source existence verification
-- Injury ownership verification
-- User-level authorization checks before exposing citations
+- Source-level citation verification utility (tested independently)
 
 #### Future Citation Improvements
 
-Advanced claim-level citation verification can be added later.
+- Integrate citation verification into the RAG response pipeline
+- Advanced claim-level citation verification can be added later.
 
 Goal:
 

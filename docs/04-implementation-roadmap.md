@@ -231,7 +231,7 @@ Build:
 - Citation mapper
 - Citation formatting
 - Source mapping
-- Source-level citation verification
+- Source-level citation Generation
 - Citation metadata preservation
 
 (Optional later):
@@ -508,6 +508,13 @@ Critical rule:
 ```
 
 The RAG system must never expose another user's information.
+
+## Future improvements
+
+- Integrate citation source verification into the RAG response pipeline
+- Verify that cited journal records still exist
+- Verify citation ownership before exposing sources
+- git Add claim-level citation verification
 
 Security applies across:
 

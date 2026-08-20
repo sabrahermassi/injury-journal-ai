@@ -9,7 +9,7 @@ The system is designed to transform structured journal data into searchable AI c
 The architecture is divided into two main flows:
 
 - **Offline flow** — prepares journal data for AI retrieval by transforming records into documents, chunking them, generating embeddings, and storing the resulting vectors.
-- **Online flow** — processes user questions through safety checks, authorization, retrieval, RAG, LLM generation, and citation verification.
+- **Online flow** — processes user questions through safety checks, authorization, retrieval, RAG, LLM generation, and citation generation.
 
 The architecture also includes supporting systems for:
 
@@ -84,7 +84,7 @@ flowchart TB
         JOURNAL --> DB
         JOURNAL --> LLM
 
-        LLM --> CIT["Citation Verification"]
+        LLM --> CIT["Citation Generation"]
         CIT --> ANSWER["Answer + Sources"]
         ANSWER --> U
         REFUSE --> U
@@ -165,7 +165,7 @@ flowchart TD
     DB --> DATA
 
     DATA --> G["LLM"]
-    G --> CV["Citation Verification"]
+    G --> CV["Citation Generation"]
     CV --> OUT["Answer + Sources"]
 
     OUT --> U
