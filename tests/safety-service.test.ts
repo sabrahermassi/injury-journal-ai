@@ -83,4 +83,13 @@ describe('safety service', () => {
 
     expect(result.allowed).toBe(false);
   });
+
+  it('blocks diagnosis requests with extra whitespace', () => {
+    expect(checkSafety('Do I     have cancer?').allowed).toBe(false);
+
+    expect(
+      checkSafety(`Do I
+    have cancer?`).allowed,
+    ).toBe(false);
+  });
 });

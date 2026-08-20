@@ -33,8 +33,10 @@ const diagnosisPatterns = [
 ];
 
 export function checkSafety(question: string): SafetyResult {
+  const normalizedQuestion = question.replace(/\s+/g, ' ').trim();
+
   const isDiagnosisRequest = diagnosisPatterns.some((pattern) =>
-    pattern.test(question),
+    pattern.test(normalizedQuestion),
   );
 
   if (isDiagnosisRequest) {
