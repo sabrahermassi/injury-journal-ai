@@ -503,3 +503,124 @@ The RAG system must never expose another user's information.
 ## Result
 
 Security applies across both the normal database and AI retrieval layers.
+
+# Step 15 — Future improvements
+
+## Future Embedding Model Management
+
+The current MVP uses a fixed embedding dimension:
+
+- Model: Qwen3-Embedding-0.6B
+- Dimension: 1024
+- Storage: pgvector `vector(1024)`
+
+This is intentional because the MVP uses a single embedding model.
+
+Future improvements:
+
+- Track embedding model metadata
+- Support embedding model versioning
+- Store embedding generation configuration
+- Support migrations when changing embedding dimensions
+- Re-index existing documents when switching embedding models
+- Evaluate retrieval quality across different embedding models
+
+Possible future design:
+
+DocumentChunk
+|
++-- Embedding
+|
++-- model name
++-- dimension
++-- version
++-- generated timestamp
+
+## Future Retrieval Improvements
+
+The current MVP uses top-k vector similarity search.
+
+The retrieval pipeline is intentionally kept simple to establish a baseline before introducing more advanced retrieval techniques.
+
+Current approach:
+
+```text
+User Question
+      |
+      v
+Question Embedding
+      |
+      v
+pgvector Similarity Search
+      |
+      v
+Top-k Retrieved Chunks
+      |
+      v
+LLM Generation
+```
+
+### Similarity Thresholds
+
+The current system always returns the top-k closest chunks, even when the retrieved chunks may not be strongly relevant.
+
+Future improvements:
+
+- Add configurable similarity thresholds
+- Handle cases where no sufficiently relevant context is found
+- Tune retrieval thresholds using evaluation results
+
+Similarity thresholds should be introduced after measuring retrieval quality rather than choosing values arbitrarily.
+
+Future flow:
+
+```text
+User Question
+      |
+      v
+Vector Search
+      |
+      v
+Similarity Threshold Check
+      |
+      v
+Relevant Chunks Only
+      |
+      v
+LLM Generation
+```
+
+### Reranking
+
+The current MVP relies only on embedding similarity to rank retrieved chunks.
+
+Future improvement:
+
+Introduce a reranking step after initial vector retrieval to improve the quality of retrieved context.
+
+Future flow:
+
+```text
+User Question
+      |
+      v
+Embedding Retrieval
+      |
+      v
+Reranker
+      |
+      v
+Top-k Highest Quality Chunks
+      |
+      v
+LLM Generation
+```
+
+Potential improvements:
+
+- Add a reranking model after vector retrieval
+- Compare retrieval quality before and after reranking
+- Evaluate impact on answer faithfulness and citation accuracy
+- Tune the number of candidates retrieved before reranking
+
+Reranking should be introduced only after evaluating the baseline retrieval system and identifying retrieval quality limitations.
