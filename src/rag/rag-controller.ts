@@ -20,11 +20,9 @@ export async function askQuestion(req: Request, res: Response) {
       });
     }
 
-    const answer = await answerQuestion(question, injuryId);
+    const result = await answerQuestion(question, injuryId);
 
-    return res.json({
-      answer,
-    });
+    return res.json(result);
   } catch (error) {
     console.error(error);
 

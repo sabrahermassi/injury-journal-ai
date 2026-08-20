@@ -24,14 +24,14 @@ The project is being built incrementally, starting with the offline ingestion pi
 - pgvector
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
+- Citations
 
 ### In Progress
 
-- Citations
+- Safety guardrails
 
 ### Planned
 
-- Safety guardrails
 - AI agents
 - Evaluation
 - AI observability
@@ -79,7 +79,7 @@ PostgreSQL advisory locks or source revision/versioning.
 Database transactions should not remain open while waiting for embedding API
 requests.
 
-## Semantic Retrieval
+### Semantic Retrieval
 
 Implemented:
 
@@ -100,7 +100,7 @@ User Question
 → Similarity Ranking
 → Top-k Relevant Chunks
 
-### Future Retrieval Improvements
+#### Future Retrieval Improvements
 
 The current retrieval implementation is intentionally minimal. Revisit and extend it when retrieval requirements become clearer.
 
@@ -120,3 +120,52 @@ Potential retrieval improvements:
 - Reranking if needed
 
 Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
+
+### Citation Generation
+
+The current implementation performs citation generation from retrieved chunks.
+(answers the question: Which journal records support this answer?)
+
+It currently provides:
+
+- Citation generation from retrieved chunks
+- Citation mapper
+- Citation formatting
+- Source mapping
+- Citation metadata preservation
+
+Implemented helper:
+
+- Source-level citation verification utility (tested independently)
+
+#### Future Citation Improvements
+
+- Integrate citation verification into the RAG response pipeline
+- Advanced claim-level citation verification can be added later.
+
+Goal:
+
+Verify that individual generated claims are supported by the retrieved evidence.
+
+Future flow:
+
+Generated Answer
+→ Claim Extraction
+→ Evidence Matching
+→ Claim Support Verification
+→ Verified Answer
+
+Example:
+
+Generated claim:
+
+"The patient improved after physiotherapy."
+
+Evidence:
+
+Treatment #42:
+"Physiotherapy completed. Outcome: improved."
+
+Verification:
+
+✓ Claim supported by source

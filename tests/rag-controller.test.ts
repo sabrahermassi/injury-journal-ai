@@ -41,7 +41,10 @@ describe('rag controller', () => {
 
     const res = mockResponse();
 
-    answerQuestionMock.mockResolvedValue('Shockwave therapy failed.');
+    answerQuestionMock.mockResolvedValue({
+      answer: 'Shockwave therapy failed.',
+      citations: [],
+    });
 
     await askQuestion(req, res);
 
@@ -49,6 +52,7 @@ describe('rag controller', () => {
 
     expect(res.json).toHaveBeenCalledWith({
       answer: 'Shockwave therapy failed.',
+      citations: [],
     });
   });
 

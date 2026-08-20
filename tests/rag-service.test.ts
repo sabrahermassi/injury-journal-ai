@@ -4,6 +4,11 @@ const semanticSearchMock = jest.fn();
 const buildContextMock = jest.fn();
 const buildPromptMock = jest.fn();
 const generateAnswerMock = jest.fn();
+const buildCitationsMock = jest.fn();
+
+jest.unstable_mockModule('../src/rag/citation-builder.js', () => ({
+  buildCitations: buildCitationsMock,
+}));
 
 jest.unstable_mockModule('../src/retrieval/semantic-search.js', () => ({
   semanticSearch: semanticSearchMock,
@@ -28,10 +33,21 @@ describe('rag service', () => {
     jest.clearAllMocks();
   });
 
-  it('retrieves context builds prompt and generates answer', async () => {
+  it('retrieves context builds prompt generates answer and builds citations', async () => {
     const chunks = [
       {
+        id: 1,
+        sourceType: 'treatment',
+        sourceId: 42,
         content: 'Shockwave therapy did not help.',
+      },
+    ];
+
+    const citations = [
+      {
+        sourceType: 'treatment',
+        sourceId: 42,
+        label: 'Treatment #42',
       },
     ];
 
@@ -42,6 +58,8 @@ describe('rag service', () => {
     buildPromptMock.mockReturnValue('prompt');
 
     generateAnswerMock.mockResolvedValue('The treatment failed.');
+
+    buildCitationsMock.mockReturnValue(citations);
 
     const result = await answerQuestion('What treatments failed?');
 
@@ -60,7 +78,49 @@ describe('rag service', () => {
 
     expect(generateAnswerMock).toHaveBeenCalledWith('prompt');
 
-    expect(result).toBe('The treatment failed.');
+    expect(buildCitationsMock).toHaveBeenCalledWith(chunks);
+
+    expect(result).toEqual({
+      answer: 'The treatment failed.',
+      citations,
+    });
+  });
+
+  it('returns generated answer with citations', async () => {
+    const chunks = [
+      {
+        id: 1,
+        sourceType: 'treatment',
+        sourceId: 42,
+        content: 'Shockwave therapy did not help',
+        distance: 0.1,
+      },
+    ];
+
+    const citations = [
+      {
+        sourceType: 'treatment',
+        sourceId: 42,
+        label: 'Treatment #42',
+      },
+    ];
+
+    semanticSearchMock.mockResolvedValue(chunks);
+
+    generateAnswerMock.mockResolvedValue(
+      'Shockwave therapy did not improve symptoms.',
+    );
+
+    buildCitationsMock.mockReturnValue(citations);
+
+    const result = await answerQuestion('What treatments did not work?');
+
+    expect(buildCitationsMock).toHaveBeenCalledWith(chunks);
+
+    expect(result).toEqual({
+      answer: 'Shockwave therapy did not improve symptoms.',
+      citations,
+    });
   });
 
   it('propagates retrieval errors', async () => {
@@ -69,5 +129,6 @@ describe('rag service', () => {
     await expect(answerQuestion('question')).rejects.toThrow('search failed');
 
     expect(generateAnswerMock).not.toHaveBeenCalled();
+    expect(buildCitationsMock).not.toHaveBeenCalled();
   });
 });

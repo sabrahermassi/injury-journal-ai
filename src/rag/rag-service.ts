@@ -2,6 +2,7 @@ import { semanticSearch } from '../retrieval/semantic-search.js';
 import { buildContext } from './context-builder.js';
 import { buildPrompt } from './prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
+import { buildCitations } from '../rag/citation-builder.js';
 
 export async function answerQuestion(
   question: string,
@@ -14,5 +15,10 @@ export async function answerQuestion(
 
   const prompt = buildPrompt(question, context);
 
-  return generateAnswer(prompt);
+  const answer = await generateAnswer(prompt);
+
+  return {
+    answer,
+    citations: buildCitations(chunks),
+  };
 }
