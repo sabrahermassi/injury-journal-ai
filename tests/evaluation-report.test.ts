@@ -38,6 +38,11 @@ describe('evaluation report', () => {
         passed: 1,
         total: 2,
       },
+
+      retrieval: {
+        passed: 0,
+        total: 0,
+      },
     });
   });
 });

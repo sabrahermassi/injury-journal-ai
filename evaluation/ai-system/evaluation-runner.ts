@@ -5,6 +5,7 @@ import {
   evaluateCitations,
   evaluateIntent,
 } from './evaluator-metrics.js';
+import { evaluateRetrieval } from './retrieval-metrics.js';
 
 export async function runEvaluation() {
   const results = [];
@@ -25,6 +26,11 @@ export async function runEvaluation() {
         citationsPassed: evaluateCitations(item.expectedBehavior, output),
 
         intentPassed: evaluateIntent(item.expectedIntent, output),
+
+        retrievalPassed: evaluateRetrieval(
+          item.expectedSources ?? [],
+          output.metadata?.retrievedChunks ?? [],
+        ),
       },
     });
   }

@@ -17,6 +17,9 @@ export async function runAgent(question: string, injuryId?: number) {
     return {
       answer: safety.message,
       citations: [],
+      metadata: {
+        retrievedChunks: [],
+      },
     };
   }
 
@@ -59,13 +62,22 @@ export async function runAgent(question: string, injuryId?: number) {
 
       state.result = result;
 
-      return result;
+      return {
+        answer: result.answer,
+        citations: result.citations,
+        metadata: {
+          retrievedChunks: result.chunks,
+        },
+      };
     }
 
     default:
       return {
         answer: safety.message,
         citations: [],
+        metadata: {
+          retrievedChunks: [],
+        },
       };
   }
 }

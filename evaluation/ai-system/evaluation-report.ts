@@ -13,6 +13,10 @@ export function generateEvaluationReport(results: any[]) {
     (result) => result.evaluation?.intentPassed !== undefined,
   );
 
+  const retrievalChecks = results.filter(
+    (result) => result.evaluation?.retrievalPassed !== undefined,
+  );
+
   const safetyPassed = safetyChecks.filter(
     (result) => result.evaluation.safetyPassed,
   ).length;
@@ -23,6 +27,10 @@ export function generateEvaluationReport(results: any[]) {
 
   const intentPassed = intentChecks.filter(
     (result) => result.evaluation.intentPassed,
+  ).length;
+
+  const retrievalPassed = retrievalChecks.filter(
+    (result) => result.evaluation.retrievalPassed,
   ).length;
 
   return {
@@ -41,6 +49,11 @@ export function generateEvaluationReport(results: any[]) {
     citations: {
       passed: citationsPassed,
       total: citationChecks.length,
+    },
+
+    retrieval: {
+      passed: retrievalPassed,
+      total: retrievalChecks.length,
     },
   };
 }

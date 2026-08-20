@@ -19,8 +19,8 @@ Click a step to jump directly to its section.
 - [x] [Step 5 — Basic RAG](#step-5--basic-rag)
 - [x] [Step 6 — Citations](#step-6--citations)
 - [x] [Step 7 — Safety Guardrails](#step-7--safety-guardrails)
-- [ ] [Step 8 — AI Agent](#step-8--ai-agent)
-- [ ] [Step 9 — Evaluation](#step-9--evaluation)
+- [x] [Step 8 — AI Agent](#step-8--ai-agent)
+- [x] [Step 9 — Evaluation](#step-9--evaluation)
 - [ ] [Step 10 — AI Observability](#step-10--ai-observability)
 - [ ] [Step 11 — AI-Assisted Observability](#step-11--ai-assisted-observability)
 - [ ] [Step 12 — Production Workflow with AWS](#step-12--production-workflow-with-aws)
@@ -308,7 +308,7 @@ The MVP uses deterministic orchestration.
 
 The agent flow is:
 
-````mermaid
+```mermaid
 flowchart TD
     U["User Question"] --> A["AI Agent Orchestrator"]
 
@@ -325,6 +325,7 @@ flowchart TD
     JT --> ST["Agent State"]
 
     ST --> OUT["Answer + Sources"]
+```
 
 ## Result
 
@@ -351,6 +352,31 @@ Evaluate:
 - Answer faithfulness
 - Citation accuracy
 - Safety adherence
+
+## Evaluation implementation details
+
+```mermaid
+flowchart TD
+    Q["Evaluation Dataset"] --> H["Evaluation Harness"]
+
+    H --> A["AI Agent"]
+
+    A --> ST["Safety Tool"]
+    A --> IR["Intent Router"]
+    A --> RT["RAG Tool"]
+    A --> JT["Journal Tool"]
+
+    RT --> R["Retrieved Chunks"]
+    A --> G["Generated Answer"]
+
+    G --> E["Evaluation Metrics"]
+    R --> E
+
+    E --> RET["Retrieval Quality"]
+    E --> INT["Intent Accuracy"]
+    E --> C["Citation Accuracy"]
+    E --> S["Safety Adherence"]
+```
 
 ## Result
 
@@ -411,7 +437,7 @@ Which answers have citation problems?
 Which agent steps are slow?
 
 Which requests repeatedly trigger safety boundaries?
-````
+```
 
 ## Result
 
@@ -542,6 +568,8 @@ Example security flow:
 
 Security applies across both the normal database and AI retrieval layers.
 
+<<<<<<< HEAD
+
 # Step 15 — Future improvements
 
 ## Future Embedding Model Management
@@ -668,3 +696,226 @@ Reranking should be introduced only after evaluating the baseline retrieval syst
 - Add schema-based request validation (for example Zod) as the API surface grows
 - Standardize API error responses
 - Add stricter input validation across all endpoints
+  \=======
+
+# Step 15 - Future Improvements
+
+### Offline Ingestion Pipeline
+
+- [x] Document chunking
+- [x] Generate embeddings
+- [x] Store embeddings in pgvector
+- [x] Make document-chunk ingestion idempotent
+- [x] Serialize ingestion per `(sourceType, sourceId)` to prevent concurrent prune races
+- [ ] Add distributed ingestion locking/versioning for production deployments
+
+#### Ingestion Concurrency
+
+The current implementation uses an in-process lock keyed by
+`(sourceType, sourceId)`. This prevents overlapping ingestions for the same
+source from racing during stale-chunk cleanup.
+
+This is sufficient for the current single-process development architecture.
+For production deployments with multiple workers, containers, or Lambda
+instances, replace or supplement this with distributed coordination such as
+PostgreSQL advisory locks or source revision/versioning.
+
+Database transactions should not remain open while waiting for embedding API
+requests.
+
+### Semantic Retrieval
+
+#### Current Implementation:
+
+- Embed the user's question using the embedding service
+- Search `DocumentChunk` using pgvector cosine distance
+- Rank results by vector similarity
+- Retrieve configurable top-k results
+- Filter retrieval by `injuryId`
+- Unit tests for the semantic retrieval service
+- Integration tests for pgvector similarity search
+
+Current retrieval flow:
+
+User Question
+→ Question Embedding
+→ Metadata Filtering
+→ pgvector Similarity Search
+→ Similarity Ranking
+→ Top-k Relevant Chunks
+
+#### Future Retrieval Improvements
+
+The current retrieval implementation is intentionally minimal. Revisit and extend it when retrieval requirements become clearer.
+
+Potential filters:
+
+- `userId`
+- `injuryId`
+- `sourceType`
+- Date range
+
+Potential retrieval improvements:
+
+- Metadata filtering
+- Similarity threshold
+- Hybrid keyword + vector search
+- Retrieval evaluation
+- Query-specific retrieval tuning
+- Reranking if needed
+
+Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
+
+### Citation Verification
+
+#### Current Implementation:
+
+It performs source-level verification.
+(answers the question: Does this citation point to a real source that belongs to this injury?)
+
+It verifies:
+
+- The referenced source exists
+- The source belongs to the requested injury
+- The source can be safely exposed to the requesting user
+
+#### Future Citation Improvements
+
+Advanced claim-level citation verification can be added later.
+
+Goal:
+
+Verify that individual generated claims are supported by the retrieved evidence.
+
+Future flow:
+
+Generated Answer
+→ Claim Extraction
+→ Evidence Matching
+→ Claim Support Verification
+→ Verified Answer
+
+Example:
+
+Generated claim:
+
+"The patient improved after physiotherapy."
+
+Evidence:
+
+Treatment #42:
+"Physiotherapy completed. Outcome: improved."
+
+Verification:
+
+✓ Claim supported by source
+
+### Safety Guardrails
+
+#### Current Implementation:
+
+The first safety layer uses deterministic rules to enforce healthcare boundaries. This is intentional because safety boundaries should be:
+
+- Predictable
+- Testable
+- Easy to audit
+
+The goal is not to diagnose medical conditions. The assistant organizes and summarizes the user's journal information.
+
+Current safety flow:
+
+User Question
+→ Safety Check
+→ Allowed Request → RAG Pipeline
+→ Unsafe Request → Safe Response
+
+Implemented:
+
+- Detect direct diagnosis requests
+- Block unsafe medical diagnosis questions
+- Provide safe redirect responses
+- Allow journal summarization and history-based questions
+
+#### Future Safety Improvements
+
+- AI-based intent classification
+- More comprehensive medical safety categories
+- Context-aware risk assessment
+- Prompt injection detection
+- Output safety checks
+- Safety evaluation dataset
+
+Future safety architecture:
+
+User Question
+→ Rule-Based Checks
+→ AI Safety Classifier
+→ Policy Decision
+→ RAG / Safe Response
+
+Do not introduce AI-based classification prematurely. The current safety layer provides explicit healthcare boundaries before adding more complex agent behavior.
+
+### AI Agent
+
+#### Current Implementation
+
+The project uses a hand-written orchestration layer to coordinate AI tools.
+
+Implemented components:
+
+- RAG tool (wraps the existing RAG service)
+- Journal tool (queries structured injury data)
+- Safety tool (wraps safety checks)
+- Citation tool (provides source references)
+
+Current agent flow:
+
+```text
+User Question
+→ Safety Check
+→ Intent Routing
+→ Tool Execution
+→ Answer + Sources
+```
+
+The agent maintains request-scoped state during orchestration.
+
+Current state tracks:
+
+- User question
+- Safety result
+- Selected intent
+- Tool used
+- Result metadata
+
+The MVP uses deterministic orchestration instead of an LLM planner or agent framework.
+
+#### Future AI Agent Improvements
+
+Introduce LangGraph or another framework when workflows become more complex and require:
+
+- Multi-step workflows
+- Advanced state management
+- Workflow persistence
+- More dynamic tool selection
+
+### AI System Evaluation
+
+The project includes an evaluation framework to measure AI system quality beyond manual testing.
+
+The current evaluation system covers:
+
+- Retrieval quality
+- Intent accuracy
+- Citation accuracy
+- Safety adherence
+
+#### Future AI System Evaluation Improvements
+
+Future iterations may introduce more advanced evaluation techniques:
+
+- Recall@k and Mean Reciprocal Rank (MRR) for retrieval evaluation
+- RAGAS for automated RAG quality evaluation
+- LLM-as-a-judge for evaluating answer quality and faithfulness
+- Regression testing with larger evaluation datasets
+- Continuous evaluation during model, prompt, or retrieval changes

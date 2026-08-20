@@ -33,5 +33,6 @@ export async function answerQuestion(
   return {
     answer,
     citations,
+    chunks,
   };
 }

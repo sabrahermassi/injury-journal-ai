@@ -4,7 +4,9 @@ AI-powered injury journal assistant exploring RAG, LLMs, agent orchestration, em
 
 ## Project Status
 
-The project is being built incrementally, starting with the offline ingestion pipeline and embeddings before adding semantic retrieval, RAG, agents, and production infrastructure.
+The AI assistant MVP has been implemented.
+
+The project was built incrementally, starting with the data ingestion and embedding foundations, then adding semantic retrieval, RAG, safety guardrails, agent orchestration, and AI system evaluation.
 
 ## Documentation
 
@@ -15,30 +17,82 @@ The project is being built incrementally, starting with the offline ingestion pi
 
 ## Tech Stack
 
-### Implemented
+### MVP Implemented
+
+#### AI Retrieval Pipeline
 
 - TypeScript / Node.js
 - PostgreSQL
 - Prisma
 - Embedding model integration
-- pgvector
+- pgvector vector storage
+- Document chunking
 - Semantic retrieval
 - Retrieval-Augmented Generation (RAG)
-- Citations
-- Safety guardrails
-- AI agent
+- Citation generation
 
-### In Progress
+#### AI Safety and Agent Layer
 
-- AI system Evaluation
+- Safety guardrails for healthcare boundaries
+- Hand-written AI agent orchestration
+- Agent state management
+- Intent routing
+- Tool-based architecture:
+  - RAG tool
+  - Journal tool
+  - Safety tool
+  - Citation handling
 
-### Planned
+#### AI System Evaluation
 
-- AI observability
-- Terraform
-- AWS Lambda
-- AWS Step Functions
-- CloudWatch / DynamoDB
+- Evaluation dataset
+- Evaluation harness
+- Retrieval evaluation
+- Intent evaluation
+- Citation evaluation
+- Safety evaluation
+- Evaluation reporting
+
+## Production Improvements
+
+Future work focuses on making the system production-ready, scalable, and operationally robust.
+
+### Security and Privacy
+
+- Authentication
+- Authorization
+- User-level data isolation
+- Vector-level authorization
+- Secure API endpoints
+- Safe logging
+
+### Retrieval and AI Quality Improvements
+
+- Hybrid keyword + vector search
+- Retrieval reranking
+- Similarity thresholds
+- Query-specific retrieval tuning
+- Advanced evaluation metrics:
+  - Recall@k
+  - Mean Reciprocal Rank (MRR)
+  - RAGAS
+  - LLM-as-a-judge
+
+### AI Agent Improvements
+
+- More complex multi-step workflows
+- Persistent agent state
+- Dynamic tool selection
+- LangGraph integration when workflows require it
+
+### Cloud and Infrastructure
+
+- AI observability and tracing
+- Terraform infrastructure management
+- AWS Lambda workloads
+- AWS Step Functions workflows
+- CloudWatch monitoring
+- DynamoDB-based distributed state patterns
 
 ## Project Goal
 
@@ -47,10 +101,9 @@ Build a production-oriented AI assistant that can:
 - Answer questions about a user's injury journal
 - Retrieve relevant historical information
 - Generate grounded summaries
-- Cite the underlying journal records
+- Cite underlying journal records
 - Apply healthcare safety boundaries
-- Evaluate retrieval and answer quality
-- Monitor AI workflows and operational behavior
+- Evaluate AI system quality
 
 The system is designed to be built one layer at a time, with the data and retrieval foundations established before introducing agentic workflows.
 
