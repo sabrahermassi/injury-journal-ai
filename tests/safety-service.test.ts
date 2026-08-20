@@ -54,10 +54,13 @@ describe('safety service', () => {
   it('blocks common diagnosis requests', () => {
     const questions = [
       'Could this be cancer?',
+      'Could this be a tumor?',
       'What condition do I have?',
       'What diagnosis do I have?',
       'What is wrong with me?',
       'Is this cancer?',
+      'Is this an illness?',
+      'Is this an injury?',
       'Am I sick?',
     ];
 

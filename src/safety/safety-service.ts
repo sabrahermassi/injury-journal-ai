@@ -27,9 +27,9 @@ const diagnosisPatterns = [
 
   /what is wrong with me/i,
 
-  /is this (cancer|a disease|a condition|serious|dangerous)/i,
+  /is this (cancer|an illness|a disease|a condition|an injury|serious|dangerous)/i,
 
-  /could this be (cancer|a disease|a condition|an injury|a fracture|a tear|a syndrome|a disorder)/i,
+  /could this be (cancer|a tumor|a tumour|an illness|a disease|a condition|an injury|a fracture|a tear|a syndrome|a disorder)/i,
 ];
 
 export function checkSafety(question: string): SafetyResult {
