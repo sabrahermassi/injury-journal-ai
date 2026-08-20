@@ -2,6 +2,19 @@ import { PrismaClient, Prisma } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+type SearchSimilarChunk = Pick<
+  Prisma.DocumentChunkGetPayload<{}>,
+  | 'id'
+  | 'injuryId'
+  | 'sourceType'
+  | 'sourceId'
+  | 'chunkIndex'
+  | 'content'
+  | 'metadata'
+> & {
+  distance: number;
+};
+
 export async function disconnectVectorStorage() {
   await prisma.$disconnect();
 }
@@ -70,6 +83,36 @@ export async function deleteDocumentChunksExcept(
       WHERE "sourceType" = ${sourceType}
         AND "sourceId" = ${sourceId}
         AND "chunkIndex" NOT IN (${Prisma.join(chunkIndexes)})
+    `,
+  );
+}
+
+export async function searchSimilarChunks(
+  embedding: number[],
+  limit = 5,
+  injuryId?: number,
+) {
+  const vector = `[${embedding.join(',')}]`;
+
+  return prisma.$queryRaw<SearchSimilarChunk[]>(
+    Prisma.sql`
+      SELECT
+        "id",
+        "injuryId",
+        "sourceType",
+        "sourceId",
+        "chunkIndex",
+        "content",
+        "metadata",
+        "embedding" <=> ${vector}::vector AS "distance"
+      FROM "DocumentChunk"
+      ${
+        injuryId !== undefined
+          ? Prisma.sql`WHERE "injuryId" = ${injuryId}`
+          : Prisma.empty
+      }
+      ORDER BY "embedding" <=> ${vector}::vector
+      LIMIT ${limit}
     `,
   );
 }
