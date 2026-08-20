@@ -1,5 +1,4 @@
 import { jest } from '@jest/globals';
-import type { Request, Response } from 'express';
 
 const runAgentMock = jest.fn();
 
@@ -103,6 +102,39 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
 
     expect(runAgentMock).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when injuryId is not a number', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 'Show my injury timeline',
+        injuryId: '42',
+      },
+    };
+
+    const res = mockResponse();
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Invalid injuryId',
+    });
+  });
+
+  it('returns 400 when injuryId is not a positive integer', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 'Show my injury timeline',
+        injuryId: 42.5,
+      },
+    };
+
+    const res = mockResponse();
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 
   it('returns 500 when agent fails', async () => {

@@ -11,6 +11,17 @@ export async function askAgent(req: Request, res: Response) {
       });
     }
 
+    if (
+      injuryId !== undefined &&
+      (!Number.isSafeInteger(injuryId) ||
+        injuryId <= 0 ||
+        injuryId > 2_147_483_647)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid injuryId',
+      });
+    }
+
     const result = await runAgent(question, injuryId);
 
     return res.json(result);
