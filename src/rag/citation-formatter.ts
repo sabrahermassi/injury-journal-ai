@@ -1,9 +1,4 @@
-type Citation = {
-  sourceType: string;
-  sourceId: number;
-  label: string;
-  date?: string;
-};
+import type { Citation } from './citation-builder.js';
 
 export function formatCitations(citations: Citation[]) {
   return citations.map((citation) => ({

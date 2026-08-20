@@ -24,4 +24,23 @@ describe('citation builder', () => {
       },
     ]);
   });
+
+  it('deduplicates citations from the same source', () => {
+    const chunks = [
+      {
+        sourceType: 'Treatment',
+        sourceId: 42,
+        metadata: {},
+      },
+      {
+        sourceType: 'Treatment',
+        sourceId: 42,
+        metadata: {},
+      },
+    ];
+
+    const citations = buildCitations(chunks);
+
+    expect(citations).toHaveLength(1);
+  });
 });

@@ -1,8 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import type { Citation } from './citation-builder.js';
 
 const prisma = new PrismaClient();
 
-export async function mapCitationSources(citations: any[]) {
+export async function mapCitationSources(
+  citations: Array<Pick<Citation, 'sourceType' | 'sourceId'>>,
+) {
   const results = [];
 
   for (const citation of citations) {

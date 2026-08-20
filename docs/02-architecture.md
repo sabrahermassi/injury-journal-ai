@@ -200,7 +200,7 @@ flowchart TD
     C["Retrieved Chunks"] --> L["LLM Context"]
     C --> M["Source Metadata"]
     L --> A["Generated Answer"]
-    A --> V["Citation Mapping"]
+    A --> V["Citation Generation"]
     M --> V
     V --> R["Answer + Sources"]
 ```

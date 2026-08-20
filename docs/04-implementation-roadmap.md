@@ -231,6 +231,7 @@ Build:
 - Citation mapper
 - Citation formatting
 - Source mapping
+- Source-level citation verification
 - Citation metadata preservation
 
 (Optional later):

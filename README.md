@@ -123,14 +123,21 @@ Do not add these prematurely. The current `semanticSearch()` service provides th
 
 ### Citation Verification
 
-The current implementation performs source-level verification.
-(answers the question: Does this citation point to a real source that belongs to this injury?)
+The current implementation performs citation generation from retrieved chunks.
+(answers the question: Which journal records support this answer?)
 
-It verifies:
+It currently provides:
 
-- The referenced source exists
-- The source belongs to the requested injury
-- The source can be safely exposed to the requesting user
+- Source type mapping
+- Source ID mapping
+- Citation formatting
+- Citation metadata preservation
+
+Future improvements:
+
+- Source existence verification
+- Injury ownership verification
+- User-level authorization checks before exposing citations
 
 #### Future Citation Improvements
 
