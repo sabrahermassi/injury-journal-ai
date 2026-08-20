@@ -13,6 +13,8 @@ const diagnosisPatterns = [
 
   /am i (suffering from|experiencing|showing signs of)\s+.+/i,
 
+  /am i sick/i,
+
   /what (is|are) my symptoms (of|for)\s+.+/i,
 
   /(can you|please)?\s*diagnose me/i,
@@ -25,7 +27,9 @@ const diagnosisPatterns = [
 
   /what is wrong with me/i,
 
-  /could this be .+/i,
+  /is this (cancer|a disease|a condition|serious|dangerous)/i,
+
+  /could this be (cancer|a disease|a condition|an injury|a fracture|a tear|a syndrome|a disorder)/i,
 ];
 
 export function checkSafety(question: string): SafetyResult {

@@ -51,13 +51,34 @@ describe('safety service', () => {
     });
   });
 
+  it('blocks common diagnosis requests', () => {
+    const questions = [
+      'Could this be cancer?',
+      'What condition do I have?',
+      'What diagnosis do I have?',
+      'What is wrong with me?',
+      'Is this cancer?',
+      'Am I sick?',
+    ];
+
+    questions.forEach((question) => {
+      expect(checkSafety(question).allowed).toBe(false);
+    });
+  });
+
+  it('allows journal questions that contain similar wording', () => {
+    const result = checkSafety('Could this be in my medical history?');
+
+    expect(result.allowed).toBe(true);
+  });
+
   it('allows journal history questions containing "what do I have"', () => {
     const result = checkSafety('What do I have in my medical history?');
 
     expect(result.allowed).toBe(true);
   });
 
-  it('blocks diagnosis requests', () => {
+  it('blocks diagnosis request for Do I have a herniated disc?', () => {
     const result = checkSafety('Do I have a herniated disc?');
 
     expect(result.allowed).toBe(false);
