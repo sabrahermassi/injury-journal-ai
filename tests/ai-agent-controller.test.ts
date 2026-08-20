@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import type { Request, Response } from 'express';
 
 const runAgentMock = jest.fn();
 
@@ -8,11 +9,22 @@ jest.unstable_mockModule('../src/ai-agent/ai-agent-orchestrator.js', () => ({
 
 const { askAgent } = await import('../src/ai-agent/ai-agent-controller.js');
 
-function mockResponse() {
+type MockRequest = {
+  body?: {
+    question?: unknown;
+    injuryId?: unknown;
+  };
+};
+type MockResponse = {
+  status: jest.Mock;
+  json: jest.Mock;
+};
+
+function mockResponse(): MockResponse {
   return {
     status: jest.fn().mockReturnThis(),
     json: jest.fn(),
-  } as any;
+  };
 }
 
 describe('ai agent controller', () => {
@@ -21,11 +33,11 @@ describe('ai agent controller', () => {
   });
 
   it('returns agent result', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {
         question: 'What treatments failed?',
       },
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -60,12 +72,12 @@ describe('ai agent controller', () => {
   });
 
   it('passes injuryId to the agent', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {
         question: 'Summarize my injury',
         injuryId: 42,
       },
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -80,9 +92,9 @@ describe('ai agent controller', () => {
   });
 
   it('returns 400 without question', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {},
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -94,11 +106,11 @@ describe('ai agent controller', () => {
   });
 
   it('returns 500 when agent fails', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {
         question: 'test',
       },
-    } as any;
+    };
 
     const res = mockResponse();
 

@@ -186,16 +186,23 @@ The goal is not to diagnose medical conditions. The assistant organizes and summ
 
 Current safety flow:
 
+```text
 User Question
 → Safety Check
-→ Allowed Request → RAG Pipeline
 → Unsafe Request → Safe Response
+→ Allowed Request → Intent Routing
+                         ↓
+                    ┌────┴────┐
+                    ↓         ↓
+                    RAG Pipeline Journal Tool
+```
 
 Implemented:
 
-- Detect direct diagnosis requests
-- Block unsafe medical diagnosis questions
+- Detect common direct diagnosis request patterns
+- Block matching unsafe medical diagnosis questions
 - Provide safe redirect responses
+- Allow safe questions to continue through intent routing
 - Allow journal summarization and history-based questions
 
 #### Future Safety Improvements

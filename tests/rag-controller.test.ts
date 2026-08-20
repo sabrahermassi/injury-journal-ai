@@ -73,11 +73,11 @@ describe('rag controller', () => {
   });
 
   it('returns safe response for blocked questions', async () => {
-    const req = {
+    const req: MockRequest = {
       body: {
         question: 'Do I have cancer?',
       },
-    } as any;
+    };
 
     const res = mockResponse();
 
@@ -91,7 +91,6 @@ describe('rag controller', () => {
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'Do I have cancer?',
-      5,
       undefined,
     );
 

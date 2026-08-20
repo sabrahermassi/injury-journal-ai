@@ -4,7 +4,7 @@ import { journalTool } from './tools/journal-tool.js';
 import { routeIntent } from './ai-agent-intent-router.js';
 import { AgentState } from './ai-agent-state.js';
 
-export async function runAgent(question: string) {
+export async function runAgent(question: string, injuryId?: number) {
   const state: AgentState = {
     question,
   };
@@ -28,17 +28,34 @@ export async function runAgent(question: string) {
     case 'journal': {
       state.toolUsed = 'journal-tool';
 
-      const result = await journalTool(question);
+      if (injuryId === undefined) {
+        return {
+          answer: 'An injury must be selected for journal questions.',
+          citations: [],
+        };
+      }
+
+      const result = await journalTool(injuryId);
+
+      if (!result) {
+        return {
+          answer: 'No injury record was found.',
+          citations: [],
+        };
+      }
 
       state.result = result;
 
-      return result;
+      return {
+        answer: JSON.stringify(result),
+        citations: [],
+      };
     }
 
     case 'rag': {
       state.toolUsed = 'rag-tool';
 
-      const result = await ragTool(question);
+      const result = await ragTool(question, injuryId, 5);
 
       state.result = result;
 

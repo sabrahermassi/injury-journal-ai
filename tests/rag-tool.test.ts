@@ -23,8 +23,8 @@ describe('rag tool', () => {
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'What treatments failed?',
-      5,
       undefined,
+      5,
     );
 
     expect(result).toEqual({
@@ -39,12 +39,12 @@ describe('rag tool', () => {
       citations: [],
     });
 
-    await ragTool('Summarize treatments', 5, 42);
+    await ragTool('Summarize treatments', 42, 5);
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'Summarize treatments',
-      5,
       42,
+      5,
     );
   });
 });

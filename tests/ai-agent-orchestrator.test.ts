@@ -67,7 +67,11 @@ describe('agent orchestrator', () => {
 
     expect(routeIntentMock).toHaveBeenCalledWith('What treatments failed?');
 
-    expect(ragToolMock).toHaveBeenCalledWith('What treatments failed?');
+    expect(ragToolMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+      5,
+    );
 
     expect(journalToolMock).not.toHaveBeenCalled();
 
@@ -89,20 +93,21 @@ describe('agent orchestrator', () => {
     routeIntentMock.mockReturnValue('journal');
 
     journalToolMock.mockResolvedValue({
-      answer: 'Your injury started in 2022.',
-      citations: [],
+      id: 42,
     });
 
-    const result = await runAgent('Show my injury timeline');
+    const result = await runAgent('Show my injury timeline', 42);
 
     expect(routeIntentMock).toHaveBeenCalledWith('Show my injury timeline');
 
-    expect(journalToolMock).toHaveBeenCalledWith('Show my injury timeline');
+    expect(journalToolMock).toHaveBeenCalledWith(42);
 
     expect(ragToolMock).not.toHaveBeenCalled();
 
+    // TODO: Update this expectation when journalTool is implemented
+    // to transform structured injury data into a user-facing answer.
     expect(result).toEqual({
-      answer: 'Your injury started in 2022.',
+      answer: JSON.stringify({ id: 42 }),
       citations: [],
     });
   });
