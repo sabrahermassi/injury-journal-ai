@@ -11,9 +11,13 @@ export type SafetyResult =
 const diagnosisPatterns = [
   /do i have .+/i,
   /what disease do i have/i,
+  /what condition do i have/i,
+  /what diagnosis do i have/i,
   /am i sick/i,
   /is this cancer/i,
+  /could this be cancer/i,
   /diagnose me/i,
+  /what is wrong with me/i,
 ];
 
 export function checkSafety(question: string): SafetyResult {

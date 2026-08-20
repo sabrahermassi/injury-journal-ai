@@ -191,10 +191,12 @@ User Question
 
 Implemented:
 
-- Detect direct diagnosis requests
-- Block unsafe medical diagnosis questions
+- Detect common direct diagnosis request patterns
+- Block matching unsafe medical diagnosis questions
 - Provide safe redirect responses
-- Allow journal summarization and history-based questions
+- Allow other questions to continue through the RAG pipeline
+
+The current safety layer uses deterministic pattern matching and does not represent a complete medical safety classifier. It should be extended with additional intent detection and safety evaluation before production use.
 
 #### Future Safety Improvements
 

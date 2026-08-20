@@ -33,4 +33,19 @@ describe('safety service', () => {
       allowed: true,
     });
   });
+
+  it('blocks common diagnosis requests', () => {
+    const unsafeQuestions = [
+      'Could this be cancer?',
+      'What condition do I have?',
+      'What diagnosis do I have?',
+      'What is wrong with me?',
+    ];
+
+    unsafeQuestions.forEach((question) => {
+      const result = checkSafety(question);
+
+      expect(result.allowed).toBe(false);
+    });
+  });
 });
