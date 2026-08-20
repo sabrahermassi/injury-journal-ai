@@ -45,7 +45,21 @@ describe('safety service', () => {
     unsafeQuestions.forEach((question) => {
       const result = checkSafety(question);
 
+      console.log('QUESTION:', question, 'RESULT:', result);
+
       expect(result.allowed).toBe(false);
     });
+  });
+
+  it('allows journal history questions containing "what do I have"', () => {
+    const result = checkSafety('What do I have in my medical history?');
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('blocks diagnosis requests', () => {
+    const result = checkSafety('Do I have a herniated disc?');
+
+    expect(result.allowed).toBe(false);
   });
 });

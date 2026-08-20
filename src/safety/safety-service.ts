@@ -9,15 +9,23 @@ export type SafetyResult =
     };
 
 const diagnosisPatterns = [
-  /do i have .+/i,
-  /what disease do i have/i,
+  /do i have (a|an)?\s*(.+)?(injury|condition|disease|syndrome|disorder|diagnosis|tear|fracture|cancer|tumou?r|disc|herniation)/i,
+
+  /am i (suffering from|experiencing|showing signs of)\s+.+/i,
+
+  /what (is|are) my symptoms (of|for)\s+.+/i,
+
+  /(can you|please)?\s*diagnose me/i,
+
   /what condition do i have/i,
+
+  /what disease do i have/i,
+
   /what diagnosis do i have/i,
-  /am i sick/i,
-  /is this cancer/i,
-  /could this be cancer/i,
-  /diagnose me/i,
+
   /what is wrong with me/i,
+
+  /could this be .+/i,
 ];
 
 export function checkSafety(question: string): SafetyResult {

@@ -514,7 +514,7 @@ The RAG system must never expose another user's information.
 - Integrate citation source verification into the RAG response pipeline
 - Verify that cited journal records still exist
 - Verify citation ownership before exposing sources
-- git Add claim-level citation verification
+- Add claim-level citation verification
 
 Security applies across:
 

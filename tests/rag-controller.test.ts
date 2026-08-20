@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import type { Request, Response } from 'express';
 
 const answerQuestionMock = jest.fn();
 
@@ -11,7 +12,7 @@ const { askQuestion } = await import('../src/rag/rag-controller.js');
 type MockRequest = {
   body?: {
     question?: unknown;
-    injuryId?: number;
+    injuryId?: unknown;
   };
 };
 
@@ -46,7 +47,7 @@ describe('rag controller', () => {
       citations: [],
     });
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'What treatments failed?',
@@ -74,7 +75,7 @@ describe('rag controller', () => {
 
     const res = mockResponse();
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'What treatments failed?',
@@ -89,7 +90,7 @@ describe('rag controller', () => {
 
     const res = mockResponse();
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(400);
   });
@@ -99,7 +100,7 @@ describe('rag controller', () => {
 
     const res = mockResponse();
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(400);
 
@@ -116,7 +117,7 @@ describe('rag controller', () => {
 
     const res = mockResponse();
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(answerQuestionMock).not.toHaveBeenCalled();
@@ -133,7 +134,7 @@ describe('rag controller', () => {
 
     answerQuestionMock.mockRejectedValue(new Error('LLM failed'));
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(500);
   });
@@ -147,7 +148,7 @@ describe('rag controller', () => {
 
     const res = mockResponse();
 
-    await askQuestion(req, res);
+    await askQuestion(req as Request, res as Response);
 
     expect(res.status).toHaveBeenCalledWith(400);
 
