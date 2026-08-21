@@ -3,7 +3,7 @@ import { runAgent } from '../../src/ai-agent/ai-agent-orchestrator.js';
 import {
   evaluateSafety,
   evaluateCitations,
-  evaluateIntent,
+  //evaluateIntent,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
 import type { EvaluationResult } from './evaluation-types.js';
