@@ -3,8 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 const prisma = new PrismaClient();
 
 type SearchSimilarChunk = Pick<
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  Prisma.DocumentChunkGetPayload<{}>,
+  Prisma.DocumentChunkGetPayload<Prisma.DocumentChunkDefaultArgs>,
   | 'id'
   | 'injuryId'
   | 'sourceType'
@@ -15,7 +14,6 @@ type SearchSimilarChunk = Pick<
 > & {
   distance: number;
 };
-
 export async function disconnectVectorStorage() {
   await prisma.$disconnect();
 }
