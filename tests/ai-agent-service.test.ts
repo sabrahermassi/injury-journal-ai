@@ -23,8 +23,8 @@ describe('AI agent service', () => {
 
     expect(ragToolMock).toHaveBeenCalledWith(
       'What treatments failed?',
-      5,
       undefined,
+      5,
     );
 
     expect(result).toEqual({
@@ -41,6 +41,6 @@ describe('AI agent service', () => {
 
     await runAgent('Summarize treatments', 42);
 
-    expect(ragToolMock).toHaveBeenCalledWith('Summarize treatments', 5, 42);
+    expect(ragToolMock).toHaveBeenCalledWith('Summarize treatments', 42, 5);
   });
 });

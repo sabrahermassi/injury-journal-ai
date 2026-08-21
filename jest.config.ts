@@ -1,5 +1,8 @@
+import type { Config } from 'jest';
+
 const config: Config = {
   preset: 'ts-jest/presets/default-esm',
+
   testEnvironment: 'node',
 
   maxWorkers: 1,
@@ -13,7 +16,8 @@ const config: Config = {
       'ts-jest',
       {
         useESM: true,
-        tsconfig: 'tsconfig.test.json',
+        tsconfig: '<rootDir>/tsconfig.test.json',
+        isolatedModules: true,
       },
     ],
   },

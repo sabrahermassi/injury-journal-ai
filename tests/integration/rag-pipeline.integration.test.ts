@@ -1,17 +1,19 @@
-import { answerQuestion } from '../../src/rag/rag-service.js';
+import { jest } from '@jest/globals';
 import { storeDocumentChunk } from '../../src/embeddings/vector-storage.js';
 import { prisma } from '../../src/lib/prisma.js';
-import { embedText } from '../../src/embeddings/embedding-client.js';
-import { generateAnswer } from '../../src/llm/llm-client.js';
 import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
 
-jest.mock('../../src/embeddings/embedding-client.js', () => ({
+jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
   embedText: jest.fn(),
 }));
 
-jest.mock('../../src/llm/llm-client.js', () => ({
+jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
   generateAnswer: jest.fn(),
 }));
+
+const { answerQuestion } = await import('../../src/rag/rag-service.js');
+const { embedText } = await import('../../src/embeddings/embedding-client.js');
+const { generateAnswer } = await import('../../src/llm/llm-client.js');
 
 const mockEmbedText = jest.mocked(embedText);
 const mockGenerateAnswer = jest.mocked(generateAnswer);
@@ -32,6 +34,7 @@ describe('RAG pipeline integration', () => {
 
   beforeAll(async () => {
     const testInjury = await createTestInjury('RAG Pipeline Test');
+
     injuryId = testInjury.injuryId;
     userId = testInjury.userId;
 
@@ -103,7 +106,7 @@ describe('RAG pipeline integration', () => {
   });
 
   it('blocks diagnosis requests before retrieval or LLM generation', async () => {
-    const result = await answerQuestion('Do I have a fracture?', 1);
+    const result = await answerQuestion('Do I have a fracture?', injuryId);
 
     expect(result).toEqual({
       answer:
@@ -112,7 +115,7 @@ describe('RAG pipeline integration', () => {
       citations: [],
     });
 
-    expect(embedText).not.toHaveBeenCalled();
-    expect(generateAnswer).not.toHaveBeenCalled();
+    expect(mockEmbedText).not.toHaveBeenCalled();
+    expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 });

@@ -1,18 +1,20 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
-import app from '../../src/app.js';
 import { storeDocumentChunk } from '../../src/embeddings/vector-storage.js';
 import { prisma } from '../../src/lib/prisma.js';
-import { embedText } from '../../src/embeddings/embedding-client.js';
-import { generateAnswer } from '../../src/llm/llm-client.js';
 import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
 
-jest.mock('../../src/embeddings/embedding-client.js', () => ({
+jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
   embedText: jest.fn(),
 }));
 
-jest.mock('../../src/llm/llm-client.js', () => ({
+jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
   generateAnswer: jest.fn(),
 }));
+
+const { default: app } = await import('../../src/app.js');
+const { embedText } = await import('../../src/embeddings/embedding-client.js');
+const { generateAnswer } = await import('../../src/llm/llm-client.js');
 
 const mockEmbedText = jest.mocked(embedText);
 const mockGenerateAnswer = jest.mocked(generateAnswer);
@@ -36,10 +38,12 @@ describe('RAG route integration', () => {
 
   beforeAll(async () => {
     const testInjury = await createTestInjury('RAG Route Test');
+
     injuryId = testInjury.injuryId;
     userId = testInjury.userId;
 
     const otherInjury = await createTestInjury('Other Injury');
+
     otherInjuryId = otherInjury.injuryId;
     otherUserId = otherInjury.userId;
 
@@ -74,6 +78,7 @@ describe('RAG route integration', () => {
   afterAll(async () => {
     await deleteTestInjury(injuryId, userId);
     await deleteTestInjury(otherInjuryId, otherUserId);
+
     await prisma.$disconnect();
   });
 
@@ -149,7 +154,7 @@ describe('RAG route integration', () => {
   it('blocks safety-sensitive requests before retrieval or LLM generation', async () => {
     const response = await request(app).post('/rag/ask').send({
       question: 'Do I have a fracture?',
-      injuryId: 1,
+      injuryId,
     });
 
     expect(response.status).toBe(200);
@@ -167,7 +172,7 @@ describe('RAG route integration', () => {
 
   it('returns 400 when question is missing', async () => {
     const response = await request(app).post('/rag/ask').send({
-      injuryId: 1,
+      injuryId,
     });
 
     expect(response.status).toBe(400);
