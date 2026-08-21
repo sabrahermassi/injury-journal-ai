@@ -64,7 +64,11 @@ describe('vector storage integration', () => {
       vectorWith(0, 0, 1),
     );
 
-    const results = await searchSimilarChunks(vectorWith(1, 0, 0), 3);
+    const results = await searchSimilarChunks(
+      vectorWith(1, 0, 0),
+      undefined,
+      3,
+    );
 
     expect(results).toHaveLength(3);
 
@@ -104,7 +108,11 @@ describe('vector storage integration', () => {
       vectorWith(0, 1, 0),
     );
 
-    const results = await searchSimilarChunks(vectorWith(1, 0, 0), 2);
+    const results = await searchSimilarChunks(
+      vectorWith(1, 0, 0),
+      undefined,
+      2,
+    );
 
     expect(results).toHaveLength(2);
   });
@@ -128,7 +136,7 @@ describe('vector storage integration', () => {
       vectorWith(1, 0, 0),
     );
 
-    const results = await searchSimilarChunks(vectorWith(1, 0, 0), 5, 1);
+    const results = await searchSimilarChunks(vectorWith(1, 0, 0), 1, 5);
 
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('Injury 1 relevant chunk');

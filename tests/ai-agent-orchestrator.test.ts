@@ -44,6 +44,9 @@ describe('agent orchestrator', () => {
     expect(result).toEqual({
       answer: 'I cannot diagnose medical conditions.',
       citations: [],
+      metadata: {
+        retrievedChunks: [],
+      },
     });
   });
 
@@ -58,6 +61,12 @@ describe('agent orchestrator', () => {
       answer: 'Shockwave therapy did not help.',
       citations: [
         {
+          sourceId: 42,
+        },
+      ],
+      chunks: [
+        {
+          sourceType: 'treatment',
           sourceId: 42,
         },
       ],
@@ -82,6 +91,14 @@ describe('agent orchestrator', () => {
           sourceId: 42,
         },
       ],
+      metadata: {
+        retrievedChunks: [
+          {
+            sourceType: 'treatment',
+            sourceId: 42,
+          },
+        ],
+      },
     });
   });
 

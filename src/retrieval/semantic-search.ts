@@ -3,10 +3,10 @@ import { searchSimilarChunks } from '../embeddings/vector-storage.js';
 
 export async function semanticSearch(
   query: string,
-  limit = 5,
   injuryId?: number,
+  limit = 5,
 ) {
   const result = await embedText(query);
 
-  return searchSimilarChunks(result.embedding, limit, injuryId);
+  return searchSimilarChunks(result.embedding, injuryId, limit);
 }

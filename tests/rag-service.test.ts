@@ -76,8 +76,8 @@ describe('rag service', () => {
 
     expect(semanticSearchMock).toHaveBeenCalledWith(
       'What treatments failed?',
-      5,
       undefined,
+      5,
     );
 
     expect(buildContextMock).toHaveBeenCalledWith(chunks);
@@ -94,6 +94,7 @@ describe('rag service', () => {
     expect(result).toEqual({
       answer: 'The treatment failed.',
       citations,
+      chunks,
     });
   });
 
@@ -131,6 +132,7 @@ describe('rag service', () => {
     expect(result).toEqual({
       answer: 'Shockwave therapy did not improve symptoms.',
       citations,
+      chunks,
     });
   });
 

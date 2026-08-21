@@ -1,4 +1,4 @@
-type RetrievedChunk = {
+export type RetrievedChunk = {
   sourceType: string;
   sourceId: number;
   metadata?: unknown;

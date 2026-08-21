@@ -3,7 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 const prisma = new PrismaClient();
 
 type SearchSimilarChunk = Pick<
-  Prisma.DocumentChunkGetPayload<{}>,
+  Prisma.DocumentChunkGetPayload<Prisma.DocumentChunkDefaultArgs>,
   | 'id'
   | 'injuryId'
   | 'sourceType'
@@ -14,7 +14,6 @@ type SearchSimilarChunk = Pick<
 > & {
   distance: number;
 };
-
 export async function disconnectVectorStorage() {
   await prisma.$disconnect();
 }
@@ -89,8 +88,8 @@ export async function deleteDocumentChunksExcept(
 
 export async function searchSimilarChunks(
   embedding: number[],
-  limit = 5,
   injuryId?: number,
+  limit = 5,
 ) {
   const vector = `[${embedding.join(',')}]`;
 

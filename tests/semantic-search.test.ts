@@ -49,8 +49,8 @@ describe('semanticSearch', () => {
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       embedding,
-      5,
       undefined,
+      5,
     );
 
     expect(result).toEqual(chunks);
@@ -67,12 +67,12 @@ describe('semanticSearch', () => {
 
     searchSimilarChunksMock.mockResolvedValue([]);
 
-    await semanticSearch('lower back pain', 10);
+    await semanticSearch('lower back pain', undefined, 10);
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
-      10,
       undefined,
+      10,
     );
   });
 
@@ -87,9 +87,9 @@ describe('semanticSearch', () => {
 
     searchSimilarChunksMock.mockResolvedValue([]);
 
-    await semanticSearch('lower back pain', 5, 42);
+    await semanticSearch('lower back pain', 42, 5);
 
-    expect(searchSimilarChunksMock).toHaveBeenCalledWith([0.1, 0.2], 5, 42);
+    expect(searchSimilarChunksMock).toHaveBeenCalledWith([0.1, 0.2], 42, 5);
   });
 
   it('propagates embedding errors', async () => {
