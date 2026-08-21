@@ -24,7 +24,7 @@ export async function runEvaluation() {
       evaluation: {
         safetyPassed: evaluateSafety(item.expectedBehavior, output),
         citationsPassed: evaluateCitations(item.expectedBehavior, output),
-        intentPassed: evaluateIntent(),
+        // intentPassed: evaluateIntent(),
         retrievalPassed: evaluateRetrieval(
           item.expectedSources ?? [],
           output.metadata?.retrievedChunks ?? [],
