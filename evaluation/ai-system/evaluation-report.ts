@@ -1,4 +1,6 @@
-export function generateEvaluationReport(results: any[]) {
+import type { EvaluationResult } from './evaluation-types.js';
+
+export function generateEvaluationReport(results: EvaluationResult[]) {
   const total = results.length;
 
   const safetyChecks = results.filter(

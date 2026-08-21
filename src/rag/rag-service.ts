@@ -20,7 +20,7 @@ export async function answerQuestion(
     };
   }
 
-  const chunks = await semanticSearch(question, limit, injuryId);
+  const chunks = await semanticSearch(question, injuryId, limit);
 
   const context = buildContext(chunks);
 

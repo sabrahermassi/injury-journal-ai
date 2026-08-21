@@ -6,9 +6,10 @@ import {
   evaluateIntent,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
+import type { EvaluationResult } from './evaluation-types.js';
 
 export async function runEvaluation() {
-  const results = [];
+  const results: EvaluationResult[] = [];
 
   for (const item of dataset) {
     const output = await runAgent(item.question);
@@ -22,11 +23,8 @@ export async function runEvaluation() {
 
       evaluation: {
         safetyPassed: evaluateSafety(item.expectedBehavior, output),
-
         citationsPassed: evaluateCitations(item.expectedBehavior, output),
-
         intentPassed: evaluateIntent(item.expectedIntent, output),
-
         retrievalPassed: evaluateRetrieval(
           item.expectedSources ?? [],
           output.metadata?.retrievedChunks ?? [],

@@ -300,7 +300,6 @@ Create tools such as:
 
 Start with a hand-written orchestration layer.
 Introduce LangGraph or another framework only when workflows become more complex.
-<<<<<<< HEAD
 
 ## Current MVP Agent Architecture
 
@@ -568,8 +567,6 @@ Example security flow:
 
 Security applies across both the normal database and AI retrieval layers.
 
-<<<<<<< HEAD
-
 # Step 15 — Future improvements
 
 ## Future Embedding Model Management
@@ -691,16 +688,13 @@ Potential improvements:
 
 Reranking should be introduced only after evaluating the baseline retrieval system and identifying retrieval quality limitations.
 
-### Future API Improvements
+## Future API Improvements
 
 - Add schema-based request validation (for example Zod) as the API surface grows
 - Standardize API error responses
 - Add stricter input validation across all endpoints
-  \=======
 
-# Step 15 - Future Improvements
-
-### Offline Ingestion Pipeline
+## Offline Ingestion Pipeline
 
 - [x] Document chunking
 - [x] Generate embeddings
@@ -709,7 +703,7 @@ Reranking should be introduced only after evaluating the baseline retrieval syst
 - [x] Serialize ingestion per `(sourceType, sourceId)` to prevent concurrent prune races
 - [ ] Add distributed ingestion locking/versioning for production deployments
 
-#### Ingestion Concurrency
+### Ingestion Concurrency
 
 The current implementation uses an in-process lock keyed by
 `(sourceType, sourceId)`. This prevents overlapping ingestions for the same
@@ -723,9 +717,9 @@ PostgreSQL advisory locks or source revision/versioning.
 Database transactions should not remain open while waiting for embedding API
 requests.
 
-### Semantic Retrieval
+## Semantic Retrieval
 
-#### Current Implementation:
+### Current Implementation:
 
 - Embed the user's question using the embedding service
 - Search `DocumentChunk` using pgvector cosine distance
@@ -744,31 +738,25 @@ User Question
 → Similarity Ranking
 → Top-k Relevant Chunks
 
-#### Future Retrieval Improvements
+### Future Retrieval Improvements
 
 The current retrieval implementation is intentionally minimal. Revisit and extend it when retrieval requirements become clearer.
 
-Potential filters:
-
-- `userId`
-- `injuryId`
-- `sourceType`
-- Date range
-
 Potential retrieval improvements:
 
-- Metadata filtering
+- Metadata filtering (Potential filters: `userId`, `injuryId`, `sourceType`, Date range)
 - Similarity threshold
 - Hybrid keyword + vector search
-- Retrieval evaluation
+- Retrieval evaluation expansion
 - Query-specific retrieval tuning
+- Answer faithfulness evaluation / LLM-as-judge
 - Reranking if needed
 
 Do not add these prematurely. The current `semanticSearch()` service provides the initial retrieval layer for RAG.
 
-### Citation Generation
+## Citation Generation
 
-#### Current Implementation:
+### Current Implementation:
 
 It performs source-level verification.
 (answers the question: Does this citation point to a real source that belongs to this injury?)
@@ -785,7 +773,7 @@ Implemented helper:
 
 - Source-level citation verification utility (tested independently)
 
-#### Future Citation Improvements
+### Future Citation Improvements
 
 - Integrate citation verification into the RAG response pipeline
 - Advanced claim-level citation verification can be added later.
@@ -817,9 +805,9 @@ Verification:
 
 ✓ Claim supported by source
 
-### Safety Guardrails
+## Safety Guardrails
 
-#### Current Implementation:
+### Current Implementation:
 
 The first safety layer uses deterministic rules to enforce healthcare boundaries. This is intentional because safety boundaries should be:
 
@@ -850,7 +838,7 @@ Implemented:
 - Allow safe questions to continue through intent routing
 - Allow journal summarization and history-based questions
 
-#### Future Safety Improvements
+### Future Safety Improvements
 
 - AI-based intent classification
 - More comprehensive medical safety categories
@@ -869,9 +857,9 @@ User Question
 
 Do not introduce AI-based classification prematurely. The current safety layer provides explicit healthcare boundaries before adding more complex agent behavior.
 
-### AI Agent
+## AI Agent
 
-#### Current Implementation
+### Current Implementation
 
 The project uses a hand-written orchestration layer to coordinate AI tools.
 
@@ -904,7 +892,7 @@ Current state tracks:
 
 The MVP uses deterministic orchestration instead of an LLM planner or agent framework.
 
-#### Future AI Agent Improvements
+### Future AI Agent Improvements
 
 Introduce LangGraph or another framework when workflows become more complex and require:
 
@@ -913,7 +901,7 @@ Introduce LangGraph or another framework when workflows become more complex and 
 - Workflow persistence
 - More dynamic tool selection
 
-### AI System Evaluation
+## AI System Evaluation
 
 The project includes an evaluation framework to measure AI system quality beyond manual testing.
 
@@ -924,7 +912,7 @@ The current evaluation system covers:
 - Citation accuracy
 - Safety adherence
 
-#### Future AI System Evaluation Improvements
+### Future AI System Evaluation Improvements
 
 Future iterations may introduce more advanced evaluation techniques:
 

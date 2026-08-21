@@ -47,7 +47,9 @@ export async function runAgent(question: string, injuryId?: number) {
         };
       }
 
-      state.result = result;
+      // TODO: Remove for now because JournalTool is palceholder
+      // Change later
+      //state.result = result;
 
       return {
         answer: JSON.stringify(result),
@@ -66,14 +68,17 @@ export async function runAgent(question: string, injuryId?: number) {
         answer: result.answer,
         citations: result.citations,
         metadata: {
-          retrievedChunks: result.chunks,
+          retrievedChunks: result.chunks.map((chunk) => ({
+            sourceType: chunk.sourceType,
+            sourceId: chunk.sourceId,
+          })),
         },
       };
     }
 
     default:
       return {
-        answer: safety.message,
+        answer: 'Unable to determine how to handle this request.',
         citations: [],
         metadata: {
           retrievedChunks: [],
