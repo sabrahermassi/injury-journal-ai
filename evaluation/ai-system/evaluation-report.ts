@@ -12,7 +12,7 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
   );
 
   const intentChecks = results.filter(
-    (result) => result.evaluation?.intentPassed !== null,
+    (result) => typeof result.evaluation?.intentPassed === 'boolean',
   );
 
   const retrievalChecks = results.filter(
