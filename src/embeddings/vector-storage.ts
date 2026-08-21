@@ -3,6 +3,7 @@ import { PrismaClient, Prisma } from '@prisma/client';
 const prisma = new PrismaClient();
 
 type SearchSimilarChunk = Pick<
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   Prisma.DocumentChunkGetPayload<{}>,
   | 'id'
   | 'injuryId'

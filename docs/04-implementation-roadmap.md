@@ -921,3 +921,4 @@ Future iterations may introduce more advanced evaluation techniques:
 - LLM-as-a-judge for evaluating answer quality and faithfulness
 - Regression testing with larger evaluation datasets
 - Continuous evaluation during model, prompt, or retrieval changes
+- Intent evaluation

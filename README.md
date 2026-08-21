@@ -48,7 +48,6 @@ The project was built incrementally, starting with the data ingestion and embedd
 - Evaluation dataset
 - Evaluation harness
 - Retrieval evaluation
-- Intent evaluation
 - Citation evaluation
 - Safety evaluation
 - Evaluation reporting
