@@ -1,4 +1,5 @@
 import { jest } from '@jest/globals';
+import dataset from '../evaluation/ai-system/dataset.json';
 
 const runAgentMock = jest.fn();
 
@@ -22,7 +23,11 @@ describe('evaluation runner', () => {
 
     const results = await runEvaluation();
 
-    expect(runAgentMock).toHaveBeenCalled();
+    expect(runAgentMock).toHaveBeenCalledTimes(dataset.length);
+
+    for (const item of dataset) {
+      expect(runAgentMock).toHaveBeenCalledWith(item.question, item.injuryId);
+    }
 
     expect(results.length).toBeGreaterThan(0);
 

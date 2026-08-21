@@ -6,6 +6,8 @@ describe('evaluation dataset', () => {
 
     for (const item of dataset) {
       expect(item.id).toEqual(expect.stringMatching(/\S+/));
+      expect(item.injuryId).toEqual(expect.any(Number));
+      expect(item.injuryId).toBeGreaterThan(0);
       expect(item.question).toEqual(expect.stringMatching(/\S+/));
       expect(item.expectedIntent).toEqual(expect.stringMatching(/\S+/));
       expect(item.expectedBehavior).toEqual(expect.stringMatching(/\S+/));
