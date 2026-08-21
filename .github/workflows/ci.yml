@@ -47,6 +47,7 @@ jobs:
         run: |
           echo "DATABASE_URL=$DATABASE_URL" > .env.test
           npx prisma db push
+          npx prisma db seed
 
       - name: Type check
         run: npx tsc --noEmit
