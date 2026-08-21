@@ -758,40 +758,50 @@ Do not add these prematurely. The current `semanticSearch()` service provides th
 
 ### Current Implementation:
 
-It performs source-level verification.
-(answers the question: Does this citation point to a real source that belongs to this injury?)
+The citation system generates user-facing citations from retrieved RAG chunks.
 
 It currently provides:
 
 - Citation generation from retrieved chunks
-- Citation mapper
+- Citation mapping
 - Citation formatting
 - Source mapping
 - Citation metadata preservation
+- Citation deduplication
 
-Implemented helper:
+The current citation builder formats and deduplicates the sources returned by the retrieval pipeline. It does not independently verify that a source record exists or that the source belongs to the requested injury.
 
-- Source-level citation verification utility (tested independently)
+Injury-level filtering is performed during vector retrieval, before citation generation.
 
 ### Future Citation Improvements
 
-- Integrate citation verification into the RAG response pipeline
+Source-Level Citation Verification
+
+Integrate independent source verification into the RAG response pipeline.
+
+This should verify:
+
+- The referenced source record exists.
+- The source belongs to the requested injury.
+- The citation refers to a valid source type and source ID.
+- Claim-Level Citation Verification
 - Advanced claim-level citation verification can be added later.
 
-Goal:
-
-Verify that individual generated claims are supported by the retrieved evidence.
+Goal: Verify that individual generated claims are supported by the retrieved evidence.
 
 Future flow:
 
+```text
 Generated Answer
 → Claim Extraction
 → Evidence Matching
 → Claim Support Verification
 → Verified Answer
+```
 
 Example:
 
+```text
 Generated claim:
 
 "The patient improved after physiotherapy."
@@ -804,6 +814,7 @@ Treatment #42:
 Verification:
 
 ✓ Claim supported by source
+```
 
 ## Safety Guardrails
 
