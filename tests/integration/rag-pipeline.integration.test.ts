@@ -3,6 +3,7 @@ import { storeDocumentChunk } from '../../src/embeddings/vector-storage.js';
 import { prisma } from '../../src/lib/prisma.js';
 import { embedText } from '../../src/embeddings/embedding-client.js';
 import { generateAnswer } from '../../src/llm/llm-client.js';
+import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
 
 jest.mock('../../src/embeddings/embedding-client.js', () => ({
   embedText: jest.fn(),
@@ -26,15 +27,17 @@ function vectorWith(first: number, second = 0, third = 0): number[] {
 }
 
 describe('RAG pipeline integration', () => {
+  let injuryId: number;
+  let userId: number;
+
   beforeAll(async () => {
-    await prisma.$executeRaw`
-      DELETE FROM "DocumentChunk"
-      WHERE "sourceType" = 'integration-test'
-    `;
+    const testInjury = await createTestInjury('RAG Pipeline Test');
+    injuryId = testInjury.injuryId;
+    userId = testInjury.userId;
 
     await storeDocumentChunk(
-      1,
-      'integration-test',
+      injuryId,
+      'rag-pipeline-integration-test',
       1,
       0,
       'Physiotherapy helped improve my hip pain.',
@@ -42,8 +45,8 @@ describe('RAG pipeline integration', () => {
     );
 
     await storeDocumentChunk(
-      1,
-      'integration-test',
+      injuryId,
+      'rag-pipeline-integration-test',
       1,
       1,
       'I also received physiotherapy exercises.',
@@ -52,11 +55,7 @@ describe('RAG pipeline integration', () => {
   });
 
   afterAll(async () => {
-    await prisma.$executeRaw`
-      DELETE FROM "DocumentChunk"
-      WHERE "sourceType" = 'integration-test'
-    `;
-
+    await deleteTestInjury(injuryId, userId);
     await prisma.$disconnect();
   });
 
@@ -75,23 +74,27 @@ describe('RAG pipeline integration', () => {
   });
 
   it('retrieves evidence and generates an answer through the RAG pipeline', async () => {
-    const result = await answerQuestion('What treatments did I have?', 1, 2);
+    const result = await answerQuestion(
+      'What treatments did I have?',
+      injuryId,
+      2,
+    );
 
     expect(result.answer).toBe('mocked answer');
 
     expect(result.chunks.length).toBeGreaterThan(0);
 
     expect(result.chunks[0]).toMatchObject({
-      sourceType: 'integration-test',
+      sourceType: 'rag-pipeline-integration-test',
       sourceId: 1,
     });
 
     expect(result.citations).toHaveLength(1);
 
     expect(result.citations[0]).toMatchObject({
-      sourceType: 'integration-test',
+      sourceType: 'rag-pipeline-integration-test',
       sourceId: 1,
-      label: 'Integration-test #1',
+      label: 'Rag-pipeline-integration-test #1',
     });
 
     expect(mockEmbedText).toHaveBeenCalledWith('What treatments did I have?');

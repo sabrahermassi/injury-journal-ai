@@ -21,14 +21,14 @@ describe('vector storage integration', () => {
   beforeEach(async () => {
     await prisma.$executeRaw`
       DELETE FROM "DocumentChunk"
-      WHERE "sourceType" = 'integration-test'
+      WHERE "sourceType" = 'vector-storage-integration-test'
     `;
   });
 
   afterAll(async () => {
     await prisma.$executeRaw`
       DELETE FROM "DocumentChunk"
-      WHERE "sourceType" = 'integration-test'
+      WHERE "sourceType" = 'vector-storage-integration-test'
     `;
 
     await disconnectVectorStorage();
@@ -39,7 +39,7 @@ describe('vector storage integration', () => {
   it('retrieves chunks ordered by cosine similarity', async () => {
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       1,
       0,
       'Very similar chunk',
@@ -48,7 +48,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       1,
       1,
       'Somewhat similar chunk',
@@ -57,7 +57,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       1,
       2,
       'Unrelated chunk',
@@ -83,7 +83,7 @@ describe('vector storage integration', () => {
   it('respects the result limit', async () => {
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       2,
       0,
       'chunk 1',
@@ -92,7 +92,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       2,
       1,
       'chunk 2',
@@ -101,7 +101,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       2,
       2,
       'chunk 3',
@@ -120,7 +120,7 @@ describe('vector storage integration', () => {
   it('filters results by injuryId when provided', async () => {
     await storeDocumentChunk(
       1,
-      'integration-test',
+      'vector-storage-integration-test',
       3,
       0,
       'Injury 1 relevant chunk',
@@ -129,7 +129,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       2,
-      'integration-test',
+      'vector-storage-integration-test',
       4,
       0,
       'Injury 2 relevant chunk',

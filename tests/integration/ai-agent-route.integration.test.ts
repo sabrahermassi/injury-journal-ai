@@ -27,53 +27,27 @@ function vectorWith(first: number, second = 0, third = 0): number[] {
   return vector;
 }
 
-describe('RAG route integration', () => {
+describe('AI agent route integration', () => {
   let injuryId: number;
   let userId: number;
 
-  let otherInjuryId: number;
-  let otherUserId: number;
-
   beforeAll(async () => {
-    const testInjury = await createTestInjury('RAG Route Test');
+    const testInjury = await createTestInjury('AI Agent Route Test');
     injuryId = testInjury.injuryId;
     userId = testInjury.userId;
 
-    const otherInjury = await createTestInjury('Other Injury');
-    otherInjuryId = otherInjury.injuryId;
-    otherUserId = otherInjury.userId;
-
     await storeDocumentChunk(
       injuryId,
-      'rag-route-integration-test',
+      'ai-agent-integration-test',
       1,
       0,
       'Physiotherapy helped improve my hip pain.',
-      vectorWith(1, 0, 0),
-    );
-
-    await storeDocumentChunk(
-      injuryId,
-      'rag-route-integration-test',
-      1,
-      1,
-      'I also received physiotherapy exercises.',
-      vectorWith(0.9, 0.1, 0),
-    );
-
-    await storeDocumentChunk(
-      otherInjuryId,
-      'rag-route-integration-test',
-      2,
-      0,
-      'Physiotherapy helped improve my knee pain.',
       vectorWith(1, 0, 0),
     );
   });
 
   afterAll(async () => {
     await deleteTestInjury(injuryId, userId);
-    await deleteTestInjury(otherInjuryId, otherUserId);
     await prisma.$disconnect();
   });
 
@@ -88,66 +62,35 @@ describe('RAG route integration', () => {
       version: 'test',
     });
 
-    mockGenerateAnswer.mockResolvedValue('mocked answer');
+    mockGenerateAnswer.mockResolvedValue('mocked agent answer');
   });
 
-  it('returns a RAG answer for a valid request', async () => {
-    const response = await request(app).post('/rag/ask').send({
+  it('routes a RAG question through the RAG tool', async () => {
+    const response = await request(app).post('/ai-agent').send({
       question: 'What treatments did I have?',
       injuryId,
     });
 
     expect(response.status).toBe(200);
 
-    expect(response.body.answer).toBe('mocked answer');
-
-    expect(response.body.chunks).toHaveLength(2);
-
-    expect(response.body.chunks[0]).toMatchObject({
-      sourceType: 'rag-route-integration-test',
-      sourceId: 1,
-    });
-
-    expect(response.body.chunks[1]).toMatchObject({
-      sourceType: 'rag-route-integration-test',
-      sourceId: 1,
-    });
+    expect(response.body.answer).toBe('mocked agent answer');
 
     expect(response.body.citations).toHaveLength(1);
+
+    expect(response.body.metadata.retrievedChunks).toEqual([
+      {
+        sourceType: 'ai-agent-integration-test',
+        sourceId: 1,
+      },
+    ]);
 
     expect(mockEmbedText).toHaveBeenCalledWith('What treatments did I have?');
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });
 
-  it('returns relevant RAG chunks only for the requested injury', async () => {
-    const response = await request(app).post('/rag/ask').send({
-      question: 'What treatments did I have?',
-      injuryId,
-    });
-
-    expect(response.status).toBe(200);
-    expect(response.body.answer).toBe('mocked answer');
-
-    expect(response.body.chunks).toHaveLength(2);
-
-    expect(
-      response.body.chunks.every(
-        (chunk: { injuryId: number }) => chunk.injuryId === injuryId,
-      ),
-    ).toBe(true);
-
-    expect(
-      response.body.chunks.some(
-        (chunk: { injuryId: number }) => chunk.injuryId === otherInjuryId,
-      ),
-    ).toBe(false);
-
-    expect(response.body.citations).toHaveLength(1);
-  });
-
-  it('blocks safety-sensitive requests before retrieval or LLM generation', async () => {
-    const response = await request(app).post('/rag/ask').send({
+  it('blocks safety-sensitive questions before retrieval or LLM generation', async () => {
+    const response = await request(app).post('/ai-agent').send({
       question: 'Do I have a fracture?',
       injuryId: 1,
     });
@@ -157,7 +100,41 @@ describe('RAG route integration', () => {
     expect(response.body).toEqual({
       answer:
         'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
-      chunks: [],
+      citations: [],
+      metadata: {
+        retrievedChunks: [],
+      },
+    });
+
+    expect(mockEmbedText).not.toHaveBeenCalled();
+    expect(mockGenerateAnswer).not.toHaveBeenCalled();
+  });
+
+  it('routes a journal question to the journal tool when injuryId is provided', async () => {
+    const response = await request(app).post('/ai-agent').send({
+      question: 'Show me my injury timeline',
+      injuryId: 1,
+    });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body.answer).toContain('Lower back pain');
+
+    expect(response.body.citations).toEqual([]);
+
+    expect(mockEmbedText).not.toHaveBeenCalled();
+    expect(mockGenerateAnswer).not.toHaveBeenCalled();
+  });
+
+  it('requires an injuryId for journal questions', async () => {
+    const response = await request(app).post('/ai-agent').send({
+      question: 'Show me my injury timeline',
+    });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toEqual({
+      answer: 'An injury must be selected for journal questions.',
       citations: [],
     });
 
@@ -165,31 +142,16 @@ describe('RAG route integration', () => {
     expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 
-  it('returns 400 when question is missing', async () => {
-    const response = await request(app).post('/rag/ask').send({
+  it('returns 400 when question is empty', async () => {
+    const response = await request(app).post('/ai-agent').send({
+      question: '',
       injuryId: 1,
     });
 
     expect(response.status).toBe(400);
 
     expect(response.body).toEqual({
-      error: 'Question must be a non-empty string',
-    });
-
-    expect(mockEmbedText).not.toHaveBeenCalled();
-    expect(mockGenerateAnswer).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 when injuryId is invalid', async () => {
-    const response = await request(app).post('/rag/ask').send({
-      question: 'What treatments did I have?',
-      injuryId: -1,
-    });
-
-    expect(response.status).toBe(400);
-
-    expect(response.body).toEqual({
-      error: 'injuryId must be a positive integer',
+      error: 'Question is required',
     });
 
     expect(mockEmbedText).not.toHaveBeenCalled();
