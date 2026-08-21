@@ -12,6 +12,24 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testing_injury_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d testing_injury_ai"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testing_injury_ai?schema=public
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,6 +42,11 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Prepare test environment
+        run: |
+          echo "DATABASE_URL=$DATABASE_URL" > .env.test
+          npx prisma db push
 
       - name: Type check
         run: npx tsc --noEmit
