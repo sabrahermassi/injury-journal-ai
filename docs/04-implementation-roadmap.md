@@ -538,6 +538,11 @@ The RAG system must never expose another user's information.
 - Verify that cited journal records still exist
 - Verify citation ownership before exposing sources
 - Add claim-level citation verification
+- Verify injury ownership before any journal or vector query
+- Scope all RAG retrieval to the authenticated user's authorized injuries
+- Prevent cross-user access when injuryId is supplied
+- Prevent unrestricted cross-user retrieval when injuryId is omitted
+- Apply authorization to AI-agent tool execution
 
 Security applies across:
 
