@@ -5,8 +5,6 @@ const config: Config = {
 
   testEnvironment: 'node',
 
-  maxWorkers: 1,
-
   extensionsToTreatAsEsm: ['.ts'],
 
   setupFiles: ['<rootDir>/tests/setup.ts'],

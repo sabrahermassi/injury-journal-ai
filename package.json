@@ -14,7 +14,7 @@
     "lint": "eslint src evaluation/ai-system",
     "format": "prettier --write .",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:integration": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
+    "test:integration": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration --maxWorkers=1",
     "seed:dev": "tsx prisma/seed-dev.ts"
   },
   "prisma": {
