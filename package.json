@@ -10,10 +10,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
     "lint": "eslint src evaluation/ai-system",
     "format": "prettier --write .",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:integration": "cross-env NODE_ENV=test jest tests/integration",
+    "test:integration": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration --maxWorkers=1",
     "seed:dev": "tsx prisma/seed-dev.ts"
   },
   "prisma": {
@@ -36,11 +37,13 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
+    "@types/supertest": "^7.2.1",
     "cross-env": "^10.1.0",
     "eslint": "^10.8.0",
     "jest": "^30.4.2",
     "prettier": "^3.9.6",
     "prisma": "^6.19.3",
+    "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
     "tsx": "^4.23.10",
     "typescript": "5.9",

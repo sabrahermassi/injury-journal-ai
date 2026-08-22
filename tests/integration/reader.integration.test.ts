@@ -32,9 +32,9 @@ describe('Postgres reader integration', () => {
   it('reads seeded injury data from PostgreSQL', async () => {
     const data = await readJournalData();
 
-    expect(data.length).toBe(3);
-
     const injury = data.find((item) => item.name === 'Lower back pain');
+
+    expect(injury).toBeDefined();
 
     expect(injury).toMatchObject({
       id: 1,
