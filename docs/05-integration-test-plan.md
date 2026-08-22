@@ -75,7 +75,7 @@ flowchart TB
 
 ---
 
-# 1. Data Layer — Implemented
+# 1. Data Layer - Implemented
 
 ## PostgreSQL → Reader
 
@@ -97,7 +97,7 @@ This verifies that the reader correctly retrieves journal data from the real tes
 
 ---
 
-# 2. Ingestion Pipeline — Implemented
+# 2. Ingestion Pipeline - Implemented
 
 **Test:** `ingestion-pipeline.integration.test.ts`
 
@@ -115,7 +115,7 @@ This verifies that journal data can be transformed into documents and then into 
 
 ---
 
-# 3. Vector Storage & Retrieval — Implemented
+# 3. Vector Storage & Retrieval - Implemented
 
 **Test:** `vector-storage.integration.test.ts`
 
@@ -137,11 +137,11 @@ This verifies the actual vector-storage boundary using the real PostgreSQL datab
 
 ---
 
-# 4. RAG Pipeline — Next
+# 4. RAG Pipeline - Implemented
 
 **Test:** `rag-pipeline.integration.test.ts`
 
-The next integration boundary is:
+The integration boundary is:
 
 ```text
 answerQuestion()
@@ -236,7 +236,7 @@ The important boundary is:
 
 ---
 
-# 5. RAG Safety Path
+# 5. RAG Safety Path - Implemented
 
 The RAG pipeline must also verify that safety-sensitive questions stop **before retrieval or LLM generation**.
 
@@ -280,7 +280,7 @@ This verifies an important application-level safety boundary rather than merely 
 
 ---
 
-# 6. HTTP RAG Route — After the Pipeline
+# 6. HTTP RAG Route — After the Pipeline - Implemented
 
 Once the RAG pipeline integration tests pass, test the HTTP boundary:
 

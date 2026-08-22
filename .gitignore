@@ -14,7 +14,7 @@ coverage/
 .windsurf/
 
 # test files
-tests/test-db-not-to-commit.ts
+tests/requests.http
 
 # Personal files
 TECHNOLOGIES.md
