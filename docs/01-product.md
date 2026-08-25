@@ -26,6 +26,14 @@ Injury Journal AI is an AI-powered assistant that helps users search, understand
 
 It works on top of an existing Injury Journal application and uses structured journal data — including injuries, symptoms, treatments, medical visits, and timeline events — as its source of truth.
 
+> **Scope clarification (added during the `docs/handoff/` review series):** this backend does
+> not implement journal record creation/editing or user authentication — those are assumed to be
+> owned by that existing Injury Journal application. Today, this repo exposes only two AI
+> endpoints (`POST /rag/ask`, `POST /ai-agent`); there is no `GET /injuries`, no way to create or
+> edit a record, and no login. If a frontend is meant to be built against this backend for
+> anything beyond asking questions, that scope needs to be decided explicitly and is not yet.
+> See `docs/handoff/contracts-review.md` §5.
+
 The system uses embeddings, semantic retrieval, RAG, and eventually AI agents to produce grounded answers and summaries.
 
 The product is designed to **organize, retrieve, and summarize information**. It does not diagnose medical conditions or replace healthcare professionals.
@@ -70,12 +78,22 @@ The product is designed around **one user's private journal data**.
 
 ## 4. Product Goals
 
-- **Natural-language access:** Users can ask questions without knowing the underlying database structure.
+- **Natural-language access:** Users can ask questions without knowing the underlying database structure. *(Implemented.)*
 - **Grounded answers:** Responses are based on information retrieved from the user's journal.
+  > **Status:** the current implementation prompts the LLM to answer only from retrieved context,
+  > but nothing verifies this actually happens — there is no answer-faithfulness check, and the
+  > empty-retrieval case (no chunks found) is untested. See `docs/handoff/architecture-review.md`
+  > §7 and `docs/handoff/flows-review.md` Flow 4.
 - **Traceability:** Important claims can be traced to their underlying journal records.
-- **Useful summaries:** Users can generate concise summaries of their injury history.
-- **Healthcare safety:** The assistant operates within explicit healthcare boundaries.
+  > **Status:** not yet enforced. Today's citations list what was *retrieved*, not what the
+  > answer actually *used* — there is no claim-level verification. See
+  > `docs/handoff/step3-architecture-diff.md` §5.3.
+- **Useful summaries:** Users can generate concise summaries of their injury history. *(Implemented for the RAG path; the journal-lookup path currently returns raw unsummarized data — see §6 below.)*
+- **Healthcare safety:** The assistant operates within explicit healthcare boundaries. *(Implemented on the input side; see §7.)*
 - **Privacy:** Users can only access their own journal data.
+  > **Status: not yet implemented.** There is currently no authentication and no per-request user
+  > identity at all — any caller can supply any `injuryId` and receive that injury's data. This is
+  > the single highest-priority open item; see `docs/04-implementation-roadmap.md` Step 5.
 
 ---
 
@@ -85,31 +103,31 @@ The product is designed around **one user's private journal data**.
 
 > What treatments have I tried?
 
-Retrieve relevant treatment records and summarize them.
+Retrieve relevant treatment records and summarize them. *(Implemented via the RAG path.)*
 
 ### Compare Treatment Outcomes
 
 > Which treatments did not improve my symptoms?
 
-Retrieve relevant treatment and outcome information and summarize it.
+Retrieve relevant treatment and outcome information and summarize it. *(Implemented via the RAG path — quality depends on the LLM correctly reading `outcome` free text, since there is no structured outcome field to query directly.)*
 
 ### Search Symptoms and Events
 
 > When did my lower back symptoms become worse?
 
-Retrieve relevant symptom and timeline records.
+Retrieve relevant symptom and timeline records. *(Implemented, but keyword-routed to the journal tool — see §6 caveat below.)*
 
 ### Prepare a Doctor Summary
 
 > Generate a summary of my injury history for my doctor.
 
-Retrieve relevant timeline events, treatments, symptoms, and medical visits, then generate a source-backed summary.
+Retrieve relevant timeline events, treatments, symptoms, and medical visits, then generate a source-backed summary. *(Implemented only as a generic RAG question — there is no dedicated summary feature or template.)*
 
 ### Retrieve Specific History
 
 > What happened after my physiotherapy treatment?
 
-Retrieve relevant journal records and summarize the available information.
+Retrieve relevant journal records and summarize the available information. *(Implemented via the RAG path.)*
 
 ---
 
@@ -117,43 +135,49 @@ Retrieve relevant journal records and summarize the available information.
 
 ### Natural-Language Search
 
-Users ask questions in normal language rather than writing database queries.
+Users ask questions in normal language rather than writing database queries. *(Implemented.)*
 
 ### Semantic Retrieval
 
-Embeddings and vector search find relevant information based on meaning rather than exact keyword matches.
+Embeddings and vector search find relevant information based on meaning rather than exact keyword matches. *(Implemented — filtered by `injuryId` only; no similarity threshold, so an unrelated question against a sparsely-populated journal can still return "top-k" results that aren't actually relevant.)*
 
 ### Retrieval-Augmented Generation
 
-Relevant journal information is provided to the LLM as context before an answer is generated.
+Relevant journal information is provided to the LLM as context before an answer is generated. *(Implemented.)*
 
 ### Source Citations
 
 Generated answers identify the journal records used to support their claims.
 
+> **Status:** citations identify records that were *retrieved*, not records the answer
+> demonstrably *used*. See the Traceability caveat in §4.
+
 ### AI Agent
 
-The assistant may eventually orchestrate tools such as:
+> **Status update:** the AI agent exists today, not just "eventually." Tool routing is
+> deterministic keyword matching (not model-driven decision-making), and covers:
 
-- RAG retrieval
-- Journal/database access
-- Safety checks
-- Citation verification
+- RAG retrieval *(implemented, full pipeline)*
+- Journal/database access *(implemented, but returns a raw unsummarized database record with no LLM synthesis and no citations — an unfinished placeholder, not a deliberate simplification)*
+- Safety checks *(implemented, input-side only)*
+- Citation verification *(not implemented — the verification module exists in code but is not wired into any response path)*
 
-The agent is built after the underlying retrieval, RAG, and safety capabilities exist.
+Per-tool authorization (deciding whether this specific request may use this specific tool) is not implemented at all yet. See `docs/02-architecture.md` §5.5.
 
 ### Evaluation
 
 The system measures:
 
-- Retrieval quality
-- Answer faithfulness
-- Citation accuracy
-- Safety adherence
+- Retrieval quality *(implemented — exact source match against an expected-sources list)*
+- Answer faithfulness *(not implemented — no metric exists for this today, despite being a stated goal)*
+- Citation accuracy *(implemented, but shallow — only checks that at least one citation exists when one is expected, not that the citations are the correct ones)*
+- Safety adherence *(implemented, but shallow — checks for the literal substrings "cannot"/"unable" in a refusal, nothing more)*
+
+The evaluation dataset currently has 4 cases total — a smoke test, not a regression suite. See `docs/handoff/step3-architecture-diff.md` §6.
 
 ### AI Observability
 
-The system tracks operational information such as:
+*(Not yet implemented — Step 6 of the roadmap.)* The system tracks operational information such as:
 
 - Request IDs
 - Agent steps
@@ -191,13 +215,19 @@ It does not diagnose conditions or make medical decisions.
 
 > Tell me which disease I have.
 
-Requests outside these boundaries should be refused or redirected.
+Requests outside these boundaries should be refused or redirected. *(Implemented via a regex-based pre-generation filter — well-tested for the phrasings it covers, but it is a pre-generation filter only: nothing checks whether the LLM's generated answer echoes diagnosis-adjacent language it might read verbatim from raw journal content, e.g. a doctor's visit notes. See `docs/handoff/architecture-review.md` §9.)*
 
-The initial safety decision must occur **before retrieving journal data or invoking RAG/journal tools**. Per-tool authorization remains a separate control before each tool accesses user data.
+The initial safety decision must occur **before retrieving journal data or invoking RAG/journal tools**. *(Implemented and verified by an integration test.)* Per-tool authorization remains a separate control before each tool accesses user data.
+
+> **Status:** this per-tool authorization control does not exist yet. See
+> `docs/04-implementation-roadmap.md` Step 5.
 
 ---
 
 ## 8. Privacy and Security Requirements
+
+> **Status: none of the items below are implemented yet.** This section describes requirements
+> for Step 5 of the roadmap (`docs/04-implementation-roadmap.md`), not current behavior.
 
 The journal may contain sensitive personal and health information.
 
@@ -225,6 +255,11 @@ User A's journal data
 
 Ownership must be enforced explicitly rather than relying solely on opaque metadata.
 
+> **Status:** this exact anti-pattern exists in the current schema today — `DocumentChunk`'s only
+> reference to `userId` is inside an unindexed JSON metadata blob, not a real, queryable column.
+> Closing this gap requires a schema change (adding a real `userId` column), not just an
+> application-level check. See `docs/handoff/architecture-review.md` §3.
+
 Telemetry should prefer identifiers and metadata over raw journal content. Sensitive content must be redacted when logging is necessary, and telemetry must have appropriate encryption, access controls, and retention policies.
 
 ---
@@ -241,25 +276,28 @@ The product is not intended to:
 - Automatically modify the user's original journal records
 - Expose one user's journal data to another user
 
+> **Status note:** the last item — "expose one user's journal data to another user" — is not
+> currently prevented by any code. See §8 above.
+
 ---
 
 ## 10. Product Principles
 
 ### Grounded
 
-Prefer information retrieved from the user's journal over unsupported model assumptions.
+Prefer information retrieved from the user's journal over unsupported model assumptions. *(Encouraged via prompt instruction; not verified. See §4.)*
 
 ### Traceable
 
-Important claims should be connected to their underlying journal records.
+Important claims should be connected to their underlying journal records. *(Not yet enforced at claim level. See §4.)*
 
 ### Private by Default
 
-Only access the user's data when necessary, and avoid exposing personal health information through telemetry or other users' requests.
+Only access the user's data when necessary, and avoid exposing personal health information through telemetry or other users' requests. *(Not yet implemented — see §8.)*
 
 ### Safe by Default
 
-Perform safety checks before accessing healthcare data.
+Perform safety checks before accessing healthcare data. *(Implemented on the input side. See §7.)*
 
 ### Incremental
 
@@ -287,6 +325,9 @@ Agent
 Evaluation & Observability
 ```
 
+This sequencing was followed faithfully — see `docs/04-implementation-roadmap.md` for current
+status per step.
+
 ---
 
 ## 11. Future Direction
@@ -302,3 +343,8 @@ Future capabilities may include:
 - AI-assisted observability
 - Production AWS orchestration
 - Reproducible infrastructure
+
+> Also see `docs/04-implementation-roadmap.md`'s "New items surfaced by the review series"
+> section for a more granular, code-verified list of near-term work, including several
+> higher-priority fixes (query-embedding correctness, the ingestion worker, the journal-tool
+> placeholder) not previously captured anywhere in this document.
