@@ -34,9 +34,8 @@ MUST run before retrieval. All LLM calls MUST go through the existing LLM client
 (`src/llm/llm-client.ts`) — do not call a provider SDK directly elsewhere.
 
 Known unfinished pieces that affect future changes: no worker currently runs the ingestion
-pipeline end-to-end outside tests; the agent's `journal` intent returns a raw DB record instead of
-an LLM summary; citations are built from what was retrieved, not verified against what the LLM
-actually said.
+pipeline end-to-end outside tests; citations are built from what was retrieved, not verified
+against what the LLM actually said.
 
 See `docs/02-architecture.md` for full diagrams. **That document describes intended design — it
 is not proof of current implementation.** Where it and the code disagree, the code is correct;
@@ -151,8 +150,8 @@ request/response fields, error statuses, or domain-object schemas here.
 - Current endpoints: `POST /rag/ask`, `POST /ai-agent`. **The API is currently unauthenticated.**
 - `/ai-agent`'s response shape depends on which intent ran, and no field in the response
   indicates which — check `ai-agent-orchestrator.ts` before building against it.
-- `/ai-agent`'s `journal` intent returns a stringified raw DB record as the `answer` field, not
-  prose — known placeholder behavior, not a stable contract.
+- `/ai-agent`'s `journal` intent returns LLM-generated prose summarizing the injury record (with
+  a fallback message if the LLM returns an empty answer) — not a raw DB record.
 - No CRUD, login/session, conversation state, or streaming exist yet.
 
 ---

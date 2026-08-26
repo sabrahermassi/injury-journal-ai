@@ -22,7 +22,7 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
   - [x] 2.4 Basic RAG (#26)
   - [x] 2.5 Citations *(generation only — verification not wired in, see below)* (#27)
   - [x] 2.6 Safety Guardrails *(input-side only — no output-side check)* (#28)
-  - [x] 2.7 AI Agent *(keyword routing, not per-tool authorization; journal path incomplete)* (#29)
+  - [x] 2.7 AI Agent *(keyword routing, not per-tool authorization)* (#29)
 - [x] Step 3 — Evaluation *(harness exists; two of four dimensions are shallow, one is unimplemented)* (#30)
 - [x] Step 4 — Integration Tests (#17)
 
@@ -54,9 +54,9 @@ issue number, or marked "not yet filed" where none exists yet.
 - [ ] Build the actual ingestion worker/entrypoint. Every stage (read → build → chunk → embed →
   store) works and is tested in isolation; nothing calls them in sequence outside test files, so
   `DocumentChunk` is never populated in a running system today. (#40)
-- [ ] Fix the journal-intent response in `/ai-agent` — it currently returns
-  `JSON.stringify(injury)` inside a prose `answer` field. This will render as raw JSON in any
-  real frontend and needs to change before frontend work starts, not alongside it. (#38)
+- [x] Fix the journal-intent response in `/ai-agent` — previously returned
+  `JSON.stringify(injury)` inside a prose `answer` field; now returns an LLM-generated prose
+  summary of the injury record. (#38)
 - [ ] Add a real, indexed `userId` column on `DocumentChunk` (denormalized from `Injury.userId`
   at write time). This is a schema migration, and #31's authorization work depends on it existing
   first — today `userId` only lives inside an unindexed JSON blob and cannot be filtered on. (#41)
@@ -123,9 +123,11 @@ product decision that should be made explicitly rather than discovered by omissi
 - [ ] #58 — Remaining dangling `docs/handoff/*` references in `docs/01-product.md` and this file.
 - [ ] #59 — `chunkDocument`'s empty-content behavior contradicts
   `docs/03-chunker-architecture.md`'s documented invariant (code-vs-doc call needed).
-- [ ] #60 — Ingestion has no error handling around embedding failures and its lock is
-  in-process-only; directly relevant to #40.
-- [ ] #61 — `/ai-agent` returns 500 instead of 400 for a body-less request.
+- [x] #60 — Ingestion error handling: investigated, confirmed the existing partial-failure
+  behavior (no pruning on a failed run) is already safe; locked in via a regression test, no
+  code change needed. Cross-process locking (the other half of #60) remains unaddressed — tied
+  to the not-yet-built ingestion worker (#40).
+- [x] #61 — `/ai-agent` returns 500 instead of 400 for a body-less request.
 
 ---
 
