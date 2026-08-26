@@ -37,7 +37,7 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
   position in this list implies
 - Reference only, not a work item: #36 (architecture diagram)
 
-### New items surfaced by the review series (not yet tracked as issues)
+### New items surfaced by the review series
 
 These were originally found by actually reading the code end-to-end during a review series whose
 working files lived under `docs/handoff/` and have since been cleaned up. Three of the four now
