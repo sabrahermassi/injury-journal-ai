@@ -33,6 +33,18 @@ def embed(request: EmbeddingRequest):
 
 @app.post("/embed-query")
 def embed_query(request: EmbeddingRequest):
+    """
+    Embed a search query using query-optimized encoding.
+
+    Uses the embedding model's query-specific transformation for retrieval tasks,
+    which may differ from document encoding to optimize query-document similarity.
+
+    Args:
+        request: EmbeddingRequest containing the query text (max 10,000 chars)
+
+    Returns:
+        dict: Response containing the embedding vector, model metadata, and dimensions
+    """
     embedding = embedding_service.embed_query(request.text)
 
     return {
