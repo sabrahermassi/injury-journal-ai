@@ -39,10 +39,12 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
 
 ### New items surfaced by the review series (not yet tracked as issues)
 
-These didn't exist as roadmap items before because they were only found by actually reading the
-code end-to-end (see `docs/handoff/` for the full review series: `step3-architecture-diff.md`,
-`architecture-review.md`, `contracts-review.md`, `flows-review.md`). Recommend filing each as its
-own issue rather than leaving them here as prose.
+These were originally found by actually reading the code end-to-end during a review series whose
+working files lived under `docs/handoff/` and have since been cleaned up. Three of the four now
+have permanent replacements: `docs/02-architecture.md` §11 (Architectural Decision Log),
+`docs/05-api-contract.md`, and `docs/07-flows-review.md`. `step3-architecture-diff.md` has no
+permanent replacement yet — tracked in issue #58. Most items below are now tracked as their own
+issues (P01–P18); a few still aren't — check the tracker before assuming one below is untracked.
 
 **Do now (cheap today, expensive later):**
 
@@ -112,6 +114,18 @@ product decision that should be made explicitly rather than discovered by omissi
   one question in, one answer out — no way to thread multi-turn context server-side).
 - [ ] Either way: decide on streaming vs. full-response for the LLM call before frontend work
   commits to one UX pattern.
+
+**Surfaced during the docs-accuracy review (PR #53), tracked but not yet in this list:**
+
+- [ ] #56 — Add a Python dependency manifest for the embedding service.
+- [ ] #57 — `vector-storage.integration.test.ts` has no isolation from shared `DocumentChunk`
+  data (`searchSimilarChunks` has no `sourceType` filter).
+- [ ] #58 — Remaining dangling `docs/handoff/*` references in `docs/01-product.md` and this file.
+- [ ] #59 — `chunkDocument`'s empty-content behavior contradicts
+  `docs/03-chunker-architecture.md`'s documented invariant (code-vs-doc call needed).
+- [ ] #60 — Ingestion has no error handling around embedding failures and its lock is
+  in-process-only; directly relevant to #40.
+- [ ] #61 — `/ai-agent` returns 500 instead of 400 for a body-less request.
 
 ---
 

@@ -108,7 +108,8 @@ npm run lint
 npm run format
 npx tsc --noEmit
 npm test
-npm run test:integration   # real Postgres+pgvector required; not run in CI
+npm run test:integration   # real Postgres+pgvector required; already covered by plain 'npm test'
+                            # (no path exclusion in jest config), including in CI
 npm run seed:dev           # guarded
 npx prisma generate
 npx prisma migrate dev
