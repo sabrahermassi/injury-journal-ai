@@ -78,7 +78,7 @@ Seeding uses two separate scripts, both with hard safety checks against running 
 Start `src/embeddings/embedding_api.py` (a FastAPI app exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
 
 ```bash
-uvicorn embedding_api:app --app-dir src/embeddings --port 8000
+uvicorn src.embeddings.embedding_api:app --port 8000
 ```
 
 ### Run the backend
@@ -113,4 +113,6 @@ npm test                 # unit tests
 npm run test:integration # integration tests — require a real PostgreSQL + pgvector database, run serially
 ```
 
-`npm run lint` and `npx tsc --noEmit` are also run in CI (`.github/workflows/ci.yml`), alongside both test commands and a full build.
+`npm run lint`, `npx tsc --noEmit`, unit tests, and a full build are also run in CI
+(`.github/workflows/ci.yml`). `npm run test:integration` is not run in CI — it requires a real
+PostgreSQL + pgvector database and must be run separately.
