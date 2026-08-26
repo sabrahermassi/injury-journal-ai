@@ -54,7 +54,17 @@ function validateEmbeddingResponse(data: unknown): EmbeddingResponse {
   };
 }
 
-export async function embedText(text: string): Promise<EmbeddingResponse> {
+/**
+ * Posts text to the embedding API at the specified path and returns the validated response.
+ * @param path - The API endpoint path (e.g., '/embed', '/embed-query')
+ * @param text - The text to embed
+ * @returns The validated embedding response with vector, model metadata, and dimensions
+ * @throws {Error} If the request fails, times out, or returns invalid data
+ */
+async function postEmbedding(
+  path: string,
+  text: string,
+): Promise<EmbeddingResponse> {
   const controller = new AbortController();
 
   const timeout = setTimeout(
@@ -63,7 +73,7 @@ export async function embedText(text: string): Promise<EmbeddingResponse> {
   );
 
   try {
-    const response = await fetch(`${EMBEDDING_API_URL}/embed`, {
+    const response = await fetch(`${EMBEDDING_API_URL}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -84,4 +94,18 @@ export async function embedText(text: string): Promise<EmbeddingResponse> {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function embedText(text: string): Promise<EmbeddingResponse> {
+  return postEmbedding('/embed', text);
+}
+
+/**
+ * Embeds a search query using the query-optimized embedding endpoint.
+ * Uses the embedding service's query-specific encoding for retrieval tasks.
+ * @param text - The query text to embed
+ * @returns The embedding response with 1024-dimensional vector
+ */
+export async function embedQuery(text: string): Promise<EmbeddingResponse> {
+  return postEmbedding('/embed-query', text);
 }
