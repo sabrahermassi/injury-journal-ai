@@ -172,6 +172,7 @@ describe('searchSimilarChunks', () => {
     expect(separator).toBe(' AND ');
     expect(filters).toHaveLength(1);
     expect(filters[0].values).toEqual([42]);
+    expect(filters[0].strings.join('')).toContain('"injuryId"');
 
     const query = queryRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values[1]).toEqual({
@@ -187,6 +188,7 @@ describe('searchSimilarChunks', () => {
     const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
     expect(filters).toHaveLength(1);
     expect(filters[0].values).toEqual(['treatment']);
+    expect(filters[0].strings.join('')).toContain('"sourceType"');
 
     const query = queryRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values[1]).toEqual({
@@ -203,7 +205,9 @@ describe('searchSimilarChunks', () => {
     expect(separator).toBe(' AND ');
     expect(filters).toHaveLength(2);
     expect(filters[0].values).toEqual([42]);
+    expect(filters[0].strings.join('')).toContain('"injuryId"');
     expect(filters[1].values).toEqual(['treatment']);
+    expect(filters[1].strings.join('')).toContain('"sourceType"');
 
     const query = queryRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values[1]).toEqual({
