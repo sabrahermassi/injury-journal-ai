@@ -172,6 +172,12 @@ describe('searchSimilarChunks', () => {
     expect(separator).toBe(' AND ');
     expect(filters).toHaveLength(1);
     expect(filters[0].values).toEqual([42]);
+
+    const query = queryRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[1]).toEqual({
+      strings: expect.any(Array),
+      values: [joinMock.mock.results[0].value],
+    });
   });
 
   it('filters by sourceType only when injuryId is omitted', async () => {
@@ -181,6 +187,12 @@ describe('searchSimilarChunks', () => {
     const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
     expect(filters).toHaveLength(1);
     expect(filters[0].values).toEqual(['treatment']);
+
+    const query = queryRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[1]).toEqual({
+      strings: expect.any(Array),
+      values: [joinMock.mock.results[0].value],
+    });
   });
 
   it('filters by both injuryId and sourceType when both are provided', async () => {
@@ -192,6 +204,12 @@ describe('searchSimilarChunks', () => {
     expect(filters).toHaveLength(2);
     expect(filters[0].values).toEqual([42]);
     expect(filters[1].values).toEqual(['treatment']);
+
+    const query = queryRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[1]).toEqual({
+      strings: expect.any(Array),
+      values: [joinMock.mock.results[0].value],
+    });
   });
 });
 
