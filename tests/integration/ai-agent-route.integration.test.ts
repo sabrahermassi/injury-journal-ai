@@ -132,6 +132,25 @@ describe('AI agent route integration', () => {
     expect(mockGenerateAnswer.mock.calls[0][0]).toContain('AI Agent Route Test');
   });
 
+  it('returns a fallback message when journal answer generation is empty', async () => {
+    mockGenerateAnswer.mockResolvedValue('');
+
+    const response = await request(app).post('/ai-agent').send({
+      question: 'Show me my injury timeline',
+      injuryId,
+    });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toEqual({
+      answer:
+        'Unable to generate a summary from your injury record right now.',
+      citations: [],
+    });
+
+    expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
+  });
+
   it('requires an injuryId for journal questions', async () => {
     const response = await request(app).post('/ai-agent').send({
       question: 'Show me my injury timeline',
