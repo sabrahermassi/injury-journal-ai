@@ -43,8 +43,8 @@ These were originally found by actually reading the code end-to-end during a rev
 working files lived under `docs/handoff/` and have since been cleaned up. Three of the four now
 have permanent replacements: `docs/02-architecture.md` §11 (Architectural Decision Log),
 `docs/05-api-contract.md`, and `docs/07-flows-review.md`. `step3-architecture-diff.md` has no
-permanent replacement yet — tracked in issue #58. Most items below are now tracked as their own
-issues (P01–P18); a few still aren't — check the tracker before assuming one below is untracked.
+permanent replacement yet — tracked in issue #58. Every item below is annotated with its tracking
+issue number, or marked "not yet filed" where none exists yet.
 
 **Do now (cheap today, expensive later):**
 
