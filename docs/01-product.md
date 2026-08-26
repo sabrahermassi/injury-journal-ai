@@ -32,7 +32,7 @@ It works on top of an existing Injury Journal application and uses structured jo
 > endpoints (`POST /rag/ask`, `POST /ai-agent`); there is no `GET /injuries`, no way to create or
 > edit a record, and no login. If a frontend is meant to be built against this backend for
 > anything beyond asking questions, that scope needs to be decided explicitly and is not yet.
-> See `docs/handoff/contracts-review.md` §5.
+> See `docs/05-api-contract.md` §6.
 
 The system uses embeddings, semantic retrieval, RAG, and eventually AI agents to produce grounded answers and summaries.
 
@@ -82,12 +82,12 @@ The product is designed around **one user's private journal data**.
 - **Grounded answers:** Responses are based on information retrieved from the user's journal.
   > **Status:** the current implementation prompts the LLM to answer only from retrieved context,
   > but nothing verifies this actually happens — there is no answer-faithfulness check, and the
-  > empty-retrieval case (no chunks found) is untested. See `docs/handoff/architecture-review.md`
-  > §7 and `docs/handoff/flows-review.md` Flow 4.
+  > empty-retrieval case (no chunks found) is untested. See `docs/02-architecture.md`
+  > §6 and `docs/07-flows-review.md` Flow 4.
 - **Traceability:** Important claims can be traced to their underlying journal records.
   > **Status:** not yet enforced. Today's citations list what was *retrieved*, not what the
   > answer actually *used* — there is no claim-level verification. See
-  > `docs/handoff/step3-architecture-diff.md` §5.3.
+  > `docs/02-architecture.md` §5.3.
 - **Useful summaries:** Users can generate concise summaries of their injury history. *(Implemented for the RAG path; the journal-lookup path currently returns raw unsummarized data — see §6 below.)*
 - **Healthcare safety:** The assistant operates within explicit healthcare boundaries. *(Implemented on the input side; see §7.)*
 - **Privacy:** Users can only access their own journal data.
@@ -173,7 +173,7 @@ The system measures:
 - Citation accuracy *(implemented, but shallow — only checks that at least one citation exists when one is expected, not that the citations are the correct ones)*
 - Safety adherence *(implemented, but shallow — checks for the literal substrings "cannot"/"unable" in a refusal, nothing more)*
 
-The evaluation dataset currently has 4 cases total — a smoke test, not a regression suite. See `docs/handoff/step3-architecture-diff.md` §6.
+The evaluation dataset currently has 4 cases total — a smoke test, not a regression suite. See `docs/02-architecture.md` §6.
 
 ### AI Observability
 
@@ -215,7 +215,7 @@ It does not diagnose conditions or make medical decisions.
 
 > Tell me which disease I have.
 
-Requests outside these boundaries should be refused or redirected. *(Implemented via a regex-based pre-generation filter — well-tested for the phrasings it covers, but it is a pre-generation filter only: nothing checks whether the LLM's generated answer echoes diagnosis-adjacent language it might read verbatim from raw journal content, e.g. a doctor's visit notes. See `docs/handoff/architecture-review.md` §9.)*
+Requests outside these boundaries should be refused or redirected. *(Implemented via a regex-based pre-generation filter — well-tested for the phrasings it covers, but it is a pre-generation filter only: nothing checks whether the LLM's generated answer echoes diagnosis-adjacent language it might read verbatim from raw journal content, e.g. a doctor's visit notes. See `docs/02-architecture.md` §5.4.)*
 
 The initial safety decision must occur **before retrieving journal data or invoking RAG/journal tools**. *(Implemented and verified by an integration test.)* Per-tool authorization remains a separate control before each tool accesses user data.
 
@@ -258,7 +258,7 @@ Ownership must be enforced explicitly rather than relying solely on opaque metad
 > **Status:** this exact anti-pattern exists in the current schema today — `DocumentChunk`'s only
 > reference to `userId` is inside an unindexed JSON metadata blob, not a real, queryable column.
 > Closing this gap requires a schema change (adding a real `userId` column), not just an
-> application-level check. See `docs/handoff/architecture-review.md` §3.
+> application-level check. See `docs/02-architecture.md` §11 (D9).
 
 Telemetry should prefer identifiers and metadata over raw journal content. Sensitive content must be redacted when logging is necessary, and telemetry must have appropriate encryption, access controls, and retention policies.
 
