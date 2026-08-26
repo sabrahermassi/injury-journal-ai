@@ -111,6 +111,19 @@ describe('storeDocumentChunk', () => {
     expect(query.values[3]).toBe(4);
     expect(query.values[4]).toBe('chunk body text');
   });
+
+  it('uses the correct ON CONFLICT clause for upserting by (sourceType, sourceId, chunkIndex)', async () => {
+    await storeDocumentChunk(1, 'treatment', 2, 0, 'some content', [0.1, 0.2, 0.3]);
+
+    const query = executeRawMock.mock.calls[0][0] as SqlResult;
+    const sql = query.strings.join('');
+    expect(sql).toContain('ON CONFLICT ("sourceType", "sourceId", "chunkIndex")');
+    expect(sql).toContain('DO UPDATE SET');
+    expect(sql).toContain('"injuryId" = EXCLUDED."injuryId"');
+    expect(sql).toContain('"content" = EXCLUDED."content"');
+    expect(sql).toContain('"embedding" = EXCLUDED."embedding"');
+    expect(sql).toContain('"metadata" = EXCLUDED."metadata"');
+  });
 });
 
 describe('deleteDocumentChunksExcept', () => {
