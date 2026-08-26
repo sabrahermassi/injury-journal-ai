@@ -12,9 +12,9 @@ jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
   generateAnswer: jest.fn(),
 }));
 
-const { default: app } = await import('../../src/app.js');
 const { embedQuery } = await import('../../src/embeddings/embedding-client.js');
 const { generateAnswer } = await import('../../src/llm/llm-client.js');
+const { default: app } = await import('../../src/app.js');
 
 const mockEmbedQuery = jest.mocked(embedQuery);
 const mockGenerateAnswer = jest.mocked(generateAnswer);
@@ -121,12 +121,34 @@ describe('AI agent route integration', () => {
 
     expect(response.status).toBe(200);
 
-    expect(response.body.answer).toContain('AI Agent Route Test');
+    expect(response.body.answer).toBe('mocked agent answer');
 
     expect(response.body.citations).toEqual([]);
 
     expect(mockEmbedQuery).not.toHaveBeenCalled();
-    expect(mockGenerateAnswer).not.toHaveBeenCalled();
+
+    expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
+
+    expect(mockGenerateAnswer.mock.calls[0][0]).toContain('AI Agent Route Test');
+  });
+
+  it('returns a fallback message when journal answer generation is empty', async () => {
+    mockGenerateAnswer.mockResolvedValue('');
+
+    const response = await request(app).post('/ai-agent').send({
+      question: 'Show me my injury timeline',
+      injuryId,
+    });
+
+    expect(response.status).toBe(200);
+
+    expect(response.body).toEqual({
+      answer:
+        'Unable to generate a summary from your injury record right now.',
+      citations: [],
+    });
+
+    expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });
 
   it('requires an injuryId for journal questions', async () => {
