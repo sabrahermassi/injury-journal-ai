@@ -23,7 +23,7 @@ model/version; see §9.
 **Do NOT introduce** (documented project decisions, not defaults): a separate vector database, a
 hosted embeddings API, an agent framework (LangGraph or otherwise), or hybrid/threshold/rerank
 retrieval — all evaluated and deliberately rejected or deferred
-(`docs/handoff/architecture-review.md`).
+(see `docs/02-architecture.md` §11, Architectural Decision Log — D1, D3, D5, D6).
 
 ## 3. Architecture
 
@@ -118,7 +118,7 @@ No `test:watch` script or evaluation-harness CLI exists — don't invent either.
 
 ## 11. Frontend Contract
 
-No frontend exists yet. Full contract: `docs/handoff/contracts-review.md` — do not reproduce
+No frontend exists yet. Full contract: `docs/05-api-contract.md` — do not reproduce
 request/response fields, error statuses, or domain-object schemas here.
 
 - Current endpoints: `POST /rag/ask`, `POST /ai-agent`. **The API is currently unauthenticated.**

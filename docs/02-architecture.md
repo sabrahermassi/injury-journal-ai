@@ -156,8 +156,7 @@ flowchart TD
 > document-side endpoint. This isn't a deferred feature — it's a built capability that's
 > disconnected, quietly costing retrieval quality today. Recommended fix: add a query-mode
 > endpoint (or a `mode` field) to the embedding API and call it from the query path. See
-> `docs/handoff/architecture-review.md` §6 (Decision D3) and
-> `docs/04-implementation-roadmap.md`'s "do now" list.
+> §11 (Decision D3) below and `docs/04-implementation-roadmap.md`'s "do now" list.
 
 ### 4.3. Vector Storage with pgvector Architecture
 
@@ -329,8 +328,8 @@ flowchart TD
 > **Current status:** the harness and "Retrieval Quality" scoring are implemented. "Citation
 > Accuracy" and "Safety Adherence" are implemented but shallow (they check for the presence of an
 > expected signal, not its correctness). "Answer Faithfulness" is not implemented at all — no
-> metric exists for it today. The evaluation dataset also currently has only 4 cases total. See
-> `docs/handoff/step3-architecture-diff.md` §6.
+> metric exists for it today. The evaluation dataset also currently has only 4 cases total (see
+> Decision D5 in §11 for why that matters beyond just this section).
 
 ## 7. Observability Architecture
 
@@ -361,10 +360,10 @@ flowchart TD
     A --> F["Findings / Recommendations"]
 ```
 
-> §7 as a whole is not implemented yet (roadmap Step 6). One recommendation carried over from
-> `docs/handoff/architecture-review.md` §15: thread a request ID through the pipeline now, even
-> as a no-op passed-through parameter, rather than retrofitting it into every function signature
-> once this step starts — none of the current pipeline stages carry one today.
+> §7 as a whole is not implemented yet (roadmap Step 6). One recommendation worth acting on before
+> this step starts: thread a request ID through the pipeline now, even as a no-op passed-through
+> parameter, rather than retrofitting it into every function signature later — none of the current
+> pipeline stages carry one today.
 
 ## 8. Production / AWS Architecture
 
@@ -424,8 +423,8 @@ flowchart TD
     ENV --> PROD["prod"]
 ```
 
-> Not implemented yet (roadmap Step 8). One architectural note worth deciding early, from
-> `docs/handoff/architecture-review.md` §16: the embedding service is a separate Python process
+> Not implemented yet (roadmap Step 8). One architectural note worth deciding early (related to
+> Decision D3 in §11): the embedding service is a separate Python process
 > with a heavier runtime footprint (a loaded transformer model) than anything else in the stack —
 > decide whether it stays a long-lived service, a sidecar, or a batch/Lambda-friendly on-demand
 > load before this Terraform work starts, since those have very different cost/latency profiles.
@@ -456,3 +455,189 @@ flowchart TD
 
     V --> D["User's Journal Data"]
 ```
+
+## 11. Architectural Decision Log
+
+For each major decision: what was chosen, why (as inferred from code, `CLAUDE.md`, and commit
+history — this project has no separate ADR history, so rationale below is reconstructed, not
+quoted), what else was considered, whether it still holds, and whether it should be revisited.
+
+### D1 — PostgreSQL + pgvector for vector storage (not a dedicated vector database)
+
+- **DECISION:** Store embeddings as a `vector(1024)` column on `DocumentChunk` inside the same
+  PostgreSQL database as the domain data, queried via `pgvector`'s `<=>` operator.
+- **RATIONALE:** The domain data (`Injury` and children) already lives in PostgreSQL. Keeping
+  vectors alongside it avoids a second system to run, deploy, and keep in sync, and keeps
+  `injuryId`-scoped filtering a plain SQL `WHERE` clause rather than a cross-system join. `CLAUDE.md`
+  lists a separate vector database under "Do NOT introduce," framing this as a considered and
+  rejected alternative, not an oversight.
+- **ALTERNATIVES CONSIDERED:** A dedicated vector database (Pinecone, Qdrant, Weaviate, etc.) —
+  better suited to very large corpora or approximate-search tuning, at the cost of a second data
+  store and a sync/consistency problem between it and PostgreSQL.
+- **CURRENT STATUS:** Still valid. Corpus size (per-user journal entries) is small enough that
+  pgvector's exact/IVF search is not a bottleneck, and there's no evidence of scale pressure yet.
+- **SHOULD THIS BE REVISITED:** No — revisit only if corpus size or query volume grows by orders
+  of magnitude; no signal that's imminent.
+
+### D2 — Prisma as ORM, with raw SQL for the vector column
+
+- **DECISION:** Use Prisma for all relational models and standard CRUD, but drop to
+  `prisma.$queryRaw`/`$executeRaw` specifically for `DocumentChunk`'s `embedding` column, since
+  Prisma cannot type or query `vector` natively (declared `Unsupported("vector(1024)")` in the
+  schema).
+- **RATIONALE:** Prisma's schema-driven typing and migrations are valuable for the bulk of the
+  domain model; the vector column is the one place that needs an escape hatch. This is a targeted
+  compromise, not a wholesale move away from the ORM.
+- **ALTERNATIVES CONSIDERED:** A raw SQL/query-builder layer (e.g. Knex, Kysely) for the whole
+  data layer — would make vector queries uniform with the rest, at the cost of losing Prisma's
+  migration/typing benefits everywhere else. A community Prisma `pgvector` extension/generator —
+  would remove the raw-SQL escape hatch but adds a third-party dependency for one column.
+- **CURRENT STATUS:** Still valid. The raw-SQL boundary is small (`vector-storage.ts`) and
+  isolated; it hasn't spread.
+- **SHOULD THIS BE REVISITED:** No.
+
+### D3 — Qwen3-Embedding-0.6B, self-hosted via a separate Python FastAPI service
+
+- **DECISION:** Run embeddings through a small, separately-deployed Python service
+  (`embedding_api.py` / `embedding_service.py`) rather than calling a hosted embeddings API from
+  Node.
+- **RATIONALE:** `Qwen3-Embedding-0.6B` isn't available as a hosted API from the LLM provider
+  already in use (Groq) or another already-integrated vendor; self-hosting a small (0.6B) model is
+  cheap enough to run locally/on modest infrastructure, and keeps embedding cost and latency fully
+  in the project's own control. `CLAUDE.md` explicitly lists "a hosted embeddings API" under "Do
+  NOT introduce," again framing this as evaluated and rejected rather than deferred.
+- **ALTERNATIVES CONSIDERED:** A hosted embeddings API (OpenAI, Cohere, Voyage, etc.) — simpler
+  operationally (no second runtime to deploy/scale), at the cost of per-call cost/latency and
+  vendor lock-in on a component this project wanted to control directly.
+- **CURRENT STATUS:** Partially outdated in one specific way — the service already implements
+  Qwen3's asymmetric query/document prompting (`embed_document()` / `embed_query()`), but the
+  query path historically called the document-side endpoint, silently degrading retrieval quality.
+  A fix was implemented via PR #55 (issue #37) — check the PR/issue directly for current merge
+  status rather than relying on this document. Separately, the missing dependency manifest for
+  this service (no `requirements.txt`/`pyproject.toml`) is tracked as issue #56.
+- **SHOULD THIS BE REVISITED:** Maybe — not the model/self-hosting choice itself, but the
+  service's operational maturity (dependency pinning, packaging — issue #56 — and, per §9 above, a
+  decision on whether it stays a long-lived service, a sidecar, or an on-demand load before the
+  Terraform work in Step 8 starts).
+
+### D4 — Recursive paragraph → sentence → sub-sentence chunking, no fixed-size/sliding-window chunking
+
+- **DECISION:** Chunk each `JournalDocument` by first checking if it fits under a token limit
+  whole; if not, split by paragraph, then by sentence, then by raw sub-sentence pieces if a single
+  sentence still exceeds the limit — never truncating mid-sentence when avoidable.
+- **RATIONALE:** Journal entries are short, structured records (a symptom note, a treatment
+  entry), not long-form prose — most fit in one chunk unchanged. The recursive strategy preserves
+  natural language boundaries for the minority of longer entries, which matters more for citation
+  readability and grounding fidelity than uniform chunk sizing would.
+- **ALTERNATIVES CONSIDERED:** Fixed-size sliding-window chunking (with overlap) — simpler to
+  implement and reason about token budgets for, but would routinely cut a single symptom/treatment
+  note across chunk boundaries, weakening both retrieval precision and citation coherence for
+  content that's naturally already short.
+- **CURRENT STATUS:** Still valid and well-tested (`document-chunker.ts` plus
+  `docs/03-chunker-architecture.md`'s test list covers boundary cases directly).
+- **SHOULD THIS BE REVISITED:** No.
+
+### D5 — Plain top-k cosine retrieval; no similarity threshold, hybrid search, or reranking
+
+- **DECISION:** Retrieval is `ORDER BY embedding <=> query LIMIT k` with no minimum-similarity
+  cutoff, no keyword/BM25 hybrid component, and no reranking stage.
+- **RATIONALE:** `CLAUDE.md` explicitly lists "hybrid/threshold/rerank retrieval" under "Do NOT
+  introduce," citing evaluation as the reason ("deliberately rejected or deferred"). §5.1 of this
+  document notes the deferral is "pending evaluation data" (issue #35) — i.e., the position is
+  that tuning a threshold or adding rerank without evaluation data to justify it risks solving the
+  wrong problem or optimizing on vibes.
+- **ALTERNATIVES CONSIDERED:** A similarity threshold (return nothing below a cosine-distance
+  cutoff) — would directly help the "no relevant information" case, but requires a calibrated
+  cutoff value the project doesn't have evidence for yet (only 4 evaluation cases exist today, per
+  §6). Hybrid (keyword + vector) search or a cross-encoder rerank stage — both add real complexity
+  and a second scoring signal to tune, for a corpus size where it's not yet clear pure vector
+  top-k is actually underperforming.
+- **CURRENT STATUS:** Still valid as a deliberate deferral, but increasingly time-pressured: the
+  evaluation dataset (4 cases) is too small to produce the evaluation data this decision says it's
+  waiting on. The deferral and the thing blocking un-deferring it are in tension.
+- **SHOULD THIS BE REVISITED:** Maybe — not by implementing threshold/hybrid/rerank now, but by
+  growing the evaluation dataset enough to actually make this decision on evidence rather than
+  leaving it open indefinitely.
+
+### D6 — Hand-written deterministic intent router instead of an agent framework (LangGraph deferred)
+
+- **DECISION:** `ai-agent-intent-router.ts` picks a fixed tool (`rag`, `journal`, or `safety`) via
+  keyword matching on the question text, rather than using an LLM planner or a framework like
+  LangGraph to decide dynamically.
+- **RATIONALE:** `CLAUDE.md` lists "an agent framework (LangGraph or otherwise)" under "Do NOT
+  introduce." With exactly two real tools and no multi-step tool chaining today, a framework's
+  overhead (graph state, dynamic planning, framework-specific abstractions) wouldn't be earning
+  its cost yet — this doc's own §5.5 calls it "an intentional MVP simplification, deferred until
+  multi-step workflows justify" the change.
+- **ALTERNATIVES CONSIDERED:** An LLM-driven planner (function-calling / tool-use loop) — more
+  flexible and would remove the keyword-matching brittleness (see the dead `'safety'`
+  `AgentIntent` branch documented in `docs/05-api-contract.md` §3/§5), at the cost of
+  nondeterminism, added latency/cost per request, and a harder-to-evaluate routing step.
+- **CURRENT STATUS:** Still valid for "should we adopt a framework" — but the current
+  implementation has a concrete bug this decision doesn't excuse: `routeIntent()` can return
+  `'safety'`, and the orchestrator's `switch` has no case for it, so those requests silently fall
+  into the generic "unable to determine" response instead of a refusal. That's an implementation
+  defect in the current approach, not a reason to adopt a framework.
+- **SHOULD THIS BE REVISITED:** No, not the framework decision — but the dead `'safety'` branch
+  should be fixed regardless of which routing approach is used long-term.
+
+### D7 — Two separate HTTP entrypoints (`POST /rag/ask` and `POST /ai-agent`) with overlapping functionality
+
+- **DECISION:** Expose both a direct RAG endpoint and a separate agent endpoint that internally
+  can also invoke the RAG path (among others), rather than a single entrypoint.
+- **RATIONALE:** Not clearly a deliberate decision so much as incremental build order — `/rag/ask`
+  was built first as the core RAG pipeline, `/ai-agent` was added later, layering intent routing
+  and a journal-lookup tool on top without retiring the original endpoint. No evidence (commits,
+  docs) of an explicit decision to keep both permanently.
+- **ALTERNATIVES CONSIDERED:** Retire `/rag/ask` once `/ai-agent` covers its functionality
+  (`/ai-agent`'s `rag` intent already calls the same `answerQuestion`). Or keep both but give them
+  clearly distinct purposes (e.g. `/rag/ask` as a lower-level/internal endpoint, `/ai-agent` as the
+  only public one).
+- **CURRENT STATUS:** Unresolved — already tracked as its own open decision, not something this
+  review is introducing (issue #43 / roadmap "Decide the fate of `POST /rag/ask` vs `POST
+  /ai-agent`").
+- **SHOULD THIS BE REVISITED:** Yes — this is already an explicitly open question (#43); it should
+  be settled before frontend work starts building against either one, since the two have
+  diverging, inconsistent request-validation and response contracts today (`docs/05-api-contract.md`
+  §5).
+
+### D8 — Ingestion built as isolated, tested stages with no runnable end-to-end worker
+
+- **DECISION:** Each offline stage (read → build documents → chunk → embed → store) is
+  implemented and tested independently; nothing currently calls them in sequence outside test
+  files.
+- **RATIONALE:** Building and testing each stage in isolation first is a reasonable incremental
+  approach — it means the hard parts (idempotent storage, chunk boundary handling, embedding
+  correctness) are solid before wiring them into a schedule/trigger. There's no evidence this is a
+  permanent design choice rather than a sequencing gap; §4.1 explicitly frames it as: "the
+  'Ingestion Worker' node itself... does not exist yet."
+- **ALTERNATIVES CONSIDERED:** Not really applicable — this reads as "not yet done" rather than
+  "chose not to do." The real open question is *how* it should run once built: a scheduled job, a
+  webhook off journal-record writes, or a manual/CLI trigger — not addressed anywhere yet.
+- **CURRENT STATUS:** Confirmed gap, not a stable design — `DocumentChunk` is never populated in a
+  running system today. Already tracked (issue #40, "Build the ingestion worker/entrypoint")
+  and flagged in the roadmap as a "do now" item given how cheap it is relative to the value (it's
+  the only thing standing between the tested pipeline and a system that actually retrieves real
+  data end-to-end).
+- **SHOULD THIS BE REVISITED:** Yes, in the sense that it needs to be *built*, not reconsidered —
+  the design of each stage is sound; only the orchestrating entrypoint is missing.
+
+### D9 — `userId` lives only on `Injury` and inside an unindexed JSON metadata blob on `DocumentChunk`, not as a real column there
+
+- **DECISION:** `DocumentChunk` has no first-class `userId` column; ownership is only directly
+  queryable via a join through `Injury.userId`, or by reading it back out of the JSON `metadata`
+  field written during ingestion (`embed-and-store.ts` spreads `document.metadata`, which includes
+  `userId`, into that JSON blob).
+- **RATIONALE:** Likely a natural consequence of not having built authorization yet — without an
+  enforced user-filtering requirement, denormalizing `userId` onto `DocumentChunk` had no forcing
+  function. The JSON blob capturing it anyway suggests the ingestion side already anticipated
+  needing it, without the retrieval/authorization side catching up.
+- **ALTERNATIVES CONSIDERED:** Add a real, indexed `userId` column on `DocumentChunk` at
+  ingestion time (denormalized from `Injury.userId`) — already the explicitly recommended fix
+  (§10, issue #41), needed specifically because vector search results can't be filtered by owner
+  through a join the way a normal relational query could without real cost at scale.
+- **CURRENT STATUS:** Confirmed gap, and a hard blocker — §10 states plainly that the target
+  authorization design's "User / Injury Filters" step "cannot be implemented against vector search
+  results until that column is added." This is a schema migration, not just application code.
+- **SHOULD THIS BE REVISITED:** Yes — already tracked (issue #41) and correctly sequenced ahead of
+  the broader authorization work (#31), since #31 depends on it.
