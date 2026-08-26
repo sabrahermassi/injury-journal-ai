@@ -222,7 +222,7 @@ describe('embedAndStoreDocument', () => {
     );
   });
 
-  it('propagates an embedding error and stops processing further chunks', async () => {
+  it('propagates an embedding error and prunes to what was already stored', async () => {
     const document = makeDocument();
     const chunk1 = { content: 'a', metadata: document.metadata };
     const chunk2 = { content: 'b', metadata: document.metadata };
@@ -238,22 +238,35 @@ describe('embedAndStoreDocument', () => {
 
     expect(embedTextMock).toHaveBeenCalledTimes(1);
     expect(storeDocumentChunkMock).not.toHaveBeenCalled();
-    expect(deleteDocumentChunksExceptMock).not.toHaveBeenCalled();
+    expect(deleteDocumentChunksExceptMock).toHaveBeenCalledTimes(1);
+    expect(deleteDocumentChunksExceptMock).toHaveBeenCalledWith(
+      document.metadata.sourceType,
+      document.metadata.sourceId,
+      [],
+    );
   });
 
-  it('propagates a storage error without pruning stale chunks', async () => {
+  it('propagates a storage error and prunes to what was already stored', async () => {
     const document = makeDocument();
     chunkDocumentMock.mockReturnValue([
       { content: 'a', metadata: document.metadata },
+      { content: 'b', metadata: document.metadata },
     ]);
     embedTextMock.mockResolvedValue(fakeEmbedding());
-    storeDocumentChunkMock.mockRejectedValueOnce(new Error('db unavailable'));
+    storeDocumentChunkMock
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('db unavailable'));
 
     await expect(embedAndStoreDocument(document)).rejects.toThrow(
       'db unavailable',
     );
 
-    expect(deleteDocumentChunksExceptMock).not.toHaveBeenCalled();
+    expect(deleteDocumentChunksExceptMock).toHaveBeenCalledTimes(1);
+    expect(deleteDocumentChunksExceptMock).toHaveBeenCalledWith(
+      document.metadata.sourceType,
+      document.metadata.sourceId,
+      [0],
+    );
   });
 
   it('serializes concurrent ingestion calls for the same sourceType/sourceId', async () => {

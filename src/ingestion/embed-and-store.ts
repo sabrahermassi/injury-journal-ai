@@ -16,33 +16,44 @@ export async function embedAndStoreDocument(
     document.metadata.sourceId,
     async () => {
       const chunks = chunkDocument(document);
+      const storedIndexes: number[] = [];
 
-      for (const [chunkIndex, chunk] of chunks.entries()) {
-        const embedding = await embedText(chunk.content);
+      try {
+        for (const [chunkIndex, chunk] of chunks.entries()) {
+          const embedding = await embedText(chunk.content);
 
-        const embeddedDocument: EmbeddedDocument = {
-          document: chunk,
-          embedding: embedding.embedding,
-          embeddingMetadata: {
-            model: embedding.model,
-            modelVersion: embedding.modelVersion,
-            vectorDimension: embedding.dimension,
-            embeddingVersion: embedding.version,
-          },
-        };
+          const embeddedDocument: EmbeddedDocument = {
+            document: chunk,
+            embedding: embedding.embedding,
+            embeddingMetadata: {
+              model: embedding.model,
+              modelVersion: embedding.modelVersion,
+              vectorDimension: embedding.dimension,
+              embeddingVersion: embedding.version,
+            },
+          };
 
-        await storeDocumentChunk(
-          embeddedDocument.document.metadata.injuryId,
-          embeddedDocument.document.metadata.sourceType,
-          embeddedDocument.document.metadata.sourceId,
-          chunkIndex,
-          embeddedDocument.document.content,
-          embeddedDocument.embedding,
-          {
-            ...embeddedDocument.document.metadata,
-            embedding: embeddedDocument.embeddingMetadata,
-          },
+          await storeDocumentChunk(
+            embeddedDocument.document.metadata.injuryId,
+            embeddedDocument.document.metadata.sourceType,
+            embeddedDocument.document.metadata.sourceId,
+            chunkIndex,
+            embeddedDocument.document.content,
+            embeddedDocument.embedding,
+            {
+              ...embeddedDocument.document.metadata,
+              embedding: embeddedDocument.embeddingMetadata,
+            },
+          );
+          storedIndexes.push(chunkIndex);
+        }
+      } catch (error) {
+        await deleteDocumentChunksExcept(
+          document.metadata.sourceType,
+          document.metadata.sourceId,
+          storedIndexes,
         );
+        throw error;
       }
 
       await deleteDocumentChunksExcept(
