@@ -119,9 +119,9 @@ refusal response.
 
 | Status | Body | Trigger |
 |--------|------|---------|
-| 400 | `{ "error": "Question is required" }` | missing/blank `question` |
+| 400 | `{ "error": "Question is required" }` | body present but `question` missing/blank |
 | 400 | `{ "error": "Invalid injuryId" }` | `injuryId` present but fails the check above |
-| 500 | `{ "error": "Failed to process request" }` | same catch-all collapse as `/rag/ask` |
+| 500 | `{ "error": "Failed to process request" }` | same catch-all collapse as `/rag/ask`, **and also a body-less request entirely** — `askAgent` destructures `req.body` with no fallback for `undefined`, so a `POST /ai-agent` sent with no body at all (Express 5 leaves `req.body` undefined in that case) throws before validation runs and is caught by the generic 500 handler instead of returning the 400 above. `/rag/ask`'s controller has an `req.body ?? {}` fallback that avoids this; `/ai-agent`'s does not. Tracked as issue #61. |
 
 **Pagination / filtering:** none, same constraints as `/rag/ask` (fixed internal limit of `5` for
 the `rag` intent path).

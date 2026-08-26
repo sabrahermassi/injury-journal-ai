@@ -57,9 +57,10 @@ the stage level. The divergence is entirely "the orchestrating entrypoint is mis
 - `embedAndStoreDocument`'s per-chunk loop has no try/catch around `embedText()`. If the
   embedding service fails partway through a multi-chunk document (e.g. chunk 3 of 5), chunks 1–2
   are already durably stored (upserted), the function throws, and `deleteDocumentChunksExcept`
-  never runs — leaving that source record's chunks in a partial, inconsistent state with no
-  automatic reconciliation on the next run unless the next run happens to reprocess the exact
-  same chunk boundaries.
+  never runs — leaving that source record's chunks in a partial, inconsistent state until a later
+  run completes successfully (that later run doesn't need matching chunk boundaries — it supplies
+  its own current chunk-index list and prunes anything not in it, so any successful full run
+  reconciles the stale state, not just one that happens to produce the same chunk count).
 - No retry/backoff on the embedding call at all — a single transient failure aborts the whole
   document.
 - `withIngestionLock` is an **in-process only** lock (a plain `Map` in memory). It correctly
