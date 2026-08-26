@@ -104,6 +104,21 @@ describe('ai agent controller', () => {
     expect(runAgentMock).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when req.body is undefined', async () => {
+    const req: MockRequest = {};
+
+    const res = mockResponse();
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Question is required',
+    });
+
+    expect(runAgentMock).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when injuryId is not a number', async () => {
     const req: MockRequest = {
       body: {
