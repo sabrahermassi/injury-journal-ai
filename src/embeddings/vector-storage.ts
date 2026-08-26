@@ -90,8 +90,16 @@ export async function searchSimilarChunks(
   embedding: number[],
   injuryId?: number,
   limit = 5,
+  sourceType?: string,
 ) {
   const vector = `[${embedding.join(',')}]`;
+
+  const filters: Prisma.Sql[] = [];
+  if (injuryId !== undefined) filters.push(Prisma.sql`"injuryId" = ${injuryId}`);
+  if (sourceType !== undefined) filters.push(Prisma.sql`"sourceType" = ${sourceType}`);
+
+  const whereClause =
+    filters.length > 0 ? Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}` : Prisma.empty;
 
   return prisma.$queryRaw<SearchSimilarChunk[]>(
     Prisma.sql`
@@ -105,11 +113,7 @@ export async function searchSimilarChunks(
         "metadata",
         "embedding" <=> ${vector}::vector AS "distance"
       FROM "DocumentChunk"
-      ${
-        injuryId !== undefined
-          ? Prisma.sql`WHERE "injuryId" = ${injuryId}`
-          : Prisma.empty
-      }
+      ${whereClause}
       ORDER BY "embedding" <=> ${vector}::vector
       LIMIT ${limit}
     `,
