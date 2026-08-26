@@ -92,6 +92,21 @@ describe('Document Chunker', () => {
     expect(chunks.length).toBeGreaterThan(2);
   });
 
+  it('produces no chunks for empty or whitespace-only content', () => {
+    const emptyDocument: JournalDocument = {
+      content: '   ',
+      metadata: {
+        userId: 1,
+        injuryId: 1,
+        sourceType: 'treatment',
+        sourceId: 3,
+        date: new Date('2025-03-01'),
+      },
+    };
+
+    expect(chunkDocument(emptyDocument, 100)).toEqual([]);
+  });
+
   it('splits a sentence that exceeds the token limit', () => {
     const chunks = chunkDocument(oversizedSentenceDocument, 20);
 
