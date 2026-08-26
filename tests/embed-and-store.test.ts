@@ -256,6 +256,30 @@ describe('embedAndStoreDocument', () => {
     expect(deleteDocumentChunksExceptMock).not.toHaveBeenCalled();
   });
 
+  it('does not delete previously-stored chunks after a transient mid-document failure', async () => {
+    const document = makeDocument();
+    chunkDocumentMock.mockReturnValue([
+      { content: 'a', metadata: document.metadata },
+      { content: 'b', metadata: document.metadata },
+      { content: 'c', metadata: document.metadata },
+    ]);
+    embedTextMock.mockResolvedValue(fakeEmbedding());
+    storeDocumentChunkMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('transient db blip'));
+
+    await expect(embedAndStoreDocument(document)).rejects.toThrow(
+      'transient db blip',
+    );
+
+    // Chunks 0 and 1 were durably stored before the failure on chunk 2.
+    // A failed run must not prune anything: the chunks it didn't reach
+    // (e.g. a previously-stored chunk 2) may still be valid and are not
+    // known to be stale just because this attempt didn't get to them.
+    expect(deleteDocumentChunksExceptMock).not.toHaveBeenCalled();
+  });
+
   it('serializes concurrent ingestion calls for the same sourceType/sourceId', async () => {
     const document = makeDocument({ sourceType: 'treatment', sourceId: 1 });
     const gate = createDeferred<void>();
