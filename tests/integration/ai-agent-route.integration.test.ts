@@ -121,12 +121,15 @@ describe('AI agent route integration', () => {
 
     expect(response.status).toBe(200);
 
-    expect(response.body.answer).toContain('AI Agent Route Test');
+    expect(response.body.answer).toBe('mocked agent answer');
 
     expect(response.body.citations).toEqual([]);
 
     expect(mockEmbedText).not.toHaveBeenCalled();
-    expect(mockGenerateAnswer).not.toHaveBeenCalled();
+
+    expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
+
+    expect(mockGenerateAnswer.mock.calls[0][0]).toContain('AI Agent Route Test');
   });
 
   it('requires an injuryId for journal questions', async () => {

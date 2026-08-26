@@ -1,8 +1,10 @@
 import { safetyTool } from './tools/safety-tool.js';
 import { ragTool } from './tools/rag-tool.js';
-import { journalTool } from './tools/journal-tool.js';
+import { journalTool, formatInjuryRecord } from './tools/journal-tool.js';
 import { routeIntent } from './ai-agent-intent-router.js';
 import { AgentState } from './ai-agent-state.js';
+import { buildPrompt } from '../rag/prompt-builder.js';
+import { generateAnswer } from '../llm/llm-client.js';
 
 export async function runAgent(question: string, injuryId?: number) {
   const state: AgentState = {
@@ -47,12 +49,12 @@ export async function runAgent(question: string, injuryId?: number) {
         };
       }
 
-      // TODO: Remove for now because JournalTool is palceholder
-      // Change later
-      //state.result = result;
+      const context = formatInjuryRecord(result);
+      const prompt = buildPrompt(question, context);
+      const answer = await generateAnswer(prompt);
 
       return {
-        answer: JSON.stringify(result),
+        answer,
         citations: [],
       };
     }

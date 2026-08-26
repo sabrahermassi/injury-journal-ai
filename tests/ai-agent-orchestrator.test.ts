@@ -3,7 +3,9 @@ import { jest } from '@jest/globals';
 const safetyToolMock = jest.fn();
 const ragToolMock = jest.fn();
 const journalToolMock = jest.fn();
+const formatInjuryRecordMock = jest.fn();
 const routeIntentMock = jest.fn();
+const generateAnswerMock = jest.fn();
 
 jest.unstable_mockModule('../src/ai-agent/tools/safety-tool.js', () => ({
   safetyTool: safetyToolMock,
@@ -15,10 +17,15 @@ jest.unstable_mockModule('../src/ai-agent/tools/rag-tool.js', () => ({
 
 jest.unstable_mockModule('../src/ai-agent/tools/journal-tool.js', () => ({
   journalTool: journalToolMock,
+  formatInjuryRecord: formatInjuryRecordMock,
 }));
 
 jest.unstable_mockModule('../src/ai-agent/ai-agent-intent-router.js', () => ({
   routeIntent: routeIntentMock,
+}));
+
+jest.unstable_mockModule('../src/llm/llm-client.js', () => ({
+  generateAnswer: generateAnswerMock,
 }));
 
 const { runAgent } = await import('../src/ai-agent/ai-agent-orchestrator.js');
@@ -113,18 +120,26 @@ describe('agent orchestrator', () => {
       id: 42,
     });
 
+    formatInjuryRecordMock.mockReturnValue('Injury:\nName: Sprained ankle');
+
+    generateAnswerMock.mockResolvedValue(
+      'Your sprained ankle injury started on record.',
+    );
+
     const result = await runAgent('Show my injury timeline', 42);
 
     expect(routeIntentMock).toHaveBeenCalledWith('Show my injury timeline');
 
     expect(journalToolMock).toHaveBeenCalledWith(42);
 
+    expect(formatInjuryRecordMock).toHaveBeenCalledWith({ id: 42 });
+
+    expect(generateAnswerMock).toHaveBeenCalled();
+
     expect(ragToolMock).not.toHaveBeenCalled();
 
-    // TODO: Update this expectation when journalTool is implemented
-    // to transform structured injury data into a user-facing answer.
     expect(result).toEqual({
-      answer: JSON.stringify({ id: 42 }),
+      answer: 'Your sprained ankle injury started on record.',
       citations: [],
     });
   });
