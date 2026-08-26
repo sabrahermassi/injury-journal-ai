@@ -74,7 +74,11 @@ are currently under-tested — verify them when touching `rag-service.ts` or its
 If the evaluation harness (or any test) depends on a local service — the embedding service, or
 similar — that isn't currently reachable: do NOT just report this and wait. Check the Commands
 section for the correct start command, ask for explicit permission to start it, and if approved,
-start it in the background, poll until it's reachable, then proceed automatically.
+start it in the background using the command documented in `README.md`'s Setup section (e.g. the
+embedding service: `uvicorn embedding_api:app --app-dir src/embeddings --port 8000`). Treat it as
+ready once a `POST /embed-query` call succeeds; cap polling at 30 seconds — if it hasn't
+responded by then, stop and report the failure instead of continuing to wait. Once verification
+is complete, stop the background service.
 
 If the evaluation harness partially fails due to a missing credential or an unavailable external
 service (not a code defect) — e.g. a mock API key rejected by a live provider — do NOT silently
