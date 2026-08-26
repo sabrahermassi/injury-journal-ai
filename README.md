@@ -1,107 +1,121 @@
 # Injury Journal AI
 
-AI-powered injury journal assistant exploring RAG, LLMs, agent orchestration, embeddings, vector search, safety guardrails, evaluation, and AI observability.
+An AI assistant that answers natural-language questions about a personal injury journal, grounded in the user's own structured journal data.
+
+## Overview
+
+Injury Journal AI sits on top of an existing Injury Journal PostgreSQL application and turns its structured records — injuries, symptoms, treatments, medical visits, and timeline events — into searchable AI context. It uses embeddings, semantic retrieval, and retrieval-augmented generation (RAG) to answer questions like "What treatments have I tried?" or "When did my symptoms get worse?", citing the underlying records it used. A rule-based safety layer keeps the assistant within an organize/retrieve/summarize boundary — it does not diagnose conditions or make medical decisions.
 
 ## Project Status
 
-The AI assistant MVP has been implemented.
+The AI retrieval and RAG pipeline is implemented and tested: offline ingestion (reader → document builder → chunker → embedder → pgvector storage), semantic retrieval, RAG generation, citation generation, input-side safety guardrails, a hand-written AI agent with intent routing, and an evaluation harness.
 
-The project was built incrementally, starting with the data ingestion and embedding foundations, then adding semantic retrieval, RAG, safety guardrails, agent orchestration, and AI system evaluation.
+Known gaps in what's implemented so far:
+- There is no runnable ingestion entrypoint yet — the pipeline stages exist and are tested individually, but nothing wires them together outside of test files.
+- The agent's journal-lookup path returns raw database records rather than an LLM-generated summary.
+- There is no authentication or per-user data isolation yet — every request is currently unauthenticated.
+
+Security/production hardening, AI observability, AWS deployment, and Infrastructure as Code are not yet started. See [docs/04-implementation-roadmap.md](docs/04-implementation-roadmap.md) for the full, current status of every step.
+
+## Tech Stack
+
+- **Language / Runtime:** TypeScript, Node.js (ESM), Express 5
+- **Database:** PostgreSQL with the `pgvector` extension
+- **ORM:** Prisma 6
+- **LLM:** Groq SDK (`openai/gpt-oss-20b`)
+- **Embeddings:** A separate Python FastAPI service (`src/embeddings/embedding_api.py`) running Qwen3-Embedding-0.6B via `sentence-transformers`, producing 1024-dimensional vectors
+- **Tokenization (chunking):** `js-tiktoken`
+- **Testing:** Jest (unit and integration, including tests against a real pgvector database), Supertest
+- **Linting/formatting:** ESLint, Prettier
 
 ## Documentation
 
 - [Product](docs/01-product.md) — Product goals, scope, features, and intended use.
 - [Architecture](docs/02-architecture.md) — Overall system architecture and technical design.
 - [Chunker Architecture](docs/03-chunker-architecture.md) — Detailed design of the document chunking component.
-- [Implementation Roadmap](docs/04-implementation-roadmap.md) — Step-by-step implementation plan and progress.
+- [Implementation Roadmap](docs/04-implementation-roadmap.md) — Current status per step, linked to GitHub issues.
 
-## Tech Stack
+## Setup
 
-### MVP Implemented
+### Prerequisites
 
-#### AI Retrieval Pipeline
+- Node.js 22 (matches CI)
+- A PostgreSQL database with the `pgvector` extension available (CI uses the `pgvector/pgvector:pg16` image)
+- A Python environment able to run the embedding service (`src/embeddings/embedding_api.py`) — FastAPI, `sentence-transformers`, and an ASGI server such as `uvicorn`. No dependency manifest for this service is currently committed to the repo.
 
-- TypeScript / Node.js
-- PostgreSQL
-- Prisma
-- Embedding model integration
-- pgvector vector storage
-- Document chunking
-- Semantic retrieval
-- Retrieval-Augmented Generation (RAG)
-- Citation generation
+### Install
 
-#### AI Safety and Agent Layer
+```bash
+npm install
+```
 
-- Safety guardrails for healthcare boundaries
-- Hand-written AI agent orchestration
-- Agent state management
-- Intent routing
-- Tool-based architecture:
-  - RAG tool
-  - Journal tool
-  - Safety tool
-  - Citation handling
+### Configure environment
 
-#### AI System Evaluation
+Set the following environment variables (see `.env.example` for a starting point — note it does not currently list every variable the code reads):
 
-- Evaluation dataset
-- Evaluation harness
-- Retrieval evaluation
-- Citation evaluation
-- Safety evaluation
-- Evaluation reporting
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `GROQ_API_KEY` | Yes | Used by `src/llm/llm-client.ts` for answer generation |
+| `EMBEDDING_API_URL` | No | Defaults to `http://127.0.0.1:8000` |
+| `EMBEDDING_API_TIMEOUT_MS` | No | Defaults to 30000 |
+| `PORT` | No | Defaults to 3000 |
 
-## Production Improvements
+### Database
 
-Future work focuses on making the system production-ready, scalable, and operationally robust.
+```bash
+npx prisma generate
+npx prisma migrate deploy
+```
 
-### Security and Privacy
+Seeding uses two separate scripts, both with hard safety checks against running against the wrong database:
 
-- Authentication
-- Authorization
-- User-level data isolation
-- Vector-level authorization
-- Secure API endpoints
-- Safe logging
+- `npx prisma db seed` runs `prisma/seed.ts`, which refuses to run unless `DATABASE_URL` contains `test`.
+- `npm run seed:dev` runs `prisma/seed-dev.ts`, which additionally requires `DATABASE_ENV=development`, `SEED_DEV_CONFIRM=true`, and a database named exactly `injury-journal-ai-db`.
 
-### Retrieval and AI Quality Improvements
+### Run the embedding service
 
-- Hybrid keyword + vector search
-- Retrieval reranking
-- Similarity thresholds
-- Query-specific retrieval tuning
-- Advanced evaluation metrics:
-  - Recall@k
-  - Mean Reciprocal Rank (MRR)
-  - RAGAS
-  - LLM-as-a-judge
+Start `src/embeddings/embedding_api.py` (a FastAPI app exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
 
-### AI Agent Improvements
+```bash
+uvicorn src.embeddings.embedding_api:app --port 8000
+```
 
-- More complex multi-step workflows
-- Persistent agent state
-- Dynamic tool selection
-- LangGraph integration when workflows require it
+### Run the backend
 
-### Cloud and Infrastructure
+```bash
+npm run dev    # tsx watch, for development
+npm run build  # tsc
+npm start      # runs dist/index.js
+```
 
-- AI observability and tracing
-- Terraform infrastructure management
-- AWS Lambda workloads
-- AWS Step Functions workflows
-- CloudWatch monitoring
-- DynamoDB-based distributed state patterns
+## Usage
 
-## Project Goal
+The API exposes two endpoints:
 
-Build a production-oriented AI assistant that can:
+```bash
+curl -X POST http://localhost:3000/rag/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What treatments have I tried?", "injuryId": 1}'
 
-- Answer questions about a user's injury journal
-- Retrieve relevant historical information
-- Generate grounded summaries
-- Cite underlying journal records
-- Apply healthcare safety boundaries
-- Evaluate AI system quality
+curl -X POST http://localhost:3000/ai-agent \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What treatments have I tried?", "injuryId": 1}'
+```
 
-The system is designed to be built one layer at a time, with the data and retrieval foundations established before introducing agentic workflows.
+`injuryId` is optional on both endpoints. Neither endpoint requires authentication today — see
+the Project Status section above.
+
+## Tests
+
+```bash
+npm test                 # runs every test under tests/, including the integration suite below —
+                          # requires a real PostgreSQL + pgvector database (see DATABASE_URL)
+npm run test:integration # runs just the integration suite explicitly/serially
+```
+
+`npm run lint`, `npx tsc --noEmit`, `npm test`, and a full build are also run in CI
+(`.github/workflows/ci.yml`). Because Jest matches every test under `tests/`, `npm test` already
+includes the PostgreSQL + pgvector integration suite — CI provisions a pgvector database
+specifically for this. `npm run test:integration` just runs that same subset explicitly/serially,
+useful for running it in isolation locally.

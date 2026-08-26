@@ -1,0 +1,173 @@
+# Injury Journal AI — Flows Review
+
+This document replaces the earlier `docs/handoff/flows-review.md` working file (removed as part
+of the handoff-file cleanup). It is a committed, permanent reference, regenerated from the actual
+code as of this writing — where it and the code disagree later, trust the code and update this
+doc.
+
+Unlike `docs/02-architecture.md` (is the design sensible?), this asks: does the system actually
+work end-to-end, tracing real function calls and real error paths, not the documented intent.
+
+## Flow 1 — Create injury
+
+**What actually happens:** nothing — there is no create/update/delete endpoint for `Injury` or any
+child record anywhere in the codebase. `app.ts` registers exactly two routers (`/rag`, `/ai-agent`);
+neither exposes a write path. The only way an `Injury` row comes to exist is direct DB
+manipulation (seed scripts, `prisma db seed` / `seed-dev`) — there's no application-level flow to
+trace.
+
+**What should happen (per docs intent):** `docs/02-architecture.md`'s framing describes this
+backend as sitting "on top of an existing Injury Journal PostgreSQL application" — implying CRUD
+is owned elsewhere. `docs/04-implementation-roadmap.md`'s frontend-readiness section frames this
+explicitly as an open product decision, not an oversight.
+
+**Divergence / missing error handling / tests:** not applicable — there's no flow here to have
+gaps in. The gap is at the decision level (§11 Decision D7 context, and the open "does this
+backend own CRUD" question), not an implementation defect.
+
+## Flow 2 — Medical document ingestion
+
+**What actually happens, step by step:**
+
+1. `readJournalData()` (`postgres-reader.ts`) — a single `prisma.injury.findMany()` with all four
+   child relations included. **No filtering, no pagination, no "since last run" cursor** — every
+   call reads every injury for every user in the database.
+2. `buildJournalDocuments()` (`document-builder.ts`) — deterministic string templates, one
+   `JournalDocument` per `Injury` and per child record (symptom, treatment, visit, timeline
+   event). **This is not LLM-based extraction** — there's no model call, no structured-output
+   schema, no retries, and therefore no hallucination risk at this stage; it's plain
+   interpolation of already-structured DB fields into sentences.
+3. `chunkDocument()` (`document-chunker.ts`) — recursive paragraph → sentence → word splitting
+   under a 300-token limit (see `docs/02-architecture.md` §11 Decision D4).
+4. `embedAndStoreDocument()` (`embed-and-store.ts`), per document, wrapped in
+   `withIngestionLock(sourceType, sourceId, ...)`:
+   - for each chunk (in order): `embedText()` → `storeDocumentChunk()` (an upsert:
+     `INSERT ... ON CONFLICT (sourceType, sourceId, chunkIndex) DO UPDATE`)
+   - after all chunks: `deleteDocumentChunksExcept()` prunes any stale chunk indexes left over
+     from a previous run that produced more chunks for the same source record.
+
+**What should happen (per docs intent):** `docs/02-architecture.md` §4.1 describes an "Ingestion
+Worker" node that calls these stages in sequence on some trigger. That worker does not exist —
+confirmed, not new information (tracked as issue #40). The stages above are exactly what's
+implemented and tested; nothing in the actual pipeline diverges from its own documented design at
+the stage level. The divergence is entirely "the orchestrating entrypoint is missing," not
+"the stages behave differently than documented."
+
+**Missing error handling:**
+- `embedAndStoreDocument`'s per-chunk loop has no try/catch around `embedText()`. If the
+  embedding service fails partway through a multi-chunk document (e.g. chunk 3 of 5), chunks 1–2
+  are already durably stored (upserted), the function throws, and `deleteDocumentChunksExcept`
+  never runs — leaving that source record's chunks in a partial, inconsistent state until a later
+  run completes successfully (that later run doesn't need matching chunk boundaries — it supplies
+  its own current chunk-index list and prunes anything not in it, so any successful full run
+  reconciles the stale state, not just one that happens to produce the same chunk count).
+- No retry/backoff on the embedding call at all — a single transient failure aborts the whole
+  document.
+- `withIngestionLock` is an **in-process only** lock (a plain `Map` in memory). It correctly
+  serializes concurrent calls within one Node process, but provides zero protection if ingestion
+  ever runs as more than one process/instance (e.g. horizontally scaled workers, concurrent Lambda
+  invocations) — worth flagging now since §9 of the architecture doc already raises the
+  service-deployment-shape question for the embedding service, and the same question applies here.
+
+**Missing tests:** no test exercises "embedding service fails partway through a multi-chunk
+document" (the partial-write scenario above). No test exercises true cross-process concurrent
+ingestion of the same source record (only intra-process, via the same test runner).
+
+**Questionable boundary — confirmed doc/code mismatch, not just an untested path:**
+`docs/03-chunker-architecture.md`'s test checklist states "Empty content doesn't create chunks."
+`chunkDocument()`'s empty-content guard only exists inside `addChunk()`, which is used on the
+multi-chunk splitting path. But the function's fast-path early return —
+`if (countTokens(document.content) <= maxTokens) return [document];` — applies to short content
+too, including empty strings (`countTokens('') <= 300` is true), and returns the document
+**unchanged, with no empty-content check at all**. So a `JournalDocument` with empty `content`
+passed through `chunkDocument()` produces one chunk with empty content, not zero chunks. Confirmed
+by reading `tests/chunker.test.ts` directly: no test named or shaped like an empty-content case
+exists — the documented invariant was never actually verified, and doesn't hold on the fast path.
+
+## Flow 3 — Search
+
+**What actually happens:** `semanticSearch()` (`retrieval/semantic-search.ts`) calls `embedText()`
+— the **document-side** embedding endpoint — on the user's question, then passes the resulting
+vector to `searchSimilarChunks()` (`vector-storage.ts`), which runs a plain
+`ORDER BY embedding <=> query LIMIT k` query, filtered by `injuryId` only when provided. No
+similarity threshold, no other metadata filter, no `userId` scoping (see §11 Decision D9).
+
+**What should happen:** the question should be embedded via the query-side prompt
+(`embed_query()` in the Python service), not the document-side one — Qwen3-Embedding-0.6B is
+designed for asymmetric retrieval. This is not a hypothetical: the fix is implemented on PR #55
+(issue #37) — check that PR/issue directly for current status rather than this document, since
+this file describes the codebase as of this review, and that fix has not landed on this branch.
+
+**Divergence:** confirmed live bug at the time of this review — every search query is embedded
+with the wrong prompt, degrading retrieval quality for reasons entirely orthogonal to any bug in
+the retrieval query itself.
+
+**Missing error handling:** `semanticSearch` propagates any `embedText`/DB error unchanged to its
+caller — by design, the collapse into a generic message happens one layer up, in the HTTP
+controllers (see Flow 5).
+
+**Missing tests:** none identified beyond what Flow 5 covers (the embedding-failure and
+DB-failure propagation paths are tested at the unit level via mocks, per `tests/semantic-search.test.ts`).
+
+**Questionable boundary:** none beyond what's already tracked (D9's `userId` gap, and the
+query/document embedding-mode gap above).
+
+## Flow 4 — RAG
+
+**What actually happens, step by step (`rag-service.ts`):**
+
+1. `checkSafety(question)` — regex-based pre-generation check. If blocked, returns immediately
+   with a refusal message, `chunks: []`, `citations: []` — **no retrieval or LLM call happens at
+   all** for a blocked question.
+2. `semanticSearch(question, injuryId, limit)` — see Flow 3.
+3. `buildContext(chunks)` — joins raw chunk `content` with `Source N:` headers and `---`
+   separators. **No token-budget check** — if retrieval ever returns many/large chunks, nothing
+   caps the resulting prompt size before it's sent to the LLM.
+4. `buildPrompt(question, context)` — a single fixed instruction ("answer using only the provided
+   journal information... if not present, say you don't have enough information") plus the raw
+   context and question, no few-shot examples, no output-format constraint.
+5. `generateAnswer(prompt)` (`llm-client.ts`) — one Groq chat-completion call, no streaming, no
+   timeout configured explicitly (relies on the SDK's default), no retry.
+6. `buildCitations(chunks)` — dedupes by `sourceType:sourceId`, builds a label + optional date
+   from chunk metadata. **Does not consult the generated answer at all** — citations are a
+   provenance list of what was retrieved, not a check of what the LLM actually used or said.
+
+**What should happen (per docs intent):** `docs/02-architecture.md` §5.3 already documents this
+citation gap accurately (citations aren't fact-checked against the answer). No divergence beyond
+what's already known and documented.
+
+**Missing error handling:** if `generateAnswer` throws (LLM down, invalid key, rate limit), the
+error propagates unchanged through `answerQuestion` to the controller, which converts it to a
+generic `500 { error: "Failed to generate answer" }` — no distinction between "provider down,"
+"invalid credentials," or "rate limited," and no retry at any layer.
+
+**Missing tests — confirmed by direct check, not assumption:** `context-builder.ts`'s empty-input
+behavior (an empty `chunks` array still produces a valid, if minimal, context string — no crash),
+but there is **no test asserting what `answerQuestion` actually does when zero chunks are
+retrieved** (e.g., whether the LLM is still called with an essentially empty "Journal
+information:" section, and what it tends to answer). This matches the already-tracked roadmap item
+("Add a test for the empty-retrieval path in `answerQuestion`," issue referenced in
+`docs/04-implementation-roadmap.md`'s "do now" list) — confirmed still open, not stale.
+
+**Questionable boundary:** none new beyond what §5.3/§5.4 of the architecture doc already state.
+
+## Flow 5 — Failure paths
+
+Traced directly against the controllers and services, not assumed:
+
+| Failure | What actually happens |
+|---|---|
+| **LLM call fails** (`/rag/ask`) | `generateAnswer` throws → uncaught through `answerQuestion` → caught in `askQuestion` controller's `try/catch` → `500 { error: "Failed to generate answer" }`. Same shape regardless of cause (invalid key, timeout, rate limit, network error) — verified directly this session: an invalid `GROQ_API_KEY` produces exactly this generic message with no distinguishing detail. |
+| **LLM call fails** (`/ai-agent`) | Same propagation pattern through `runAgent` → `askAgent` controller → `500 { error: "Failed to process request" }` — a *different* generic message than `/rag/ask`'s, for the same underlying failure class. |
+| **Embedding call fails** | `embedText`/`embedQuery` throws (network error, non-200 response) → propagates through `semanticSearch` → `answerQuestion`/`runAgent` → same generic 500 as above. No distinction from an LLM failure at the HTTP response level. |
+| **DB fails** | Any Prisma/raw-SQL error (`vector-storage.ts`, `journal-tool.ts`) propagates uncaught up to the same controller-level `catch` → same generic 500. |
+| **Bad/malformed document (ingestion)** | Not directly applicable — `buildJournalDocuments` operates on already-typed Prisma results, not external/untrusted input. The closest analogue, a chunk whose content becomes empty after processing, is covered under Flow 2's chunker finding above. |
+| **Duplicate ingestion** | Handled correctly and idempotently — `storeDocumentChunk`'s `ON CONFLICT (sourceType, sourceId, chunkIndex) DO UPDATE` means re-ingesting the same source record updates existing rows rather than duplicating them, and `deleteDocumentChunksExcept` prunes chunks left over from a run that previously produced more chunks for that record. Verified via `vector-storage.ts` directly, not assumed. |
+| **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty "Journal information:" section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. Nothing short-circuits before the LLM call; whether the model actually follows that instruction is unverified — no test covers it (see Flow 4). |
+
+**Cross-cutting observation, confirmed by reading both controllers side by side:** `/rag/ask` and
+`/ai-agent` use different generic error message text for the same failure classes
+(`"Failed to generate answer"` vs. `"Failed to process request"`), and neither includes an error
+code/type. A frontend cannot distinguish "try again" from "service misconfigured" from "no
+results" from either endpoint's 500 response — already noted in `docs/05-api-contract.md` §5, and
+confirmed here as a real, traced code path rather than an inferred risk.
