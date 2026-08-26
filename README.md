@@ -109,10 +109,13 @@ the Project Status section above.
 ## Tests
 
 ```bash
-npm test                 # unit tests
-npm run test:integration # integration tests — require a real PostgreSQL + pgvector database, run serially
+npm test                 # runs every test under tests/, including the integration suite below —
+                          # requires a real PostgreSQL + pgvector database (see DATABASE_URL)
+npm run test:integration # runs just the integration suite explicitly/serially
 ```
 
-`npm run lint`, `npx tsc --noEmit`, unit tests, and a full build are also run in CI
-(`.github/workflows/ci.yml`). `npm run test:integration` is not run in CI — it requires a real
-PostgreSQL + pgvector database and must be run separately.
+`npm run lint`, `npx tsc --noEmit`, `npm test`, and a full build are also run in CI
+(`.github/workflows/ci.yml`). Because Jest matches every test under `tests/`, `npm test` already
+includes the PostgreSQL + pgvector integration suite — CI provisions a pgvector database
+specifically for this. `npm run test:integration` just runs that same subset explicitly/serially,
+useful for running it in isolation locally.
