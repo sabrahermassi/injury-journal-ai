@@ -5,7 +5,7 @@ import { prisma } from '../../src/lib/prisma.js';
 import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
 
 jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
-  embedText: jest.fn(),
+  embedQuery: jest.fn(),
 }));
 
 jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
@@ -13,10 +13,10 @@ jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
 }));
 
 const { default: app } = await import('../../src/app.js');
-const { embedText } = await import('../../src/embeddings/embedding-client.js');
+const { embedQuery } = await import('../../src/embeddings/embedding-client.js');
 const { generateAnswer } = await import('../../src/llm/llm-client.js');
 
-const mockEmbedText = jest.mocked(embedText);
+const mockEmbedQuery = jest.mocked(embedQuery);
 const mockGenerateAnswer = jest.mocked(generateAnswer);
 
 function vectorWith(first: number, second = 0, third = 0): number[] {
@@ -85,7 +85,7 @@ describe('RAG route integration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockEmbedText.mockResolvedValue({
+    mockEmbedQuery.mockResolvedValue({
       embedding: vectorWith(1, 0, 0),
       model: 'test-model',
       modelVersion: 'test-version',
@@ -120,7 +120,7 @@ describe('RAG route integration', () => {
 
     expect(response.body.citations).toHaveLength(1);
 
-    expect(mockEmbedText).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });
@@ -166,7 +166,7 @@ describe('RAG route integration', () => {
       citations: [],
     });
 
-    expect(mockEmbedText).not.toHaveBeenCalled();
+    expect(mockEmbedQuery).not.toHaveBeenCalled();
     expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 
@@ -181,7 +181,7 @@ describe('RAG route integration', () => {
       error: 'Question must be a non-empty string',
     });
 
-    expect(mockEmbedText).not.toHaveBeenCalled();
+    expect(mockEmbedQuery).not.toHaveBeenCalled();
     expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 
@@ -197,7 +197,7 @@ describe('RAG route integration', () => {
       error: 'injuryId must be a positive integer',
     });
 
-    expect(mockEmbedText).not.toHaveBeenCalled();
+    expect(mockEmbedQuery).not.toHaveBeenCalled();
     expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 });

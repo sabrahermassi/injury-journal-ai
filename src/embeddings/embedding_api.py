@@ -30,6 +30,19 @@ def embed(request: EmbeddingRequest):
         "version": "qwen3-embedding-0.6b-v1",
     }
 
+
+@app.post("/embed-query")
+def embed_query(request: EmbeddingRequest):
+    embedding = embedding_service.embed_query(request.text)
+
+    return {
+        "embedding": embedding,
+        "model": "Qwen/Qwen3-Embedding-0.6B",
+        "modelVersion": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+        "dimension": len(embedding),
+        "version": "qwen3-embedding-0.6b-v1",
+    }
+
 def test_rejects_text_over_max_length(self, client, fake_service):
     response = client.post(
         "/embed",

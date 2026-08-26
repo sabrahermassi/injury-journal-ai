@@ -53,13 +53,19 @@ class FakeEmbeddingService:
 
     def __init__(self):
         self.embed_document_calls = []
+        self.embed_query_calls = []
         self.embed_batch_calls = []
         self.document_result = [0.1, 0.2, 0.3]
+        self.query_result = [0.1, 0.2, 0.3]
         self.batch_result = None
 
     def embed_document(self, text):
         self.embed_document_calls.append(text)
         return self.document_result
+
+    def embed_query(self, text):
+        self.embed_query_calls.append(text)
+        return self.query_result
 
     def embed_batch(self, texts):
         self.embed_batch_calls.append(texts)
@@ -154,6 +160,33 @@ class TestEmbedEndpoint:
 
         assert response.status_code == 200
         assert fake_service.embed_document_calls == ["hello"]
+
+
+class TestEmbedQueryEndpoint:
+    def test_returns_200_with_expected_payload_shape(self, client, fake_service):
+        fake_service.query_result = [0.1, 0.2, 0.3, 0.4]
+
+        response = client.post("/embed-query", json={"text": "hello world"})
+
+        assert response.status_code == 200
+
+        body = response.json()
+        assert body["embedding"] == [0.1, 0.2, 0.3, 0.4]
+        assert body["model"] == "Qwen/Qwen3-Embedding-0.6B"
+        assert body["modelVersion"] == "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+        assert body["dimension"] == 4
+        assert body["version"] == "qwen3-embedding-0.6b-v1"
+
+    def test_calls_embed_query_with_request_text(self, client, fake_service):
+        client.post("/embed-query", json={"text": "what treatments have I tried?"})
+
+        assert fake_service.embed_query_calls == ["what treatments have I tried?"]
+        assert fake_service.embed_document_calls == []
+
+    def test_missing_text_field_returns_422(self, client):
+        response = client.post("/embed-query", json={})
+
+        assert response.status_code == 422
 
 
 class TestEmbedBatchEndpoint:

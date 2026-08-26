@@ -54,7 +54,10 @@ function validateEmbeddingResponse(data: unknown): EmbeddingResponse {
   };
 }
 
-export async function embedText(text: string): Promise<EmbeddingResponse> {
+async function postEmbedding(
+  path: string,
+  text: string,
+): Promise<EmbeddingResponse> {
   const controller = new AbortController();
 
   const timeout = setTimeout(
@@ -63,7 +66,7 @@ export async function embedText(text: string): Promise<EmbeddingResponse> {
   );
 
   try {
-    const response = await fetch(`${EMBEDDING_API_URL}/embed`, {
+    const response = await fetch(`${EMBEDDING_API_URL}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -84,4 +87,12 @@ export async function embedText(text: string): Promise<EmbeddingResponse> {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function embedText(text: string): Promise<EmbeddingResponse> {
+  return postEmbedding('/embed', text);
+}
+
+export async function embedQuery(text: string): Promise<EmbeddingResponse> {
+  return postEmbedding('/embed-query', text);
 }

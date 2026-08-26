@@ -273,3 +273,72 @@ describe('embedText', () => {
     expect(result.embedding).toEqual(TEST_EMBEDDING);
   });
 });
+
+describe('embedQuery', () => {
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  it('sends a POST request to /embed-query, not /embed', async () => {
+    delete process.env.EMBEDDING_API_URL;
+
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { embedQuery } = await loadEmbeddingClient();
+    const result = await embedQuery('what treatments have I tried?');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:8000/embed-query',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'what treatments have I tried?' }),
+      }),
+    );
+
+    expect(result.embedding).toEqual(TEST_EMBEDDING);
+  });
+
+  it('uses a custom EMBEDDING_API_URL when configured', async () => {
+    process.env.EMBEDDING_API_URL = 'http://embedding-service:9000';
+
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { embedQuery } = await loadEmbeddingClient();
+    await embedQuery('hi');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://embedding-service:9000/embed-query',
+      expect.anything(),
+    );
+  });
+
+  it('throws a descriptive error when the response is not ok', async () => {
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
+      makeResponse({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      }),
+    );
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { embedQuery } = await loadEmbeddingClient();
+
+    await expect(embedQuery('hi')).rejects.toThrow(
+      'Embedding API request failed: 500 Internal Server Error',
+    );
+  });
+});

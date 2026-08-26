@@ -71,6 +71,21 @@ harness (`runEvaluation()` in `evaluation/ai-system/evaluation-runner.ts` — no
 for this; don't invent one). The "no relevant information" and "LLM/embedding call fails" paths
 are currently under-tested — verify them when touching `rag-service.ts` or its callers.
 
+If the evaluation harness (or any test) depends on a local service — the embedding service, or
+similar — that isn't currently reachable: do NOT just report this and wait. Check the Commands
+section for the correct start command, ask for explicit permission to start it, and if approved,
+start it in the background, poll until it's reachable, then proceed automatically.
+
+If the evaluation harness partially fails due to a missing credential or an unavailable external
+service (not a code defect) — e.g. a mock API key rejected by a live provider — do NOT silently
+treat partial results as sufficient. First check whether the change being verified touches the
+part of the pipeline that failed to verify:
+
+- If it does NOT (the failure is in an unrelated stage), ask for explicit confirmation that
+  partial verification is acceptable, stating plainly what was verified and what wasn't.
+- If it DOES, do not proceed on partial results — ask for the missing credential or service
+  instead of shipping on incomplete verification.
+
 ## 8. File and Component Placement Rules
 
 Ingestion logic → existing `src/ingestion/` modules. Retrieval/embedding logic → existing
@@ -94,6 +109,11 @@ it before creating a new one.
 - Do NOT wire up currently-unwired code (e.g. `citation-verifier.ts`, `citation-source-mapper.ts`,
   `embed_query()`) just because it exists — verify first that it covers every case the rest of the
   system assumes (the citation modules today only handle 2 of 5 `sourceType` values).
+- Before making any file edits for a new feature or fix, MUST ask whether the work should go on
+  a new local branch stacked on the current one. If yes, propose a kebab-case branch name
+  referencing the relevant issue number (e.g. `37-wire-embed-query`), confirm it, then create the
+  branch before editing any files. NEVER push or open a PR automatically — that remains a manual
+  step.
 - Major architectural changes MUST be flagged before implementation, not introduced silently
   during an unrelated task. This does not prohibit a change a task explicitly requires.
 - Do not treat `docs/02-architecture.md` as proof that something is implemented (see §3).
@@ -114,6 +134,7 @@ npx prisma generate
 npx prisma migrate dev
 npx prisma db seed
 ```
+
 No `test:watch` script or evaluation-harness CLI exists — don't invent either.
 
 ## 11. Frontend Contract
