@@ -149,4 +149,39 @@ describe('vector storage integration', () => {
     expect(results[0].content).toBe('Injury 1 relevant chunk');
     expect(results[0].injuryId).toBe(1);
   });
+
+  it('excludes rows from a different sourceType even when their vector is closer', async () => {
+    await storeDocumentChunk(
+      1,
+      'vector-storage-integration-test',
+      5,
+      0,
+      'Own sourceType chunk',
+      vectorWith(0, 1, 0),
+    );
+
+    await storeDocumentChunk(
+      1,
+      'some-other-source-type',
+      5,
+      0,
+      'Foreign sourceType chunk, closer vector',
+      vectorWith(1, 0, 0),
+    );
+
+    const results = await searchSimilarChunks(
+      vectorWith(1, 0, 0),
+      undefined,
+      5,
+      'vector-storage-integration-test',
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].content).toBe('Own sourceType chunk');
+
+    await prisma.$executeRaw`
+      DELETE FROM "DocumentChunk"
+      WHERE "sourceType" = 'some-other-source-type'
+    `;
+  });
 });
