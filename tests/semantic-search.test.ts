@@ -1,10 +1,10 @@
 import { jest } from '@jest/globals';
 
-const embedTextMock = jest.fn();
+const embedQueryMock = jest.fn();
 const searchSimilarChunksMock = jest.fn();
 
 jest.unstable_mockModule('../src/embeddings/embedding-client.js', () => ({
-  embedText: embedTextMock,
+  embedQuery: embedQueryMock,
 }));
 
 jest.unstable_mockModule('../src/embeddings/vector-storage.js', () => ({
@@ -21,7 +21,7 @@ describe('semanticSearch', () => {
   it('embeds the query and searches using the resulting embedding', async () => {
     const embedding = [0.1, 0.2, 0.3];
 
-    embedTextMock.mockResolvedValue({
+    embedQueryMock.mockResolvedValue({
       embedding,
       model: 'test-model',
       modelVersion: 'v1',
@@ -43,7 +43,7 @@ describe('semanticSearch', () => {
       'Why does my lower back hurt after sitting?',
     );
 
-    expect(embedTextMock).toHaveBeenCalledWith(
+    expect(embedQueryMock).toHaveBeenCalledWith(
       'Why does my lower back hurt after sitting?',
     );
 
@@ -57,7 +57,7 @@ describe('semanticSearch', () => {
   });
 
   it('passes a custom result limit to vector search', async () => {
-    embedTextMock.mockResolvedValue({
+    embedQueryMock.mockResolvedValue({
       embedding: [0.1, 0.2],
       model: 'test-model',
       modelVersion: 'v1',
@@ -77,7 +77,7 @@ describe('semanticSearch', () => {
   });
 
   it('passes injuryId to vector search when provided', async () => {
-    embedTextMock.mockResolvedValue({
+    embedQueryMock.mockResolvedValue({
       embedding: [0.1, 0.2],
       model: 'test-model',
       modelVersion: 'v1',
@@ -93,7 +93,7 @@ describe('semanticSearch', () => {
   });
 
   it('propagates embedding errors', async () => {
-    embedTextMock.mockRejectedValue(new Error('embedding service unavailable'));
+    embedQueryMock.mockRejectedValue(new Error('embedding service unavailable'));
 
     await expect(semanticSearch('lower back pain')).rejects.toThrow(
       'embedding service unavailable',
@@ -103,7 +103,7 @@ describe('semanticSearch', () => {
   });
 
   it('propagates vector search errors', async () => {
-    embedTextMock.mockResolvedValue({
+    embedQueryMock.mockResolvedValue({
       embedding: [0.1, 0.2],
       model: 'test-model',
       modelVersion: 'v1',

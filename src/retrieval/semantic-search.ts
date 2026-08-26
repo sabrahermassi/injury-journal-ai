@@ -1,4 +1,4 @@
-import { embedText } from '../embeddings/embedding-client.js';
+import { embedQuery } from '../embeddings/embedding-client.js';
 import { searchSimilarChunks } from '../embeddings/vector-storage.js';
 
 export async function semanticSearch(
@@ -6,7 +6,7 @@ export async function semanticSearch(
   injuryId?: number,
   limit = 5,
 ) {
-  const result = await embedText(query);
+  const result = await embedQuery(query);
 
   return searchSimilarChunks(result.embedding, injuryId, limit);
 }
