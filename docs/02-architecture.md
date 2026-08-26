@@ -215,8 +215,9 @@ flowchart TD
 
 > **Current status:** "Question Embedding" now uses the query-specific `/embed-query` endpoint as
 > of PR #55 (issue #37) — see §4.2's design-gap note for the merge-status caveat. "Metadata
-> Filtering" is `injuryId` only; `userId`, `sourceType`, and date-range filters are not
-> implemented (deliberately deferred pending evaluation data, per issue #35). There is no
+> Filtering" is `injuryId` only in production; `searchSimilarChunks` also accepts an optional
+> `sourceType` parameter, but no production caller passes one. `userId` and date-range filters are
+> not implemented (deliberately deferred pending evaluation data, per issue #35). There is no
 > similarity threshold — "Top-k Relevant Chunks" really means "Top-k *Nearest* Chunks," which may
 > not be relevant at all if the journal has little or no ingested content for the question asked.
 

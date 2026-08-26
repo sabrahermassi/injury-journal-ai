@@ -16,8 +16,8 @@ identity/session endpoints, no health check.
 **None.** There is no auth middleware anywhere in `app.ts`/`index.ts`, no session, and no
 `userId` derived from request context at any layer. Every request is anonymous. Concretely:
 
-- `searchSimilarChunks` (`vector-storage.ts`) filters only by the optional `injuryId` — never by
-  owner.
+- `searchSimilarChunks` (`vector-storage.ts`) filters only by the optional `injuryId` (it also
+  accepts an optional `sourceType`, but no production caller passes one) — never by owner.
 - `journalTool` (`journal-tool.ts`) does a bare `prisma.injury.findUnique({ where: { id } })` —
   no owner check.
 

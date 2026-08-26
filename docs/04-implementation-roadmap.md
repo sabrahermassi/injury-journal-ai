@@ -118,8 +118,9 @@ product decision that should be made explicitly rather than discovered by omissi
 **Surfaced during the docs-accuracy review (PR #53), tracked but not yet in this list:**
 
 - [ ] #56 — Add a Python dependency manifest for the embedding service.
-- [ ] #57 — `vector-storage.integration.test.ts` has no isolation from shared `DocumentChunk`
-  data (`searchSimilarChunks` has no `sourceType` filter).
+- [x] #57 — `vector-storage.integration.test.ts` has no isolation from shared `DocumentChunk`
+  data: fixed by adding an optional `sourceType` filter to `searchSimilarChunks` and scoping the
+  test to it. Not used by any production caller.
 - [ ] #58 — Remaining dangling `docs/handoff/*` references in `docs/01-product.md` and this file.
 - [ ] #59 — `chunkDocument`'s empty-content behavior contradicts
   `docs/03-chunker-architecture.md`'s documented invariant (code-vs-doc call needed).
