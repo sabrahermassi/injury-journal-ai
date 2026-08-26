@@ -143,4 +143,30 @@ describe('agent orchestrator', () => {
       citations: [],
     });
   });
+
+  it('returns a fallback message when the LLM returns an empty answer for journal questions', async () => {
+    safetyToolMock.mockReturnValue({
+      allowed: true,
+    });
+
+    routeIntentMock.mockReturnValue('journal');
+
+    journalToolMock.mockResolvedValue({
+      id: 42,
+    });
+
+    formatInjuryRecordMock.mockReturnValue('Injury:\nName: Sprained ankle');
+
+    generateAnswerMock.mockResolvedValue('');
+
+    const result = await runAgent('Show my injury timeline', 42);
+
+    expect(generateAnswerMock).toHaveBeenCalled();
+
+    expect(result).toEqual({
+      answer:
+        'Unable to generate a summary from your injury record right now.',
+      citations: [],
+    });
+  });
 });

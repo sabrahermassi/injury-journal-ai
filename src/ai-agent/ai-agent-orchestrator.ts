@@ -53,6 +53,14 @@ export async function runAgent(question: string, injuryId?: number) {
       const prompt = buildPrompt(question, context);
       const answer = await generateAnswer(prompt);
 
+      if (!answer) {
+        return {
+          answer:
+            'Unable to generate a summary from your injury record right now.',
+          citations: [],
+        };
+      }
+
       return {
         answer,
         citations: [],
