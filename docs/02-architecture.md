@@ -147,16 +147,14 @@ flowchart TD
     V --> E["Embedded Document"]
 ```
 
-> **Real design gap (not just a documentation-vs-code mismatch):** Qwen3-Embedding-0.6B is
-> designed for *asymmetric* retrieval — documents and queries should be embedded differently
-> (queries use an instruction-style prompt, documents don't) for best retrieval quality. The
-> embedding service already implements both (`embed_document()` and `embed_query()` in
-> `embedding_service.py`), but the API layer only ever exposes the document-side call, and the
-> retrieval path (`semantic-search.ts`) embeds the user's question through that same
-> document-side endpoint. This isn't a deferred feature — it's a built capability that's
-> disconnected, quietly costing retrieval quality today. Recommended fix: add a query-mode
-> endpoint (or a `mode` field) to the embedding API and call it from the query path. See
-> §11 (Decision D3) below and `docs/04-implementation-roadmap.md`'s "do now" list.
+> **Design gap — fix implemented, pending merge confirmation:** Qwen3-Embedding-0.6B is designed
+> for *asymmetric* retrieval — documents and queries should be embedded differently (queries use
+> an instruction-style prompt, documents don't) for best retrieval quality. The embedding service
+> implements both (`embed_document()` and `embed_query()` in `embedding_service.py`); as of PR #55
+> (issue #37) the API layer adds a dedicated `/embed-query` route and the retrieval path
+> (`semantic-search.ts`) calls it via `embedQuery()` instead of the document-side endpoint. Check
+> the PR/issue directly for current merge status rather than relying on this document. See §11
+> (Decision D3) below.
 
 ### 4.3. Vector Storage with pgvector Architecture
 
@@ -215,12 +213,37 @@ flowchart TD
     R --> K["Top-k Relevant Chunks"]
 ```
 
-> **Current status:** "Question Embedding" uses the document-side embedding call, not a
-> query-specific one — see §4.2's design-gap note, which applies here at the point of use.
-> "Metadata Filtering" is `injuryId` only; `userId`, `sourceType`, and date-range filters are not
+> **Current status:** "Question Embedding" now uses the query-specific `/embed-query` endpoint as
+> of PR #55 (issue #37) — see §4.2's design-gap note for the merge-status caveat. "Metadata
+> Filtering" is `injuryId` only; `userId`, `sourceType`, and date-range filters are not
 > implemented (deliberately deferred pending evaluation data, per issue #35). There is no
 > similarity threshold — "Top-k Relevant Chunks" really means "Top-k *Nearest* Chunks," which may
 > not be relevant at all if the journal has little or no ingested content for the question asked.
+
+### Sequence Diagram
+
+> Originated from a Greptile-generated PR summary (PR #55) and independently verified against
+> the merged code before inclusion here.
+
+```mermaid
+sequenceDiagram
+    participant R as RAG caller
+    participant S as semanticSearch
+    participant C as Embedding client
+    participant A as Embedding API
+    participant E as EmbeddingService
+    participant V as Vector storage
+    R->>S: Query, injuryId, limit
+    S->>C: embedQuery(query)
+    C->>A: POST /embed-query
+    A->>E: embed_query(text)
+    E-->>A: Normalized query vector
+    A-->>C: Embedding response
+    C-->>S: Validated embedding
+    S->>V: searchSimilarChunks(vector, injuryId, limit)
+    V-->>S: Similar chunks
+    S-->>R: Search results
+```
 
 ### 5.2. Basic RAG Architecture
 
