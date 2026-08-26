@@ -158,6 +158,41 @@ describe('rag service', () => {
     expect(buildCitationsMock).not.toHaveBeenCalled();
   });
 
+  it('still generates an answer when retrieval finds zero chunks', async () => {
+    semanticSearchMock.mockResolvedValue([]);
+
+    buildContextMock.mockReturnValue('');
+
+    buildPromptMock.mockReturnValue('prompt with empty context');
+
+    generateAnswerMock.mockResolvedValue(
+      'I do not have enough information to answer that.',
+    );
+
+    buildCitationsMock.mockReturnValue([]);
+
+    const result = await answerQuestion('What treatments have I tried?');
+
+    expect(buildContextMock).toHaveBeenCalledWith([]);
+
+    expect(buildPromptMock).toHaveBeenCalledWith(
+      'What treatments have I tried?',
+      '',
+    );
+
+    expect(generateAnswerMock).toHaveBeenCalledWith(
+      'prompt with empty context',
+    );
+
+    expect(buildCitationsMock).toHaveBeenCalledWith([]);
+
+    expect(result).toEqual({
+      answer: 'I do not have enough information to answer that.',
+      citations: [],
+      chunks: [],
+    });
+  });
+
   it('propagates retrieval errors', async () => {
     semanticSearchMock.mockRejectedValue(new Error('search failed'));
 
