@@ -3,7 +3,7 @@ import { runAgent } from './ai-agent-orchestrator.js';
 
 export async function askAgent(req: Request, res: Response) {
   try {
-    const { question, injuryId } = req.body;
+    const { question, injuryId } = req.body ?? {};
 
     if (typeof question !== 'string' || question.trim().length === 0) {
       return res.status(400).json({
