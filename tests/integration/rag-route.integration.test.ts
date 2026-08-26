@@ -12,9 +12,9 @@ jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
   generateAnswer: jest.fn(),
 }));
 
-const { default: app } = await import('../../src/app.js');
 const { embedQuery } = await import('../../src/embeddings/embedding-client.js');
 const { generateAnswer } = await import('../../src/llm/llm-client.js');
+const { default: app } = await import('../../src/app.js');
 
 const mockEmbedQuery = jest.mocked(embedQuery);
 const mockGenerateAnswer = jest.mocked(generateAnswer);
