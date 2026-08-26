@@ -127,7 +127,7 @@ product decision that should be made explicitly rather than discovered by omissi
   behavior (no pruning on a failed run) is already safe; locked in via a regression test, no
   code change needed. Cross-process locking (the other half of #60) remains unaddressed — tied
   to the not-yet-built ingestion worker (#40).
-- [x] #61 — `/ai-agent` returns 500 instead of 400 for a body-less request.
+- [x] #61 — `/ai-agent` now returns 400 instead of 500 for a body-less request.
 
 ---
 
