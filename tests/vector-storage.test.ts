@@ -12,6 +12,7 @@ import { jest } from '@jest/globals';
 type SqlResult = { strings: string[]; values: unknown[] };
 
 const executeRawMock = jest.fn<(query: SqlResult) => Promise<unknown>>();
+const queryRawMock = jest.fn<(query: SqlResult) => Promise<unknown>>();
 const disconnectMock = jest.fn<() => Promise<void>>();
 
 const sqlMock = jest.fn(
@@ -21,28 +22,41 @@ const sqlMock = jest.fn(
   }),
 );
 
-const joinMock = jest.fn((values: unknown[]) => ({ __join__: values }));
+const joinMock = jest.fn((values: unknown[], separator?: string) => ({
+  __join__: values,
+  __separator__: separator,
+}));
+
+const emptyMarker = { __empty__: true };
 
 jest.unstable_mockModule('@prisma/client', () => ({
   PrismaClient: jest.fn().mockImplementation(() => ({
     $executeRaw: executeRawMock,
+    $queryRaw: queryRawMock,
     $disconnect: disconnectMock,
   })),
   Prisma: {
     sql: sqlMock,
     join: joinMock,
+    empty: emptyMarker,
   },
 }));
 
-const { storeDocumentChunk, deleteDocumentChunksExcept, disconnectVectorStorage } =
-  await import('../src/embeddings/vector-storage.js');
+const {
+  storeDocumentChunk,
+  deleteDocumentChunksExcept,
+  searchSimilarChunks,
+  disconnectVectorStorage,
+} = await import('../src/embeddings/vector-storage.js');
 
 beforeEach(() => {
   executeRawMock.mockClear();
+  queryRawMock.mockClear();
   disconnectMock.mockClear();
   sqlMock.mockClear();
   joinMock.mockClear();
   executeRawMock.mockResolvedValue(undefined);
+  queryRawMock.mockResolvedValue([]);
   disconnectMock.mockResolvedValue(undefined);
 });
 
@@ -125,6 +139,59 @@ describe('deleteDocumentChunksExcept', () => {
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values[0]).toBe('symptom');
     expect(query.values[1]).toBe(9);
+  });
+});
+
+describe('searchSimilarChunks', () => {
+  it('formats the embedding as a pgvector literal and passes limit through', async () => {
+    await searchSimilarChunks([0.1, 0.2, 0.3], undefined, 7);
+
+    expect(queryRawMock).toHaveBeenCalledTimes(1);
+    expect(joinMock).not.toHaveBeenCalled();
+
+    const query = queryRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[0]).toBe('[0.1,0.2,0.3]');
+    expect(query.values[1]).toBe(emptyMarker);
+    expect(query.values[2]).toBe('[0.1,0.2,0.3]');
+    expect(query.values[3]).toBe(7);
+  });
+
+  it('uses no WHERE clause and default limit when neither filter is provided', async () => {
+    await searchSimilarChunks([1]);
+
+    const query = queryRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[1]).toBe(emptyMarker);
+    expect(query.values[3]).toBe(5);
+  });
+
+  it('filters by injuryId only when sourceType is omitted', async () => {
+    await searchSimilarChunks([1], 42);
+
+    expect(joinMock).toHaveBeenCalledTimes(1);
+    const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(separator).toBe(' AND ');
+    expect(filters).toHaveLength(1);
+    expect(filters[0].values).toEqual([42]);
+  });
+
+  it('filters by sourceType only when injuryId is omitted', async () => {
+    await searchSimilarChunks([1], undefined, 5, 'treatment');
+
+    expect(joinMock).toHaveBeenCalledTimes(1);
+    const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(filters).toHaveLength(1);
+    expect(filters[0].values).toEqual(['treatment']);
+  });
+
+  it('filters by both injuryId and sourceType when both are provided', async () => {
+    await searchSimilarChunks([1], 42, 5, 'treatment');
+
+    expect(joinMock).toHaveBeenCalledTimes(1);
+    const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(separator).toBe(' AND ');
+    expect(filters).toHaveLength(2);
+    expect(filters[0].values).toEqual([42]);
+    expect(filters[1].values).toEqual(['treatment']);
   });
 });
 
