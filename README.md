@@ -41,7 +41,7 @@ Security/production hardening, AI observability, AWS deployment, and Infrastruct
 
 - Node.js 22 (matches CI)
 - A PostgreSQL database with the `pgvector` extension available (CI uses the `pgvector/pgvector:pg16` image)
-- A Python environment able to run the embedding service (`src/embeddings/embedding_api.py`) — FastAPI, `sentence-transformers`, and an ASGI server such as `uvicorn`. No dependency manifest for this service is currently committed to the repo.
+- A Python environment able to run the embedding service (`src/embeddings/embedding_api.py`) — dependencies are pinned in `src/embeddings/requirements.txt`.
 
 ### Install
 
@@ -75,9 +75,11 @@ Seeding uses two separate scripts, both with hard safety checks against running 
 
 ### Run the embedding service
 
-Start `src/embeddings/embedding_api.py` (a FastAPI app exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
+Install the Python dependencies, then start `src/embeddings/embedding_api.py` (a FastAPI app
+exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
 
 ```bash
+pip install -r src/embeddings/requirements.txt
 uvicorn src.embeddings.embedding_api:app --port 8000
 ```
 
