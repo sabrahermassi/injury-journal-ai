@@ -55,23 +55,6 @@ def embed_query(request: EmbeddingRequest):
         "version": "qwen3-embedding-0.6b-v1",
     }
 
-def test_rejects_text_over_max_length(self, client, fake_service):
-    response = client.post(
-        "/embed",
-        json={"text": "x" * 10_001},
-    )
-
-    assert response.status_code == 422
-    assert fake_service.embed_document_calls == []
-
-def test_accepts_maximum_text_length(self, client, fake_service):
-    response = client.post(
-        "/embed",
-        json={"text": "x" * 10_000},
-    )
-
-    assert response.status_code == 200
-
 
 @app.post("/embed-batch")
 def embed_batch(request: BatchEmbeddingRequest):
@@ -90,20 +73,3 @@ def embed_batch(request: BatchEmbeddingRequest):
         "dimension": len(embeddings[0]),
         "version": "qwen3-embedding-0.6b-v1",
     }
-
-def test_rejects_batch_over_max_size(self, client, fake_service):
-    response = client.post(
-        "/embed-batch",
-        json={"texts": ["x"] * 33},
-    )
-
-    assert response.status_code == 422
-    assert fake_service.embed_batch_calls == []
-
-def test_accepts_maximum_batch_size(self, client, fake_service):
-    response = client.post(
-        "/embed-batch",
-        json={"texts": ["x"] * 32},
-    )
-
-    assert response.status_code == 200

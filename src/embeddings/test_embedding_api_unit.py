@@ -161,6 +161,23 @@ class TestEmbedEndpoint:
         assert response.status_code == 200
         assert fake_service.embed_document_calls == ["hello"]
 
+    def test_rejects_text_over_max_length(self, client, fake_service):
+        response = client.post(
+            "/embed",
+            json={"text": "x" * 10_001},
+        )
+
+        assert response.status_code == 422
+        assert fake_service.embed_document_calls == []
+
+    def test_accepts_maximum_text_length(self, client, fake_service):
+        response = client.post(
+            "/embed",
+            json={"text": "x" * 10_000},
+        )
+
+        assert response.status_code == 200
+
 
 class TestEmbedQueryEndpoint:
     def test_returns_200_with_expected_payload_shape(self, client, fake_service):
@@ -239,3 +256,20 @@ class TestEmbedBatchEndpoint:
 
         assert response.json()["embeddings"] == [[1.0], [2.0], [3.0]]
         assert fake_service.embed_batch_calls == [["x", "y", "z"]]
+
+    def test_rejects_batch_over_max_size(self, client, fake_service):
+        response = client.post(
+            "/embed-batch",
+            json={"texts": ["x"] * 33},
+        )
+
+        assert response.status_code == 422
+        assert fake_service.embed_batch_calls == []
+
+    def test_accepts_maximum_batch_size(self, client, fake_service):
+        response = client.post(
+            "/embed-batch",
+            json={"texts": ["x"] * 32},
+        )
+
+        assert response.status_code == 200
