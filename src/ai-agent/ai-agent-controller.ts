@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { runAgent } from './ai-agent-orchestrator.js';
+import { logError } from '../lib/log-error.js';
 
 // Mirrors EmbeddingRequest.text's own Field(max_length=10_000) in
 // src/embeddings/embedding_api.py -- the question is what gets embedded.
@@ -66,7 +67,7 @@ export async function askAgent(req: Request, res: Response) {
 
     return res.json(result);
   } catch (error) {
-    console.error(error);
+    logError('ai-agent request failed', error);
 
     return res.status(500).json({
       error: 'Failed to process request',

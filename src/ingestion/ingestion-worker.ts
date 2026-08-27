@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { readJournalData } from './reader/postgres-reader.js';
 import { buildJournalDocuments } from './documents/document-builder.js';
 import { embedAndStoreDocument } from './embed-and-store.js';
+import { logError } from '../lib/log-error.js';
 import type { JournalDocument } from './documents/document-types.js';
 
 export interface IngestionFailure {
@@ -46,7 +47,7 @@ export async function runIngestion(): Promise<IngestionResult> {
   try {
     documents = buildJournalDocuments(injuries);
   } catch (error) {
-    console.error('Failed to build journal documents for this ingestion run:', error);
+    logError('Failed to build journal documents for this ingestion run', error);
     return {
       total: 1,
       succeeded: 0,
@@ -65,9 +66,9 @@ export async function runIngestion(): Promise<IngestionResult> {
       await embedAndStoreDocument(document);
       result.succeeded += 1;
     } catch (error) {
-      console.error(
+      logError(
         `Ingestion failed for sourceType=${document.metadata.sourceType} ` +
-          `sourceId=${document.metadata.sourceId} injuryId=${document.metadata.injuryId}:`,
+          `sourceId=${document.metadata.sourceId} injuryId=${document.metadata.injuryId}`,
         error,
       );
       result.failed.push({
@@ -105,7 +106,7 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main()
     .catch((error) => {
-      console.error(error);
+      logError('Ingestion run failed', error);
       process.exitCode = 1;
     })
     .finally(async () => {
