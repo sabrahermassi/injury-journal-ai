@@ -6,6 +6,7 @@ type SearchSimilarChunk = Pick<
   Prisma.DocumentChunkGetPayload<Prisma.DocumentChunkDefaultArgs>,
   | 'id'
   | 'injuryId'
+  | 'userId'
   | 'sourceType'
   | 'sourceId'
   | 'chunkIndex'
@@ -20,6 +21,7 @@ export async function disconnectVectorStorage() {
 
 export async function storeDocumentChunk(
   injuryId: number,
+  userId: number,
   sourceType: string,
   sourceId: number,
   chunkIndex: number,
@@ -33,6 +35,7 @@ export async function storeDocumentChunk(
     Prisma.sql`
       INSERT INTO "DocumentChunk" (
         "injuryId",
+        "userId",
         "sourceType",
         "sourceId",
         "chunkIndex",
@@ -42,6 +45,7 @@ export async function storeDocumentChunk(
       )
       VALUES (
         ${injuryId},
+        ${userId},
         ${sourceType},
         ${sourceId},
         ${chunkIndex},
@@ -52,6 +56,7 @@ export async function storeDocumentChunk(
       ON CONFLICT ("sourceType", "sourceId", "chunkIndex")
       DO UPDATE SET
         "injuryId" = EXCLUDED."injuryId",
+        "userId" = EXCLUDED."userId",
         "content" = EXCLUDED."content",
         "embedding" = EXCLUDED."embedding",
         "metadata" = EXCLUDED."metadata"
@@ -91,12 +96,14 @@ export async function searchSimilarChunks(
   injuryId?: number,
   limit = 5,
   sourceType?: string,
+  userId?: number,
 ) {
   const vector = `[${embedding.join(',')}]`;
 
   const filters: Prisma.Sql[] = [];
   if (injuryId !== undefined) filters.push(Prisma.sql`"injuryId" = ${injuryId}`);
   if (sourceType !== undefined) filters.push(Prisma.sql`"sourceType" = ${sourceType}`);
+  if (userId !== undefined) filters.push(Prisma.sql`"userId" = ${userId}`);
 
   const whereClause =
     filters.length > 0 ? Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}` : Prisma.empty;
@@ -106,6 +113,7 @@ export async function searchSimilarChunks(
       SELECT
         "id",
         "injuryId",
+        "userId",
         "sourceType",
         "sourceId",
         "chunkIndex",
