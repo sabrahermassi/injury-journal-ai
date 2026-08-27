@@ -88,7 +88,10 @@ describe('AI agent route integration', () => {
       },
     ]);
 
-    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith(
+      'What treatments did I have?',
+      expect.any(String),
+    );
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });

@@ -106,6 +106,11 @@ export async function embedText(text: string): Promise<EmbeddingResponse> {
  * @param text - The query text to embed
  * @returns The embedding response with 1024-dimensional vector
  */
-export async function embedQuery(text: string): Promise<EmbeddingResponse> {
+export async function embedQuery(
+  text: string,
+  requestId?: string,
+): Promise<EmbeddingResponse> {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   return postEmbedding('/embed-query', text);
 }

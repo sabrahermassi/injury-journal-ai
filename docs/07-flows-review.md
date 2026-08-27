@@ -11,8 +11,8 @@ work end-to-end, tracing real function calls and real error paths, not the docum
 ## Flow 1 — Create injury
 
 **What actually happens:** nothing — there is no create/update/delete endpoint for `Injury` or any
-child record anywhere in the codebase. `app.ts` registers exactly two routers (`/rag`, `/ai-agent`);
-neither exposes a write path. The only way an `Injury` row comes to exist is direct DB
+child record anywhere in the codebase. `app.ts` registers exactly one router (`/ai-agent`); it
+does not expose a write path. The only way an `Injury` row comes to exist is direct DB
 manipulation (seed scripts, `prisma db seed` / `seed-dev`) — there's no application-level flow to
 trace.
 
@@ -157,17 +157,16 @@ Traced directly against the controllers and services, not assumed:
 
 | Failure | What actually happens |
 |---|---|
-| **LLM call fails** (`/rag/ask`) | `generateAnswer` throws → uncaught through `answerQuestion` → caught in `askQuestion` controller's `try/catch` → `500 { error: "Failed to generate answer" }`. Same shape regardless of cause (invalid key, timeout, rate limit, network error) — verified directly this session: an invalid `GROQ_API_KEY` produces exactly this generic message with no distinguishing detail. |
-| **LLM call fails** (`/ai-agent`) | Same propagation pattern through `runAgent` → `askAgent` controller → `500 { error: "Failed to process request" }` — a *different* generic message than `/rag/ask`'s, for the same underlying failure class. |
+| **LLM call fails** (`/ai-agent`) | `generateAnswer` throws → uncaught through `runAgent`/`answerQuestion` → caught in the `askAgent` controller's `try/catch` → `500 { error: "Failed to process request" }`. Same shape regardless of cause (invalid key, timeout, rate limit, network error) — verified directly in an earlier session: an invalid `GROQ_API_KEY` produces exactly this generic message with no distinguishing detail. |
 | **Embedding call fails** | `embedText`/`embedQuery` throws (network error, non-200 response) → propagates through `semanticSearch` → `answerQuestion`/`runAgent` → same generic 500 as above. No distinction from an LLM failure at the HTTP response level. |
 | **DB fails** | Any Prisma/raw-SQL error (`vector-storage.ts`, `journal-tool.ts`) propagates uncaught up to the same controller-level `catch` → same generic 500. |
 | **Bad/malformed document (ingestion)** | Not directly applicable — `buildJournalDocuments` operates on already-typed Prisma results, not external/untrusted input. The closest analogue, a chunk whose content becomes empty after processing, is covered under Flow 2's chunker finding above. |
 | **Duplicate ingestion** | Handled correctly and idempotently — `storeDocumentChunk`'s `ON CONFLICT (sourceType, sourceId, chunkIndex) DO UPDATE` means re-ingesting the same source record updates existing rows rather than duplicating them, and `deleteDocumentChunksExcept` prunes chunks left over from a run that previously produced more chunks for that record. Verified via `vector-storage.ts` directly, not assumed. |
 | **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty "Journal information:" section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. Nothing short-circuits before the LLM call; whether the model actually follows that instruction is unverified — no test covers it (see Flow 4). |
 
-**Cross-cutting observation, confirmed by reading both controllers side by side:** `/rag/ask` and
-`/ai-agent` use different generic error message text for the same failure classes
-(`"Failed to generate answer"` vs. `"Failed to process request"`), and neither includes an error
-code/type. A frontend cannot distinguish "try again" from "service misconfigured" from "no
-results" from either endpoint's 500 response — already noted in `docs/05-api-contract.md` §5, and
-confirmed here as a real, traced code path rather than an inferred risk.
+**Cross-cutting observation:** every failure class above collapses into the same generic
+`{ error: "Failed to process request" }` 500 response, with no error code/type. A frontend cannot
+distinguish "try again" from "service misconfigured" from "no results" — already noted in
+`docs/05-api-contract.md` §5, and confirmed here as a real, traced code path rather than an
+inferred risk. (`POST /rag/ask`, which previously used a different generic message
+(`"Failed to generate answer"`) for the same failure class, was retired — see #43.)

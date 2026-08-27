@@ -25,6 +25,7 @@ describe('rag tool', () => {
       'What treatments failed?',
       undefined,
       5,
+      undefined,
     );
 
     expect(result).toEqual({
@@ -45,6 +46,7 @@ describe('rag tool', () => {
       'Summarize treatments',
       42,
       5,
+      undefined,
     );
   });
 });
