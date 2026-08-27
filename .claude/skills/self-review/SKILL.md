@@ -1,174 +1,102 @@
 # Skeptical Self-Review
 
-Perform a fresh, skeptical code review of [PR #__ / the current diff / the changes on this branch].
+Perform a fresh, skeptical review of the current diff, branch changes, or specified PR.
 
-Act as if you are reviewing code written by someone else. Do NOT assume the implementation is correct because you or another agent wrote it.
+Assume the code was written by someone else. Do not assume the implementation is correct because you or another agent wrote it.
 
-Do not modify any files, commit, push, comment on GitHub, resolve review threads, or trigger external review tools.
+Do not modify files, commit, push, comment, resolve review threads, or trigger external review tools.
 
-## Review scope
+## Review
 
 First inspect:
 
-1. The complete diff against the PR's base branch.
-2. The surrounding implementation of every changed area.
-3. Relevant tests and whether they actually exercise the changed behavior.
-4. CLAUDE.md and relevant project documentation.
-5. Relevant database models, API contracts, and consumers when the change touches them.
-6. Existing GitHub issues when you discover a pre-existing problem that may affect the review.
+- the complete diff against the relevant base branch
+- surrounding implementation and important data/control flows
+- relevant tests and whether they actually exercise the changed behavior
+- `CLAUDE.md`
+- documentation relevant to the changed area; skip unrelated documentation
+- relevant database models, API contracts, and consumers when affected
+- existing GitHub issues when a pre-existing problem is relevant
 
-Do not review only the changed lines. Follow important data and control flows into the surrounding code.
+Review for:
 
-## Actively look for
+- correctness, edge cases, and error handling
+- failure, retry, ordering, concurrency, and resource behavior
+- test coverage and test quality
+- security and user-level data isolation
+- database/API compatibility
+- production and performance risks
+- architectural consistency
+- regressions and unintended side effects
+- AI/RAG/safety behavior when relevant
 
-### Correctness
+### Maintainability and Design
 
-- Bugs and incorrect assumptions
-- Edge cases
-- Missing error handling
-- Incorrect state transitions
-- Null/empty/unexpected inputs
-- Timing, ordering, concurrency, and retry problems
-- Failure and partial-failure behavior
-- Resource leaks or cleanup problems
+When relevant to the changed area, also check:
 
-### Testing
+- unclear or misleading naming
+- dead or unused code and imports
+- duplicated abstractions or sources of truth
+- unclear ownership of state or side effects
+- functions or modules with multiple unrelated responsibilities
+- unnecessary complexity, coupling, or abstraction
+- whether another engineer could understand the important "why" behind the implementation
 
-- Missing tests for changed behavior
-- Tests that only test a side effect rather than the mechanism that produces it
-- Tests that pass while the actual failure mode remains untested
-- Missing negative/error-path tests
-- Tests that are too tightly coupled to implementation details
-- Integration boundaries that are not actually tested
+Do not recommend splitting or refactoring code merely because it could be structured differently. Only flag maintainability or design concerns when they create a meaningful problem for correctness, maintainability, or future changes.
 
-### Production behavior
+Do not invent hypothetical problems or recommend changes merely because another implementation is possible. Verify concerns against the actual code.
 
-- Assumptions that may fail under load
-- Behavior across different environments
-- Database consistency
-- API compatibility
-- Timeout/retry behavior
-- External-service failures
-- Duplicate requests or repeated processing
-- Logging/observability gaps where they matter
+For each concern, determine whether it is:
 
-### Security and data isolation
+1. introduced by this change
+2. pre-existing but relevant
+3. unrelated/pre-existing
+4. not actually a problem
 
-- Authentication/authorization assumptions
-- User-level data isolation
-- Exposure of sensitive journal data
-- Trusting client-controlled identifiers
-- Unsafe database access
-- Secrets or credentials
-- Injection risks
-- Overly broad access to data
+Do not blame the change for unrelated pre-existing issues.
 
-### Architecture
+If a relevant pre-existing issue is found, check whether it is already tracked before suggesting a new one.
 
-- Contradictions with CLAUDE.md
-- Violations of documented project constraints
-- New abstractions that duplicate existing ones
-- Unnecessary architectural complexity
-- Changes that silently alter an API, database, retrieval, RAG, safety, or embedding contract
-- Unfinished/unwired code being connected without verifying its behavior
+## Findings
 
-### AI/RAG-specific behavior, when relevant
+Classify every finding as exactly one of:
 
-- Retrieval failures
-- Incorrect citation behavior
-- Unsupported claims
-- Prompt/instruction leakage
-- Safety guardrail bypasses
-- Incorrect handling of "no relevant information"
-- Embedding-model compatibility
-- Changes that affect evaluation quality without updating evaluation coverage
+- **Clearly Correct** — implementation is solid; briefly explain why.
+- **Judgment Call** — genuine concern or tradeoff; explain the evidence and recommend an action without making the change.
+- **Disagree** — apparent problem is not actually a problem or is unrelated/pre-existing; explain why.
+- **Nitpick** — minor, non-blocking improvement.
 
-### Regression risk
-
-Look specifically for:
-
-- Existing behavior that the diff may accidentally break
-- Pre-existing fragility that the new code depends on
-- Cases where the new fix works for the intended case but breaks another case
-- Code paths that were previously safe but are now bypassed
-
-## Important distinction
-
-For every potential problem, determine whether it is:
-
-1. A regression introduced by this diff.
-2. A pre-existing issue exposed by this diff.
-3. A pre-existing issue unrelated to this diff.
-4. Not actually a problem.
-
-Do not blame the PR for unrelated pre-existing problems.
-
-If a pre-existing issue is relevant, check whether it is already tracked in GitHub before suggesting a new issue.
-
-## Finding categories
-
-Classify every finding into exactly ONE category:
-
-### Clearly Correct
-
-The implementation is solid in this area. Briefly explain why.
-
-### Judgment Call
-
-There is a genuine concern or tradeoff.
-
-Explain:
-
-- what the concern is
-- why it matters
-- the tradeoff
-- your recommended action
-
-Do NOT make the change.
-
-### Disagree
-
-The apparent problem is not actually a problem, or it is unrelated/pre-existing.
-
-Explain why.
-
-### Nitpick
-
-A minor, low-risk improvement that should not block the PR.
-
-## Severity
-
-For every Judgment Call or Nitpick, assign:
+For Judgment Call and Nitpick, assign:
 
 - HIGH — could cause data loss, security issues, incorrect behavior, major production failure, or serious regression
 - MEDIUM — meaningful correctness, reliability, maintainability, or testing concern
 - LOW — minor improvement or low-probability issue
 
-Do not invent severity for Clearly Correct findings.
+Do not assign severity to Clearly Correct or Disagree findings.
 
-## Evidence
+For every Judgment Call provide:
 
-For every Judgment Call, provide:
+- Location
+- Finding
+- Why it matters
+- Concrete scenario
+- Recommendation
 
-- file and relevant code location
-- what happens
-- why it could be a problem
-- concrete scenario that exposes the problem
-- recommended action
+For every pre-existing but relevant concern, state whether it is already tracked by an existing GitHub issue.
 
-Do not make vague statements such as "this might cause issues."
-
-## Review discipline
+## Review Discipline
 
 Be skeptical but evidence-based.
 
-Do NOT manufacture hypothetical problems simply to produce findings.
+Do not manufacture hypothetical problems simply to produce findings.
 
-Do NOT recommend changes merely because another implementation is possible.
+Do not recommend changes merely because another implementation is possible.
 
 Prefer the simplest explanation supported by the actual code.
 
-Do not treat architecture documentation as proof that something is implemented. Verify behavior against the code.
+Do not treat architecture documentation as proof that something is implemented. Verify behavior against the source code.
+
+Follow important data and control flows into surrounding code rather than reviewing only the changed lines.
 
 ## Output
 
@@ -176,10 +104,10 @@ Start with:
 
 ### Review Summary
 
-- PR/diff reviewed
+- Change/PR reviewed
 - Base branch
 - Overall assessment
-- Number of findings by category
+- Finding counts by category
 
 Then provide the findings.
 
@@ -190,7 +118,7 @@ For each Judgment Call or Nitpick use:
 - Location:
 - Finding:
 - Why it matters:
-- Example scenario:
+- Concrete scenario:
 - Recommendation:
 
 For Clearly Correct findings, keep them brief.
@@ -201,8 +129,12 @@ Finish with:
 
 ### Bottom Line
 
-One concise verdict stating whether you would consider the changes ready to merge, ready with minor changes, or requiring changes before merge — and why.
+State whether the change is:
 
-Do not fix anything yet.
+- ready to merge
+- ready with minor changes
+- requires changes before merge
 
-Wait for my direction before taking any action.
+Do not fix anything.
+
+Wait for direction before taking any action.
