@@ -1,8 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import { runAgent } from './ai-agent-orchestrator.js';
 
 export async function askAgent(req: Request, res: Response) {
   try {
+    const headerRequestId = req.headers?.['x-request-id'];
+    const requestId =
+      typeof headerRequestId === 'string' && headerRequestId.trim().length > 0
+        ? headerRequestId
+        : randomUUID();
+
     const { question, injuryId } = req.body ?? {};
 
     if (typeof question !== 'string' || question.trim().length === 0) {
@@ -22,7 +29,7 @@ export async function askAgent(req: Request, res: Response) {
       });
     }
 
-    const result = await runAgent(question, injuryId);
+    const result = await runAgent(question, injuryId, requestId);
 
     return res.json(result);
   } catch (error) {

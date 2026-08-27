@@ -97,7 +97,10 @@ export async function searchSimilarChunks(
   limit = 5,
   sourceType?: string,
   userId?: number,
+  requestId?: string,
 ) {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const vector = `[${embedding.join(',')}]`;
 
   const filters: Prisma.Sql[] = [];

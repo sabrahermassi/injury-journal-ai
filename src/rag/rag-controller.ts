@@ -1,8 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import { answerQuestion } from './rag-service.js';
 
 export async function askQuestion(req: Request, res: Response) {
   try {
+    const headerRequestId = req.headers?.['x-request-id'];
+    const requestId =
+      typeof headerRequestId === 'string' && headerRequestId.trim().length > 0
+        ? headerRequestId
+        : randomUUID();
+
     const { question, injuryId } = req.body ?? {};
 
     if (typeof question !== 'string' || question.trim().length === 0) {
@@ -20,7 +27,7 @@ export async function askQuestion(req: Request, res: Response) {
       });
     }
 
-    const result = await answerQuestion(question, injuryId);
+    const result = await answerQuestion(question, injuryId, undefined, requestId);
 
     return res.json(result);
   } catch (error) {

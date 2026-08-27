@@ -1,4 +1,10 @@
-export function buildPrompt(question: string, context: string): string {
+export function buildPrompt(
+  question: string,
+  context: string,
+  requestId?: string,
+): string {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   return `
 You are a healthcare journal assistant.
 

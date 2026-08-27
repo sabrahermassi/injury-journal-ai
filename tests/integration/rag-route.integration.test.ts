@@ -123,7 +123,10 @@ describe('RAG route integration', () => {
 
     expect(response.body.citations).toHaveLength(1);
 
-    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith(
+      'What treatments did I have?',
+      expect.any(String),
+    );
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });

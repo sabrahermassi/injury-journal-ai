@@ -6,12 +6,16 @@ import { AgentState } from './ai-agent-state.js';
 import { buildPrompt } from '../rag/prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
 
-export async function runAgent(question: string, injuryId?: number) {
+export async function runAgent(
+  question: string,
+  injuryId?: number,
+  requestId?: string,
+) {
   const state: AgentState = {
     question,
   };
 
-  const safety = safetyTool(question);
+  const safety = safetyTool(question, requestId);
 
   state.safety = safety;
 
@@ -25,7 +29,7 @@ export async function runAgent(question: string, injuryId?: number) {
     };
   }
 
-  const intent = routeIntent(question);
+  const intent = routeIntent(question, requestId);
 
   state.intent = intent;
 
@@ -40,7 +44,7 @@ export async function runAgent(question: string, injuryId?: number) {
         };
       }
 
-      const result = await journalTool(injuryId);
+      const result = await journalTool(injuryId, requestId);
 
       if (!result) {
         return {
@@ -49,9 +53,9 @@ export async function runAgent(question: string, injuryId?: number) {
         };
       }
 
-      const context = formatInjuryRecord(result);
-      const prompt = buildPrompt(question, context);
-      const answer = await generateAnswer(prompt);
+      const context = formatInjuryRecord(result, requestId);
+      const prompt = buildPrompt(question, context, requestId);
+      const answer = await generateAnswer(prompt, requestId);
 
       if (!answer) {
         return {
@@ -70,7 +74,7 @@ export async function runAgent(question: string, injuryId?: number) {
     case 'rag': {
       state.toolUsed = 'rag-tool';
 
-      const result = await ragTool(question, injuryId, 5);
+      const result = await ragTool(question, injuryId, 5, requestId);
 
       state.result = result;
 

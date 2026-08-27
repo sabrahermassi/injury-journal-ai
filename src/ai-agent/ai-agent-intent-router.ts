@@ -1,6 +1,8 @@
 export type AgentIntent = 'rag' | 'journal' | 'safety';
 
-export function routeIntent(question: string): AgentIntent {
+export function routeIntent(question: string, requestId?: string): AgentIntent {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const normalized = question.toLowerCase();
 
   if (

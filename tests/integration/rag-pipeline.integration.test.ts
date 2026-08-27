@@ -102,7 +102,10 @@ describe('RAG pipeline integration', () => {
       label: 'Rag-pipeline-integration-test #1',
     });
 
-    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith(
+      'What treatments did I have?',
+      undefined,
+    );
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });

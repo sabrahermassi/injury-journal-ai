@@ -43,7 +43,7 @@ describe('agent orchestrator', () => {
 
     const result = await runAgent('Do I have cancer?');
 
-    expect(safetyToolMock).toHaveBeenCalledWith('Do I have cancer?');
+    expect(safetyToolMock).toHaveBeenCalledWith('Do I have cancer?', undefined);
 
     expect(ragToolMock).not.toHaveBeenCalled();
     expect(journalToolMock).not.toHaveBeenCalled();
@@ -81,12 +81,16 @@ describe('agent orchestrator', () => {
 
     const result = await runAgent('What treatments failed?');
 
-    expect(routeIntentMock).toHaveBeenCalledWith('What treatments failed?');
+    expect(routeIntentMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+    );
 
     expect(ragToolMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
       5,
+      undefined,
     );
 
     expect(journalToolMock).not.toHaveBeenCalled();
@@ -128,11 +132,17 @@ describe('agent orchestrator', () => {
 
     const result = await runAgent('Show my injury timeline', 42);
 
-    expect(routeIntentMock).toHaveBeenCalledWith('Show my injury timeline');
+    expect(routeIntentMock).toHaveBeenCalledWith(
+      'Show my injury timeline',
+      undefined,
+    );
 
-    expect(journalToolMock).toHaveBeenCalledWith(42);
+    expect(journalToolMock).toHaveBeenCalledWith(42, undefined);
 
-    expect(formatInjuryRecordMock).toHaveBeenCalledWith({ id: 42 });
+    expect(formatInjuryRecordMock).toHaveBeenCalledWith(
+      { id: 42 },
+      undefined,
+    );
 
     expect(generateAnswerMock).toHaveBeenCalled();
 

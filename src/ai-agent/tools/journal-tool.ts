@@ -2,7 +2,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export async function journalTool(injuryId: number) {
+export async function journalTool(injuryId: number, requestId?: string) {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const injury = await prisma.injury.findUnique({
     where: {
       id: injuryId,
@@ -20,7 +22,9 @@ export async function journalTool(injuryId: number) {
 
 type InjuryRecord = NonNullable<Awaited<ReturnType<typeof journalTool>>>;
 
-export function formatInjuryRecord(injury: InjuryRecord): string {
+export function formatInjuryRecord(injury: InjuryRecord, requestId?: string): string {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const sections: string[] = [];
 
   const details = [

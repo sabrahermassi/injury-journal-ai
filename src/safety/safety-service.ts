@@ -73,7 +73,9 @@ const diagnosisPatterns = [
   /not asking (?:for )?a diagnosis,?\s*but/i,
 ];
 
-export function checkSafety(question: string): SafetyResult {
+export function checkSafety(question: string, requestId?: string): SafetyResult {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const normalizedQuestion = question.replace(/\s+/g, ' ').trim();
 
   const isDiagnosisRequest = diagnosisPatterns.some((pattern) =>
