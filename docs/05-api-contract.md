@@ -97,11 +97,10 @@ limit of `5` for the `rag` intent path.
 - **The dead `'safety'` intent branch** described in §3 — a real inconsistency between the type
   system (`AgentIntent`) and the orchestrator's actual handling, not just a documentation gap.
   Tracked as issue #86.
-- **Two unused, unwired duplicate entrypoints exist in the codebase**:
-  `src/ai-agent/ai-agent-service.ts` (a dead duplicate of `ai-agent-orchestrator.ts`, already
-  flagged in CLAUDE.md §8) and `src/ai-assistant/ai-assistant-api.ts` (a thin, otherwise-unused
-  wrapper around `runAgent`). Neither is reachable from any route. A frontend engineer grepping
-  the codebase for "the agent entrypoint" could easily land on the wrong one.
+- **An unused, unwired duplicate entrypoint exists in the codebase**:
+  `src/ai-assistant/ai-assistant-api.ts` (a thin, otherwise-unused wrapper around `runAgent`). It is
+  not reachable from any route. (`src/ai-agent/ai-agent-service.ts`, a dead duplicate of
+  `ai-agent-orchestrator.ts`, was removed — issue #46.)
 - **Citation enrichment is unwired and incomplete even if wired.** `citation-verifier.ts` and
   `citation-formatter.ts` are not called from any response path. `citation-source-mapper.ts` is
   also unwired, and even if it were, it only maps 2 of the 5 valid `sourceType` values

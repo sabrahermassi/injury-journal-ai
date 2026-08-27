@@ -105,7 +105,7 @@ Infrastructure as Code) — both are cloud-infra concepts with no local-codebase
 
 **Fold into Step 9 backlog cleanup / general hygiene (not urgent, but shouldn't be lost):**
 
-- [ ] Delete or finish `src/ai-agent/ai-agent-service.ts` — a second, unused, partially-dead
+- [x] Delete `src/ai-agent/ai-agent-service.ts` — a second, unused, partially-dead
   duplicate of `ai-agent-orchestrator.ts`. (#46)
 - [ ] Resolve the three unwired citation modules (`citation-verifier.ts`,
   `citation-formatter.ts`, `citation-source-mapper.ts`) — either wire them into the response path
