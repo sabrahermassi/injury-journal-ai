@@ -4,6 +4,8 @@ import aiAgentRouter from './routes/ai-agent-router.js';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(express.json());
 
 const aiAgentLimiter = rateLimit({
@@ -11,6 +13,7 @@ const aiAgentLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
 });
 
 app.use('/ai-agent', aiAgentLimiter, aiAgentRouter);
