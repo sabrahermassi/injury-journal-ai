@@ -41,6 +41,7 @@ describe('AI agent route integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'ai-agent-integration-test',
       1,
       0,

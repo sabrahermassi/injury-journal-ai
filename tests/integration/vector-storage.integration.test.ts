@@ -39,6 +39,7 @@ describe('vector storage integration', () => {
   it('retrieves chunks ordered by cosine similarity', async () => {
     await storeDocumentChunk(
       1,
+      1,
       'vector-storage-integration-test',
       1,
       0,
@@ -48,6 +49,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       1,
+      1,
       'vector-storage-integration-test',
       1,
       1,
@@ -56,6 +58,7 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
+      1,
       1,
       'vector-storage-integration-test',
       1,
@@ -84,6 +87,7 @@ describe('vector storage integration', () => {
   it('respects the result limit', async () => {
     await storeDocumentChunk(
       1,
+      1,
       'vector-storage-integration-test',
       2,
       0,
@@ -93,6 +97,7 @@ describe('vector storage integration', () => {
 
     await storeDocumentChunk(
       1,
+      1,
       'vector-storage-integration-test',
       2,
       1,
@@ -101,6 +106,7 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
+      1,
       1,
       'vector-storage-integration-test',
       2,
@@ -122,6 +128,7 @@ describe('vector storage integration', () => {
   it('filters results by injuryId when provided', async () => {
     await storeDocumentChunk(
       1,
+      1,
       'vector-storage-integration-test',
       3,
       0,
@@ -130,6 +137,7 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
+      2,
       2,
       'vector-storage-integration-test',
       4,
@@ -150,8 +158,43 @@ describe('vector storage integration', () => {
     expect(results[0].injuryId).toBe(1);
   });
 
+  it('filters results by userId when provided', async () => {
+    await storeDocumentChunk(
+      1,
+      1,
+      'vector-storage-integration-test',
+      6,
+      0,
+      'User 1 relevant chunk',
+      vectorWith(1, 0, 0),
+    );
+
+    await storeDocumentChunk(
+      2,
+      2,
+      'vector-storage-integration-test',
+      7,
+      0,
+      'User 2 relevant chunk',
+      vectorWith(1, 0, 0),
+    );
+
+    const results = await searchSimilarChunks(
+      vectorWith(1, 0, 0),
+      undefined,
+      5,
+      'vector-storage-integration-test',
+      1,
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].content).toBe('User 1 relevant chunk');
+    expect(results[0].userId).toBe(1);
+  });
+
   it('excludes rows from a different sourceType even when their vector is closer', async () => {
     await storeDocumentChunk(
+      1,
       1,
       'vector-storage-integration-test',
       5,
@@ -161,6 +204,7 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
+      1,
       1,
       'some-other-source-type',
       5,

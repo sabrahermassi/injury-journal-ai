@@ -94,6 +94,7 @@ model User {
 model DocumentChunk {
   id          Int      @id @default(autoincrement())
   injuryId    Int
+  userId      Int
   sourceType  String
   sourceId    Int
   chunkIndex  Int
@@ -105,6 +106,7 @@ model DocumentChunk {
   Injury Injury @relation(fields: [injuryId], references: [id])
 
   @@index([injuryId])
+  @@index([userId])
   @@index([sourceType, sourceId])
   @@unique([sourceType, sourceId, chunkIndex])
 }

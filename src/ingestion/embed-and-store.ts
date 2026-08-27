@@ -33,6 +33,7 @@ export async function embedAndStoreDocument(
 
         await storeDocumentChunk(
           embeddedDocument.document.metadata.injuryId,
+          embeddedDocument.document.metadata.userId,
           embeddedDocument.document.metadata.sourceType,
           embeddedDocument.document.metadata.sourceId,
           chunkIndex,

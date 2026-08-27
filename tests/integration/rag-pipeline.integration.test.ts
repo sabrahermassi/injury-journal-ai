@@ -40,6 +40,7 @@ describe('RAG pipeline integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'rag-pipeline-integration-test',
       1,
       0,
@@ -49,6 +50,7 @@ describe('RAG pipeline integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'rag-pipeline-integration-test',
       1,
       1,
