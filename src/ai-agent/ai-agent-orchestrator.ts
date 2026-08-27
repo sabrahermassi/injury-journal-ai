@@ -5,6 +5,7 @@ import { routeIntent } from './ai-agent-intent-router.js';
 import { AgentState } from './ai-agent-state.js';
 import { buildPrompt } from '../rag/prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
+import { checkAnswerSafety } from '../safety/safety-service.js';
 
 export async function runAgent(
   question: string,
@@ -64,6 +65,16 @@ export async function runAgent(
         return {
           answer:
             'Unable to generate a summary from your injury record right now.',
+          citations: [],
+          intent,
+        };
+      }
+
+      const answerSafety = checkAnswerSafety(answer, requestId);
+
+      if (!answerSafety.allowed) {
+        return {
+          answer: answerSafety.message,
           citations: [],
           intent,
         };

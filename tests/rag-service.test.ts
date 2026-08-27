@@ -6,6 +6,7 @@ const buildPromptMock = jest.fn();
 const generateAnswerMock = jest.fn();
 const buildCitationsMock = jest.fn();
 const checkSafetyMock = jest.fn();
+const checkAnswerSafetyMock = jest.fn();
 
 jest.unstable_mockModule('../src/rag/citation-builder.js', () => ({
   buildCitations: buildCitationsMock,
@@ -29,6 +30,7 @@ jest.unstable_mockModule('../src/llm/llm-client.js', () => ({
 
 jest.unstable_mockModule('../src/safety/safety-service.js', () => ({
   checkSafety: checkSafetyMock,
+  checkAnswerSafety: checkAnswerSafetyMock,
 }));
 
 const { answerQuestion } = await import('../src/rag/rag-service.js');
@@ -38,6 +40,10 @@ describe('rag service', () => {
     jest.clearAllMocks();
 
     checkSafetyMock.mockReturnValue({
+      allowed: true,
+    });
+
+    checkAnswerSafetyMock.mockReturnValue({
       allowed: true,
     });
   });
@@ -160,6 +166,45 @@ describe('rag service', () => {
 
     expect(semanticSearchMock).not.toHaveBeenCalled();
     expect(generateAnswerMock).not.toHaveBeenCalled();
+    expect(buildCitationsMock).not.toHaveBeenCalled();
+  });
+
+  it('withholds an answer that fails the output-side safety check', async () => {
+    const chunks = [
+      {
+        id: 1,
+        sourceType: 'treatment',
+        sourceId: 42,
+        content: "Doctor's note: diagnosis of torn meniscus.",
+      },
+    ];
+
+    semanticSearchMock.mockResolvedValue(chunks);
+    buildContextMock.mockReturnValue("Doctor's note: diagnosis of torn meniscus.");
+    buildPromptMock.mockReturnValue('prompt');
+    generateAnswerMock.mockResolvedValue(
+      'Based on these symptoms, you may have a torn meniscus.',
+    );
+
+    checkAnswerSafetyMock.mockReturnValue({
+      allowed: false,
+      reason: 'diagnosis_leak',
+      message: 'I withheld that response because it read like a medical diagnosis.',
+    });
+
+    const result = await answerQuestion('What did the doctor say?');
+
+    expect(checkAnswerSafetyMock).toHaveBeenCalledWith(
+      'Based on these symptoms, you may have a torn meniscus.',
+      undefined,
+    );
+
+    expect(result).toEqual({
+      answer: 'I withheld that response because it read like a medical diagnosis.',
+      citations: [],
+      chunks: [],
+    });
+
     expect(buildCitationsMock).not.toHaveBeenCalled();
   });
 

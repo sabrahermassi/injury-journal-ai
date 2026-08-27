@@ -1,4 +1,4 @@
-import { checkSafety } from '../src/safety/safety-service.js';
+import { checkSafety, checkAnswerSafety } from '../src/safety/safety-service.js';
 
 describe('safety service', () => {
   it('allows journal summary questions', () => {
@@ -183,5 +183,77 @@ describe('safety service', () => {
     questions.forEach((question) => {
       expect(checkSafety(question).allowed).toBe(false);
     });
+  });
+});
+
+describe('checkAnswerSafety', () => {
+  it('allows a normal summarizing answer', () => {
+    const result = checkAnswerSafety(
+      'You recorded physiotherapy on three occasions and noted improved mobility.',
+    );
+
+    expect(result).toEqual({
+      allowed: true,
+    });
+  });
+
+  it('blocks a hedged/inferential diagnosis via "you may have"', () => {
+    const result = checkAnswerSafety(
+      'Based on these symptoms, you may have a fracture.',
+    );
+
+    expect(result).toEqual({
+      allowed: false,
+      reason: 'diagnosis_leak',
+      message:
+        'I withheld that response because it read like a medical diagnosis, which I cannot provide. I can summarize your recorded symptoms, tests, treatments, and medical history instead.',
+    });
+  });
+
+  it('blocks a hedged/inferential diagnosis via "this could be"', () => {
+    expect(
+      checkAnswerSafety('This could be a herniated disc.').allowed,
+    ).toBe(false);
+  });
+
+  it('blocks with extra whitespace/newlines in the answer', () => {
+    expect(
+      checkAnswerSafety('You    might have\n  arthritis.').allowed,
+    ).toBe(false);
+  });
+
+  it('allows an answer that references symptoms without affirming a diagnosis', () => {
+    const result = checkAnswerSafety(
+      'Your journal mentions knee pain and swelling after the run on March 3rd.',
+    );
+
+    expect(result.allowed).toBe(true);
+  });
+
+  // --- Regression coverage: grounded restatement of an already-recorded diagnosis
+  // is the app's core journal-summary behavior and must not be withheld. ---
+
+  it('allows a definite restatement of a diagnosis already in the record', () => {
+    const result = checkAnswerSafety(
+      'You have an ACL tear from a football injury, first recorded on 2024-01-15.',
+    );
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('allows quoting a "Diagnosis:" label from a doctor\'s note', () => {
+    const result = checkAnswerSafety(
+      "Your medical visit on 2024-01-15 with Dr. Smith noted: Diagnosis: torn meniscus.",
+    );
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('allows a definite "this is" restatement of a recorded condition', () => {
+    const result = checkAnswerSafety(
+      'This is the fracture you recorded on 2023-06-01, treated with a cast.',
+    );
+
+    expect(result.allowed).toBe(true);
   });
 });

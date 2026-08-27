@@ -286,11 +286,21 @@ flowchart TD
 
     S -->|Allowed| C["Continue"]
     S -->|Boundary Violation| R["Refuse / Redirect"]
+
+    C --> G["Generate Answer"]
+    G --> O["Output Safety Check"]
+    O -->|Allowed| A["Return Answer"]
+    O -->|Diagnosis-like| R
 ```
 
-> **Current status:** this covers the input side only. There is no output-side check — nothing
-> verifies the LLM's generated answer against diagnosis-adjacent language it might echo from raw
-> journal content (e.g. a doctor's note). Output safety checks are future work.
+> **Current status:** both sides are covered. `checkSafety` (`src/safety/safety-service.ts`)
+> inspects the raw question before retrieval; `checkAnswerSafety` in the same file inspects the
+> LLM's generated answer afterward (in `rag-service.ts` and the journal-intent branch of
+> `ai-agent-orchestrator.ts`) and withholds it if the LLM hedges toward its own diagnostic
+> judgment ("you may have...", "this could be..."). It deliberately does not flag a definite
+> restatement of a diagnosis already present in the record (e.g. quoting a doctor's note) — that
+> grounded restatement is the app's core journal-summary behavior, not a leak; only the assistant
+> appearing to infer a *new* diagnosis on its own is treated as unsafe output.
 
 ### 5.5. AI Agent Architecture
 

@@ -12,7 +12,7 @@ export type SafetyResult =
 // NOTE: this list will always be a step behind real-world phrasing (see review notes) —
 // treat this regex layer as a fast pre-filter, not the sole safety boundary. The downstream
 // LLM must also be instructed never to diagnose, regardless of how the question is phrased.
-const CONDITION_KEYWORDS =
+export const CONDITION_KEYWORDS =
   'injury|condition|disease|syndrome|disorder|diagnosis|tear|fracture|cancer|tumou?r|disc|herniation|infection|concussion|arthritis';
 
 const diagnosisPatterns = [
@@ -88,6 +88,53 @@ export function checkSafety(question: string, requestId?: string): SafetyResult 
       reason: 'diagnosis_request',
       message:
         'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+    };
+  }
+
+  return {
+    allowed: true,
+  };
+}
+
+// Output-side counterpart to `diagnosisPatterns` above. Deliberately narrower than a
+// plain "does this contain a condition word" check: journal summaries routinely restate
+// a diagnosis that is already recorded (an injury's name, a doctor's note), and that
+// grounded restatement is the app's core function, not a leak. What this targets instead
+// is the LLM *hedging toward its own inference* -- speculative phrasing ("you may have",
+// "this could be") that reads as the assistant reaching a diagnostic judgment on its own,
+// rather than reporting a fact already present in the record. Definite statements
+// ("you have X", "diagnosis: X") are intentionally NOT flagged, since those are the
+// normal shape of a faithful summary of recorded data.
+const diagnosisLeakPatterns = [
+  new RegExp(
+    `you (?:may have|might have|could have|likely have|possibly have|appear to have)\\s+(?:a|an|any)?\\s*(?:\\w+\\s+){0,2}(?:${CONDITION_KEYWORDS})\\b`,
+    'i',
+  ),
+
+  new RegExp(
+    `this (?:could be|might be|may be|looks like|sounds like|appears to be)\\s+(?:a|an)?\\s*(?:\\w+\\s+){0,2}(?:${CONDITION_KEYWORDS})\\b`,
+    'i',
+  ),
+];
+
+export function checkAnswerSafety(
+  answer: string,
+  requestId?: string,
+): SafetyResult {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
+  const normalizedAnswer = answer.replace(/\s+/g, ' ').trim();
+
+  const isDiagnosisLeak = diagnosisLeakPatterns.some((pattern) =>
+    pattern.test(normalizedAnswer),
+  );
+
+  if (isDiagnosisLeak) {
+    return {
+      allowed: false,
+      reason: 'diagnosis_leak',
+      message:
+        'I withheld that response because it read like a medical diagnosis, which I cannot provide. I can summarize your recorded symptoms, tests, treatments, and medical history instead.',
     };
   }
 
