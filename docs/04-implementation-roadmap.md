@@ -117,7 +117,9 @@ Infrastructure as Code) — both are cloud-infra concepts with no local-codebase
   covered in `tests/journal-tool.test.ts`. (#44)
 - [ ] Surface `AgentState.intent` in the actual HTTP response — it's computed, tracked, and then
   discarded; a frontend needs exactly this field to know which response shape it received. (#45)
-- [ ] Clean up the stray Python test functions embedded at module level in `embedding_api.py`. (#48)
+- [x] Clean up the stray Python test functions embedded at module level in `embedding_api.py` —
+  moved into `test_embedding_api_unit.py`'s existing `TestEmbedEndpoint`/`TestEmbedBatchEndpoint`
+  classes. (#48)
 
 **Frontend-readiness gaps — new "Step 10" candidate, sequenced after Step 5 (security), since
 building frontend-facing endpoints without auth would just mean redoing them:**
