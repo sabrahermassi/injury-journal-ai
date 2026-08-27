@@ -73,7 +73,10 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
 *Urgent (no dependencies, do first):*
 - [ ] Add rate limiting to prevent LLM/embedding cost-abuse and resource exhaustion — confirmed
   exploitable today (no auth, no rate limit, every request triggers a paid Groq + embedding call). (#89)
-- [ ] Add schema-based request input validation (Zod) incl. a max question length. (#90)
+- [x] Add schema-based request input validation (Zod) incl. a max question length —
+  `ai-agent-controller.ts` now validates `question`/`injuryId` via a Zod schema instead of ad hoc
+  inline checks, and `question` has a real 10,000-character upper bound (matching the embedding
+  service's own `EmbeddingRequest.text` limit). (#90)
 - [ ] Regression tests for data isolation boundaries — currently zero tests exist proving
   cross-user chunk leakage can't happen when `injuryId` is omitted (requested explicitly in #31's
   own text). (#91)
