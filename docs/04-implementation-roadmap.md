@@ -72,9 +72,9 @@ issue number, or marked "not yet filed" where none exists yet.
   anonymous server-side). (#31)
 - [ ] Per-tool authorization step in the agent orchestrator — does not exist today, not even
   partially. (#31)
-- [ ] Decide the fate of `POST /rag/ask` vs `POST /ai-agent` before scoping authorization work —
-  they're two public, unauthenticated, differently-validated entrypoints to overlapping
-  functionality today. (#43)
+- [x] `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint. `answerQuestion()`
+  stays as an internal function (`ragTool` already called it directly). Resolves the divergent
+  `injuryId` validation by elimination rather than reconciliation. (#43)
 - [ ] Regression tests for data isolation boundaries specifically (requested explicitly in #31's
   own text) — currently zero tests exist proving cross-user chunk leakage can't happen when
   `injuryId` is omitted. (#31)
@@ -129,6 +129,9 @@ product decision that should be made explicitly rather than discovered by omissi
   code change needed. Cross-process locking (the other half of #60) remains unaddressed — tied
   to the not-yet-built ingestion worker (#40).
 - [x] #61 — `/ai-agent` now returns 400 instead of 500 for a body-less request.
+- [x] #43 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint.
+- [ ] #86 — `routeIntent()` can return `'safety'`, but the orchestrator's `switch` has no case for
+  it (falls into the generic default response instead of a refusal). Surfaced while resolving #43.
 
 ---
 
@@ -137,8 +140,8 @@ product decision that should be made explicitly rather than discovered by omissi
 The order above (do-now items → Step 5/#31 → Step 9 hygiene → frontend-readiness) is a proposed
 re-sequencing, not a reordering of the official Step 5→8 sequence itself — Steps 5 through 8
 remain in their documented order (security → observability → AWS → Terraform). The "do now" items
-are things that make Step 5 itself easier/cheaper (the `userId` column, the `/rag/ask` vs.
-`/ai-agent` decision) or that are simply cheap-now-expensive-later regardless of step ordering
+are things that make Step 5 itself easier/cheaper (the `userId` column, retiring `/rag/ask` in
+favor of `/ai-agent`) or that are simply cheap-now-expensive-later regardless of step ordering
 (the embedding fix, the request-ID threading).
 
 ---

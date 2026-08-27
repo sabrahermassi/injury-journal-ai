@@ -601,29 +601,37 @@ quoted), what else was considered, whether it still holds, and whether it should
   implementation has a concrete bug this decision doesn't excuse: `routeIntent()` can return
   `'safety'`, and the orchestrator's `switch` has no case for it, so those requests silently fall
   into the generic "unable to determine" response instead of a refusal. That's an implementation
-  defect in the current approach, not a reason to adopt a framework.
+  defect in the current approach, not a reason to adopt a framework. Filed as issue #86.
 - **SHOULD THIS BE REVISITED:** No, not the framework decision — but the dead `'safety'` branch
-  should be fixed regardless of which routing approach is used long-term.
+  should be fixed regardless of which routing approach is used long-term (#86).
 
-### D7 — Two separate HTTP entrypoints (`POST /rag/ask` and `POST /ai-agent`) with overlapping functionality
+### D7 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint (resolved)
 
-- **DECISION:** Expose both a direct RAG endpoint and a separate agent endpoint that internally
-  can also invoke the RAG path (among others), rather than a single entrypoint.
-- **RATIONALE:** Not clearly a deliberate decision so much as incremental build order — `/rag/ask`
-  was built first as the core RAG pipeline, `/ai-agent` was added later, layering intent routing
-  and a journal-lookup tool on top without retiring the original endpoint. No evidence (commits,
-  docs) of an explicit decision to keep both permanently.
-- **ALTERNATIVES CONSIDERED:** Retire `/rag/ask` once `/ai-agent` covers its functionality
-  (`/ai-agent`'s `rag` intent already calls the same `answerQuestion`). Or keep both but give them
-  clearly distinct purposes (e.g. `/rag/ask` as a lower-level/internal endpoint, `/ai-agent` as the
-  only public one).
-- **CURRENT STATUS:** Unresolved — already tracked as its own open decision, not something this
-  review is introducing (issue #43 / roadmap "Decide the fate of `POST /rag/ask` vs `POST
-  /ai-agent`").
-- **SHOULD THIS BE REVISITED:** Yes — this is already an explicitly open question (#43); it should
-  be settled before frontend work starts building against either one, since the two have
-  diverging, inconsistent request-validation and response contracts today (`docs/05-api-contract.md`
-  §5).
+- **DECISION:** `POST /rag/ask` has been removed as a public route. `POST /ai-agent` is now the
+  only HTTP entrypoint into the assistant. `answerQuestion()` (`src/rag/rag-service.ts`) is
+  unchanged and stays as an internal function — `ai-agent`'s `rag` intent (`ragTool.ts`) already
+  called it directly, so no retrieval behavior changed.
+- **RATIONALE:** `/rag/ask` and `/ai-agent` were not two purposeful entrypoints — `/rag/ask` was
+  built first as the core RAG pipeline, `/ai-agent` was layered on top later with intent routing
+  (`journal` vs `rag`) and a safety gate in front, without retiring the original route. Once traced,
+  `/ai-agent`'s `rag` branch turned out to be a direct pass-through to the exact same
+  `answerQuestion()` function `/rag/ask` called — so `/rag/ask` was a narrower, duplicate surface to
+  the same underlying capability, minus intent routing and with its own divergent `injuryId`
+  validation (`Number.isInteger`, no upper bound, vs `/ai-agent`'s `Number.isSafeInteger` with a
+  `2147483647` bound). A single entrypoint also matches the intended frontend shape: one
+  question/summary input, with the backend — not the client — deciding whether the question needs
+  targeted retrieval (`rag` intent) or a whole-record summary (`journal` intent).
+- **ALTERNATIVES CONSIDERED:** Keep both with clearly distinct purposes (`/rag/ask` as a
+  lower-level/internal endpoint, `/ai-agent` as the only public one) — rejected because `/rag/ask`
+  bypassed `routeIntent()` entirely, so a "summarize my history"-shaped question sent to `/rag/ask`
+  would get vector-searched instead of the full record, and keeping two validated public routes to
+  overlapping functionality was the actual problem, not a feature worth preserving.
+- **CURRENT STATUS:** Resolved (issue #43). `src/routes/rag-router.ts` and
+  `src/rag/rag-controller.ts` are deleted; `src/app.ts` mounts only `aiAgentRouter`.
+  `docs/05-api-contract.md` has been updated to document `/ai-agent` as the sole endpoint.
+- **SHOULD THIS BE REVISITED:** No, unless a future need arises for a retrieval-only endpoint that
+  deliberately skips intent routing (e.g. an internal debugging tool) — that would be a new,
+  explicitly-scoped decision, not a reason to bring back `/rag/ask` as-is.
 
 ### D8 — Ingestion built as isolated, tested stages with no runnable end-to-end worker
 

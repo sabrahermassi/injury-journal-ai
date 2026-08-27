@@ -91,20 +91,16 @@ npm start      # runs dist/index.js
 
 ## Usage
 
-The API exposes two endpoints:
+The API exposes a single endpoint:
 
 ```bash
-curl -X POST http://localhost:3000/rag/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "What treatments have I tried?", "injuryId": 1}'
-
 curl -X POST http://localhost:3000/ai-agent \
   -H "Content-Type: application/json" \
   -d '{"question": "What treatments have I tried?", "injuryId": 1}'
 ```
 
-`injuryId` is optional on both endpoints. Neither endpoint requires authentication today — see
-the Project Status section above.
+`injuryId` is optional. The endpoint requires no authentication today — see the Project Status
+section above.
 
 ## Tests
 

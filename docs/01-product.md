@@ -28,8 +28,8 @@ It works on top of an existing Injury Journal application and uses structured jo
 
 > **Scope clarification (added during the `docs/handoff/` review series):** this backend does
 > not implement journal record creation/editing or user authentication — those are assumed to be
-> owned by that existing Injury Journal application. Today, this repo exposes only two AI
-> endpoints (`POST /rag/ask`, `POST /ai-agent`); there is no `GET /injuries`, no way to create or
+> owned by that existing Injury Journal application. Today, this repo exposes only one AI
+> endpoint (`POST /ai-agent`); there is no `GET /injuries`, no way to create or
 > edit a record, and no login. If a frontend is meant to be built against this backend for
 > anything beyond asking questions, that scope needs to be decided explicitly and is not yet.
 > See `docs/05-api-contract.md` §6.
