@@ -33,6 +33,7 @@ const storeDocumentChunkMock =
   jest.fn<
     (
       injuryId: number,
+      userId: number,
       sourceType: string,
       sourceId: number,
       chunkIndex: number,
@@ -145,6 +146,7 @@ describe('embedAndStoreDocument', () => {
     expect(storeDocumentChunkMock).toHaveBeenNthCalledWith(
       1,
       document.metadata.injuryId,
+      document.metadata.userId,
       document.metadata.sourceType,
       document.metadata.sourceId,
       0,
@@ -163,6 +165,7 @@ describe('embedAndStoreDocument', () => {
     expect(storeDocumentChunkMock).toHaveBeenNthCalledWith(
       2,
       document.metadata.injuryId,
+      document.metadata.userId,
       document.metadata.sourceType,
       document.metadata.sourceId,
       1,

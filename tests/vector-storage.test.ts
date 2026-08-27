@@ -62,13 +62,14 @@ beforeEach(() => {
 
 describe('storeDocumentChunk', () => {
   it('inserts a document chunk with the embedding formatted as a pgvector literal', async () => {
-    await storeDocumentChunk(1, 'treatment', 2, 0, 'some content', [0.1, 0.2, 0.3]);
+    await storeDocumentChunk(1, 9, 'treatment', 2, 0, 'some content', [0.1, 0.2, 0.3]);
 
     expect(executeRawMock).toHaveBeenCalledTimes(1);
 
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values).toEqual([
       1,
+      9,
       'treatment',
       2,
       0,
@@ -79,47 +80,56 @@ describe('storeDocumentChunk', () => {
   });
 
   it('serializes metadata to JSON when provided', async () => {
-    await storeDocumentChunk(1, 'treatment', 2, 0, 'content', [0.1], {
+    await storeDocumentChunk(1, 9, 'treatment', 2, 0, 'content', [0.1], {
       foo: 'bar',
     });
 
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[6]).toBe(JSON.stringify({ foo: 'bar' }));
+    expect(query.values[7]).toBe(JSON.stringify({ foo: 'bar' }));
   });
 
   it('uses null metadata when none is provided', async () => {
-    await storeDocumentChunk(1, 'treatment', 2, 0, 'content', [0.1]);
+    await storeDocumentChunk(1, 9, 'treatment', 2, 0, 'content', [0.1]);
 
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[6]).toBeNull();
+    expect(query.values[7]).toBeNull();
   });
 
   it('formats an empty embedding array as an empty vector literal', async () => {
-    await storeDocumentChunk(1, 'treatment', 2, 0, 'content', []);
+    await storeDocumentChunk(1, 9, 'treatment', 2, 0, 'content', []);
 
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[5]).toBe('[]');
+    expect(query.values[6]).toBe('[]');
   });
 
   it('passes the chunkIndex and content through unchanged', async () => {
-    await storeDocumentChunk(7, 'medical_visit', 3, 4, 'chunk body text', [1]);
+    await storeDocumentChunk(7, 9, 'medical_visit', 3, 4, 'chunk body text', [1]);
 
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values[0]).toBe(7);
-    expect(query.values[1]).toBe('medical_visit');
-    expect(query.values[2]).toBe(3);
-    expect(query.values[3]).toBe(4);
-    expect(query.values[4]).toBe('chunk body text');
+    expect(query.values[1]).toBe(9);
+    expect(query.values[2]).toBe('medical_visit');
+    expect(query.values[3]).toBe(3);
+    expect(query.values[4]).toBe(4);
+    expect(query.values[5]).toBe('chunk body text');
+  });
+
+  it('passes the userId through unchanged', async () => {
+    await storeDocumentChunk(1, 42, 'treatment', 2, 0, 'content', [0.1]);
+
+    const query = executeRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[1]).toBe(42);
   });
 
   it('uses the correct ON CONFLICT clause for upserting by (sourceType, sourceId, chunkIndex)', async () => {
-    await storeDocumentChunk(1, 'treatment', 2, 0, 'some content', [0.1, 0.2, 0.3]);
+    await storeDocumentChunk(1, 9, 'treatment', 2, 0, 'some content', [0.1, 0.2, 0.3]);
 
     const query = executeRawMock.mock.calls[0][0] as SqlResult;
     const sql = query.strings.join('');
     expect(sql).toContain('ON CONFLICT ("sourceType", "sourceId", "chunkIndex")');
     expect(sql).toContain('DO UPDATE SET');
     expect(sql).toContain('"injuryId" = EXCLUDED."injuryId"');
+    expect(sql).toContain('"userId" = EXCLUDED."userId"');
     expect(sql).toContain('"content" = EXCLUDED."content"');
     expect(sql).toContain('"embedding" = EXCLUDED."embedding"');
     expect(sql).toContain('"metadata" = EXCLUDED."metadata"');
@@ -227,6 +237,37 @@ describe('searchSimilarChunks', () => {
       strings: expect.any(Array),
       values: [joinMock.mock.results[0].value],
     });
+  });
+
+  it('filters by userId only when injuryId and sourceType are omitted', async () => {
+    await searchSimilarChunks([1], undefined, 5, undefined, 42);
+
+    expect(joinMock).toHaveBeenCalledTimes(1);
+    const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(filters).toHaveLength(1);
+    expect(filters[0].values).toEqual([42]);
+    expect(filters[0].strings.join('')).toContain('"userId"');
+
+    const query = queryRawMock.mock.calls[0][0] as SqlResult;
+    expect(query.values[1]).toEqual({
+      strings: expect.any(Array),
+      values: [joinMock.mock.results[0].value],
+    });
+  });
+
+  it('filters by injuryId, sourceType, and userId together when all are provided', async () => {
+    await searchSimilarChunks([1], 42, 5, 'treatment', 7);
+
+    expect(joinMock).toHaveBeenCalledTimes(1);
+    const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(separator).toBe(' AND ');
+    expect(filters).toHaveLength(3);
+    expect(filters[0].values).toEqual([42]);
+    expect(filters[0].strings.join('')).toContain('"injuryId"');
+    expect(filters[1].values).toEqual(['treatment']);
+    expect(filters[1].strings.join('')).toContain('"sourceType"');
+    expect(filters[2].values).toEqual([7]);
+    expect(filters[2].strings.join('')).toContain('"userId"');
   });
 });
 
