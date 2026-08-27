@@ -113,8 +113,8 @@ Infrastructure as Code) — both are cloud-infra concepts with no local-codebase
   values (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`). (not yet filed)
 - [ ] Consolidate `PrismaClient` instantiation behind `src/lib/prisma.ts` — four files construct
   their own client independently today. (#47)
-- [ ] Add `journal-tool.ts` test coverage — zero tests exist for it despite it being one of three
-  response branches in the agent. (#44)
+- [x] Add `journal-tool.ts` test coverage — both `journalTool()` and `formatInjuryRecord()` are now
+  covered in `tests/journal-tool.test.ts`. (#44)
 - [ ] Surface `AgentState.intent` in the actual HTTP response — it's computed, tracked, and then
   discarded; a frontend needs exactly this field to know which response shape it received. (#45)
 - [ ] Clean up the stray Python test functions embedded at module level in `embedding_api.py`. (#48)
