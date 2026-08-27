@@ -28,7 +28,8 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
 
 ### Open / Not Started
 
-- [ ] Step 5 — Security and Production Hardening (#31)
+- [ ] Step 5 — Security and Production Hardening (#31, closed — decomposed into #89-#99; see
+  "Step 5 security" below)
 - [ ] Step 6 — AI Observability + AI-Assisted Observability (#32)
 - [ ] Step 7 — Production Workflow with AWS (#33)
 - [ ] Step 8 — Infrastructure as Code (#34)
@@ -58,7 +59,7 @@ issue number, or marked "not yet filed" where none exists yet.
   `JSON.stringify(injury)` inside a prose `answer` field; now returns an LLM-generated prose
   summary of the injury record. (#38)
 - [ ] Add a real, indexed `userId` column on `DocumentChunk` (denormalized from `Injury.userId`
-  at write time). This is a schema migration, and #31's authorization work depends on it existing
+  at write time). This is a schema migration, and #95's authorization work depends on it existing
   first — today `userId` only lives inside an unindexed JSON blob and cannot be filtered on. (#41)
 - [ ] Start threading a request ID through the pipeline now, even as a no-op passed-through
   parameter, rather than retrofitting it into every function signature once #32 starts. (#42)
@@ -66,20 +67,41 @@ issue number, or marked "not yet filed" where none exists yet.
   the LLM actually do with an empty context block?). Likely the common case until the ingestion
   worker above exists. (#39)
 
-**Fold into Step 5 / #31 (security), more concretely scoped than the current issue text:**
+**Step 5 security (formerly the single epic #31, now closed and decomposed into 11 scoped
+issues — a security gap-analysis pass also surfaced items #31's own text never named):**
 
-- [ ] Authentication + session/identity on every request (currently: zero — every request is
-  anonymous server-side). (#31)
-- [ ] Per-tool authorization step in the agent orchestrator — does not exist today, not even
-  partially. (#31)
+*Urgent (no dependencies, do first):*
+- [ ] Add rate limiting to prevent LLM/embedding cost-abuse and resource exhaustion — confirmed
+  exploitable today (no auth, no rate limit, every request triggers a paid Groq + embedding call). (#89)
+- [ ] Add schema-based request input validation (Zod) incl. a max question length. (#90)
+- [ ] Regression tests for data isolation boundaries — currently zero tests exist proving
+  cross-user chunk leakage can't happen when `injuryId` is omitted (requested explicitly in #31's
+  own text). (#91)
+- [ ] Redact/minimize sensitive data in error logging (`console.error` catch blocks) — a present-day
+  leak risk, distinct from and not gated on #32's larger future AWS observability project. (#92)
+
+*Normal priority:*
+- [ ] Ensure the app's Postgres role follows least privilege + document DB connection hygiene. (#93)
+- [ ] Authentication + session/identity on every request (currently: zero) — blocked on #49
+  (does this backend own auth, or verify tokens from a separate app?). (#94)
+- [ ] Per-tool + retrieval/vector-level authorization enforcing user-level data isolation — depends
+  on #94. (#95)
+- [ ] Output-side safety check — the current safety layer is entirely pre-generation; nothing
+  checks whether the LLM's answer echoes diagnosis-adjacent language from a chunk's raw content. (#96)
+
+*Optional (safe to defer indefinitely):*
+- [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)
+- [ ] Add `npm audit`/Dependabot/SCA scanning to CI. (#98)
+- [ ] Document third-party LLM data exposure (Groq) and the embedding service's missing auth
+  boundary as accepted risks. (#99)
+
+*Deliberately not duplicated:* safe logging → already tracked under #32 ([P19] AI Observability);
+least-privilege IAM (AWS roles/policies) and secret rotation → already tracked under #34 ([P21]
+Infrastructure as Code) — both are cloud-infra concepts with no local-codebase equivalent today.
+
 - [x] `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint. `answerQuestion()`
   stays as an internal function (`ragTool` already called it directly). Resolves the divergent
   `injuryId` validation by elimination rather than reconciliation. (#43)
-- [ ] Regression tests for data isolation boundaries specifically (requested explicitly in #31's
-  own text) — currently zero tests exist proving cross-user chunk leakage can't happen when
-  `injuryId` is omitted. (#31)
-- [ ] Output-side safety check — the current safety layer is entirely pre-generation; nothing
-  checks whether the LLM's answer echoes diagnosis-adjacent language from a chunk's raw content. (#31)
 
 **Fold into Step 9 backlog cleanup / general hygiene (not urgent, but shouldn't be lost):**
 
