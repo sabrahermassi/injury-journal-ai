@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js';
 import { readJournalData } from './reader/postgres-reader.js';
 import { buildJournalDocuments } from './documents/document-builder.js';
 import { embedAndStoreDocument } from './embed-and-store.js';
+import { disconnectVectorStorage } from '../embeddings/vector-storage.js';
 import type { JournalDocument } from './documents/document-types.js';
 
 export interface IngestionFailure {
@@ -109,6 +110,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       process.exitCode = 1;
     })
     .finally(async () => {
-      await prisma.$disconnect();
+      // embedAndStoreDocument (via vector-storage.ts) uses its own separate
+      // PrismaClient instance -- disconnect it too, or its connection pool
+      // can keep the process alive after this reports completion.
+      await Promise.all([prisma.$disconnect(), disconnectVectorStorage()]);
     });
 }
