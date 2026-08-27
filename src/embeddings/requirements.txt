@@ -1,0 +1,8 @@
+fastapi==0.141.1
+pydantic==2.13.4
+sentence-transformers==6.0.0
+uvicorn==0.52.3
+
+# test dependencies
+pytest==8.2.2
+httpx==0.28.1
