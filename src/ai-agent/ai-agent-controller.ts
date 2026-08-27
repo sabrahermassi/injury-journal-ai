@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import { runAgent } from './ai-agent-orchestrator.js';
+import { logError } from '../lib/log-error.js';
 
 export async function askAgent(req: Request, res: Response) {
   try {
@@ -33,7 +34,7 @@ export async function askAgent(req: Request, res: Response) {
 
     return res.json(result);
   } catch (error) {
-    console.error(error);
+    logError('ai-agent request failed', error);
 
     return res.status(500).json({
       error: 'Failed to process request',
