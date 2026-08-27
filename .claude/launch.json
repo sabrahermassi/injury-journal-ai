@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "embedding-service",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["embedding_api:app", "--app-dir", "src/embeddings", "--port", "8000"],
+      "port": 8000
+    }
+  ]
+}
