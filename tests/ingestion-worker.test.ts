@@ -128,6 +128,28 @@ describe('runIngestion', () => {
     expect(result).toEqual({ total: 0, succeeded: 0, failed: [] });
   });
 
+  it('reports a single synthetic failure and does not throw when buildJournalDocuments fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    readJournalDataMock.mockResolvedValue([{ id: 10 } as InjuryWithRelations]);
+    const buildFailure = new Error('invalid date');
+    buildJournalDocumentsMock.mockImplementation(() => {
+      throw buildFailure;
+    });
+
+    const result = await runIngestion();
+
+    expect(embedAndStoreDocumentMock).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      total: 1,
+      succeeded: 0,
+      failed: [{ sourceType: 'injury', sourceId: -1, injuryId: -1, error: buildFailure }],
+    });
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it('accumulates multiple failures without aborting the run', async () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 

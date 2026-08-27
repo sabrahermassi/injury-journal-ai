@@ -21,9 +21,17 @@ export interface IngestionResult {
 /**
  * Runs one full ingestion pass: reads all journal data, builds documents,
  * and embeds/stores each document sequentially. A single document failing
- * does not abort the run -- it is logged and collected in `failed`, and the
- * run continues, since one bad record should not block ingestion of every
- * other user's data.
+ * to embed/store does not abort the run -- it is logged and collected in
+ * `failed`, and the run continues, since one bad record should not block
+ * ingestion of every other user's data.
+ *
+ * `buildJournalDocuments` itself builds every record in one batch call, so a
+ * failure there (e.g. an invalid date) is not attributable to a single
+ * source record -- it is reported as one synthetic `IngestionFailure`
+ * (sourceType 'injury', sourceId/injuryId -1) rather than left as an
+ * unhandled rejection. Isolating this to the specific failing record would
+ * require building documents per-injury instead of in one batch; not done
+ * here to keep this fix minimal (see PR #81 review).
  *
  * Each document is stored independently and immediately as it succeeds --
  * there is no cross-document transaction. A non-empty `failed` array means
@@ -33,7 +41,18 @@ export interface IngestionResult {
  */
 export async function runIngestion(): Promise<IngestionResult> {
   const injuries = await readJournalData();
-  const documents = buildJournalDocuments(injuries);
+
+  let documents: JournalDocument[];
+  try {
+    documents = buildJournalDocuments(injuries);
+  } catch (error) {
+    console.error('Failed to build journal documents for this ingestion run:', error);
+    return {
+      total: 1,
+      succeeded: 0,
+      failed: [{ sourceType: 'injury', sourceId: -1, injuryId: -1, error }],
+    };
+  }
 
   const result: IngestionResult = {
     total: documents.length,
@@ -87,7 +106,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   main()
     .catch((error) => {
       console.error(error);
-      process.exit(1);
+      process.exitCode = 1;
     })
     .finally(async () => {
       await prisma.$disconnect();
