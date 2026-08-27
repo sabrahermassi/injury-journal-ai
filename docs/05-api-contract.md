@@ -38,7 +38,7 @@ record. This is a known, unaddressed gap (see CLAUDE.md §9 on user-level data i
 
 | Field       | Type     | Required | Validation |
 |-------------|----------|----------|------------|
-| `question`  | `string` | yes      | non-empty after trim |
+| `question`  | `string` | yes      | non-empty after trim, max 10,000 characters |
 | `injuryId`  | `number` | no       | `Number.isSafeInteger`, `> 0`, **and** `<= 2147483647` |
 
 **Response — 200, shape depends on which internal path ran. An `intent` field
