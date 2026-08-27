@@ -72,24 +72,29 @@ describe('rag service', () => {
 
     const result = await answerQuestion('What treatments failed?');
 
-    expect(checkSafetyMock).toHaveBeenCalledWith('What treatments failed?');
+    expect(checkSafetyMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+    );
 
     expect(semanticSearchMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
       5,
+      undefined,
     );
 
-    expect(buildContextMock).toHaveBeenCalledWith(chunks);
+    expect(buildContextMock).toHaveBeenCalledWith(chunks, undefined);
 
     expect(buildPromptMock).toHaveBeenCalledWith(
       'What treatments failed?',
       'Shockwave therapy did not help.',
+      undefined,
     );
 
-    expect(generateAnswerMock).toHaveBeenCalledWith('prompt');
+    expect(generateAnswerMock).toHaveBeenCalledWith('prompt', undefined);
 
-    expect(buildCitationsMock).toHaveBeenCalledWith(chunks);
+    expect(buildCitationsMock).toHaveBeenCalledWith(chunks, undefined);
 
     expect(result).toEqual({
       answer: 'The treatment failed.',
@@ -127,7 +132,7 @@ describe('rag service', () => {
 
     const result = await answerQuestion('What treatments did not work?');
 
-    expect(buildCitationsMock).toHaveBeenCalledWith(chunks);
+    expect(buildCitationsMock).toHaveBeenCalledWith(chunks, undefined);
 
     expect(result).toEqual({
       answer: 'Shockwave therapy did not improve symptoms.',
@@ -145,7 +150,7 @@ describe('rag service', () => {
 
     const result = await answerQuestion('Do I have cancer?');
 
-    expect(checkSafetyMock).toHaveBeenCalledWith('Do I have cancer?');
+    expect(checkSafetyMock).toHaveBeenCalledWith('Do I have cancer?', undefined);
 
     expect(result).toEqual({
       answer: 'I cannot diagnose medical conditions.',
@@ -173,18 +178,20 @@ describe('rag service', () => {
 
     const result = await answerQuestion('What treatments have I tried?');
 
-    expect(buildContextMock).toHaveBeenCalledWith([]);
+    expect(buildContextMock).toHaveBeenCalledWith([], undefined);
 
     expect(buildPromptMock).toHaveBeenCalledWith(
       'What treatments have I tried?',
       '',
+      undefined,
     );
 
     expect(generateAnswerMock).toHaveBeenCalledWith(
       'prompt with empty context',
+      undefined,
     );
 
-    expect(buildCitationsMock).toHaveBeenCalledWith([]);
+    expect(buildCitationsMock).toHaveBeenCalledWith([], undefined);
 
     expect(result).toEqual({
       answer: 'I do not have enough information to answer that.',

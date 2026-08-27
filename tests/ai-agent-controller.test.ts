@@ -9,6 +9,7 @@ jest.unstable_mockModule('../src/ai-agent/ai-agent-orchestrator.js', () => ({
 const { askAgent } = await import('../src/ai-agent/ai-agent-controller.js');
 
 type MockRequest = {
+  headers?: Record<string, string>;
   body?: {
     question?: unknown;
     injuryId?: unknown;
@@ -56,6 +57,7 @@ describe('ai agent controller', () => {
     expect(runAgentMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
+      expect.any(String),
     );
 
     expect(res.json).toHaveBeenCalledWith({
@@ -68,6 +70,32 @@ describe('ai agent controller', () => {
         },
       ],
     });
+  });
+
+  it('uses a supplied x-request-id header instead of generating one', async () => {
+    const req: MockRequest = {
+      headers: {
+        'x-request-id': 'client-supplied-id',
+      },
+      body: {
+        question: 'What treatments failed?',
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockResolvedValue({
+      answer: 'Shockwave therapy did not help.',
+      citations: [],
+    });
+
+    await askAgent(req, res);
+
+    expect(runAgentMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+      'client-supplied-id',
+    );
   });
 
   it('passes injuryId to the agent', async () => {
@@ -87,7 +115,11 @@ describe('ai agent controller', () => {
 
     await askAgent(req, res);
 
-    expect(runAgentMock).toHaveBeenCalledWith('Summarize my injury', 42);
+    expect(runAgentMock).toHaveBeenCalledWith(
+      'Summarize my injury',
+      42,
+      expect.any(String),
+    );
   });
 
   it('returns 400 without question', async () => {

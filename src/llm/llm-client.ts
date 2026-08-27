@@ -6,7 +6,12 @@ const client = new Groq({
 
 const MODEL = 'openai/gpt-oss-20b';
 
-export async function generateAnswer(prompt: string): Promise<string> {
+export async function generateAnswer(
+  prompt: string,
+  requestId?: string,
+): Promise<string> {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const response = await client.chat.completions.create({
     model: MODEL,
     messages: [

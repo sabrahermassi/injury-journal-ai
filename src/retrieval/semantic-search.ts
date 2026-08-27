@@ -5,8 +5,9 @@ export async function semanticSearch(
   query: string,
   injuryId?: number,
   limit = 5,
+  requestId?: string,
 ) {
-  const result = await embedQuery(query);
+  const result = await embedQuery(query, requestId);
 
-  return searchSimilarChunks(result.embedding, injuryId, limit);
+  return searchSimilarChunks(result.embedding, injuryId, limit, undefined, undefined, requestId);
 }

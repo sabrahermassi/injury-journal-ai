@@ -22,7 +22,12 @@ function formatSourceType(sourceType: string): string {
     .join(' ');
 }
 
-export function buildCitations(chunks: RetrievedChunk[]): Citation[] {
+export function buildCitations(
+  chunks: RetrievedChunk[],
+  requestId?: string,
+): Citation[] {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
   const seen = new Set<string>();
 
   return chunks.flatMap((chunk) => {

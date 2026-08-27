@@ -41,6 +41,7 @@ describe('AI agent route integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'ai-agent-integration-test',
       1,
       0,
@@ -87,7 +88,10 @@ describe('AI agent route integration', () => {
       },
     ]);
 
-    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith(
+      'What treatments did I have?',
+      expect.any(String),
+    );
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });

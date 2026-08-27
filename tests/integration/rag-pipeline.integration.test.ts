@@ -40,6 +40,7 @@ describe('RAG pipeline integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'rag-pipeline-integration-test',
       1,
       0,
@@ -49,6 +50,7 @@ describe('RAG pipeline integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'rag-pipeline-integration-test',
       1,
       1,
@@ -100,7 +102,10 @@ describe('RAG pipeline integration', () => {
       label: 'Rag-pipeline-integration-test #1',
     });
 
-    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith(
+      'What treatments did I have?',
+      undefined,
+    );
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });

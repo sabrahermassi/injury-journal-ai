@@ -10,6 +10,7 @@ jest.unstable_mockModule('../src/rag/rag-service.js', () => ({
 const { askQuestion } = await import('../src/rag/rag-controller.js');
 
 type MockRequest = {
+  headers?: Record<string, string>;
   body?: {
     question?: unknown;
     injuryId?: unknown;
@@ -58,6 +59,8 @@ describe('rag controller', () => {
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
+      undefined,
+      expect.any(String),
     );
 
     expect(res.json).toHaveBeenCalledWith({
@@ -70,6 +73,33 @@ describe('rag controller', () => {
         },
       ],
     });
+  });
+
+  it('uses a supplied x-request-id header instead of generating one', async () => {
+    const req: MockRequest = {
+      headers: {
+        'x-request-id': 'client-supplied-id',
+      },
+      body: {
+        question: 'What treatments failed?',
+      },
+    };
+
+    const res = mockResponse();
+
+    answerQuestionMock.mockResolvedValue({
+      answer: 'Shockwave therapy failed.',
+      citations: [],
+    });
+
+    await askQuestion(req as Request, res as Response);
+
+    expect(answerQuestionMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+      undefined,
+      'client-supplied-id',
+    );
   });
 
   it('returns safe response for blocked questions', async () => {
@@ -92,6 +122,8 @@ describe('rag controller', () => {
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'Do I have cancer?',
       undefined,
+      undefined,
+      expect.any(String),
     );
 
     expect(res.json).toHaveBeenCalledWith({
@@ -121,6 +153,8 @@ describe('rag controller', () => {
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'What treatments failed?',
       42,
+      undefined,
+      expect.any(String),
     );
   });
 

@@ -49,6 +49,7 @@ describe('RAG route integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'rag-route-integration-test',
       1,
       0,
@@ -58,6 +59,7 @@ describe('RAG route integration', () => {
 
     await storeDocumentChunk(
       injuryId,
+      userId,
       'rag-route-integration-test',
       1,
       1,
@@ -67,6 +69,7 @@ describe('RAG route integration', () => {
 
     await storeDocumentChunk(
       otherInjuryId,
+      otherUserId,
       'rag-route-integration-test',
       2,
       0,
@@ -120,7 +123,10 @@ describe('RAG route integration', () => {
 
     expect(response.body.citations).toHaveLength(1);
 
-    expect(mockEmbedQuery).toHaveBeenCalledWith('What treatments did I have?');
+    expect(mockEmbedQuery).toHaveBeenCalledWith(
+      'What treatments did I have?',
+      expect.any(String),
+    );
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });

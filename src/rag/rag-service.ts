@@ -9,8 +9,9 @@ export async function answerQuestion(
   question: string,
   injuryId?: number,
   limit = 5,
+  requestId?: string,
 ) {
-  const safety = checkSafety(question);
+  const safety = checkSafety(question, requestId);
 
   if (!safety.allowed) {
     return {
@@ -20,15 +21,15 @@ export async function answerQuestion(
     };
   }
 
-  const chunks = await semanticSearch(question, injuryId, limit);
+  const chunks = await semanticSearch(question, injuryId, limit, requestId);
 
-  const context = buildContext(chunks);
+  const context = buildContext(chunks, requestId);
 
-  const prompt = buildPrompt(question, context);
+  const prompt = buildPrompt(question, context, requestId);
 
-  const answer = await generateAnswer(prompt);
+  const answer = await generateAnswer(prompt, requestId);
 
-  const citations = buildCitations(chunks);
+  const citations = buildCitations(chunks, requestId);
 
   return {
     answer,
