@@ -1,4 +1,16 @@
-import { formatInjuryRecord } from '../src/ai-agent/tools/journal-tool.js';
+import { jest } from '@jest/globals';
+
+const findUniqueMock = jest.fn();
+
+jest.unstable_mockModule('@prisma/client', () => ({
+  PrismaClient: jest.fn().mockImplementation(() => ({
+    injury: {
+      findUnique: findUniqueMock,
+    },
+  })),
+}));
+
+const { journalTool, formatInjuryRecord } = await import('../src/ai-agent/tools/journal-tool.js');
 
 function baseInjury() {
   return {
@@ -18,6 +30,40 @@ function baseInjury() {
     MedicalVisit: [],
   };
 }
+
+describe('journalTool', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('queries the injury by id with all relations included and returns the result', async () => {
+    const injury = baseInjury();
+    findUniqueMock.mockResolvedValue(injury);
+
+    const result = await journalTool(1);
+
+    expect(findUniqueMock).toHaveBeenCalledWith({
+      where: {
+        id: 1,
+      },
+      include: {
+        Treatment: true,
+        Symptom: true,
+        TimelineEvent: true,
+        MedicalVisit: true,
+      },
+    });
+    expect(result).toBe(injury);
+  });
+
+  it('returns null when no injury is found', async () => {
+    findUniqueMock.mockResolvedValue(null);
+
+    const result = await journalTool(999);
+
+    expect(result).toBeNull();
+  });
+});
 
 describe('formatInjuryRecord', () => {
   it('formats a minimal record with no optional fields or relations', () => {
