@@ -98,6 +98,32 @@ describe('ai agent controller', () => {
     );
   });
 
+  it('generates a request ID when the x-request-id header is empty', async () => {
+    const req: MockRequest = {
+      headers: {
+        'x-request-id': '',
+      },
+      body: {
+        question: 'What treatments failed?',
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockResolvedValue({
+      answer: 'Shockwave therapy did not help.',
+      citations: [],
+    });
+
+    await askAgent(req, res);
+
+    expect(runAgentMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+      expect.not.stringMatching(/^$/),
+    );
+  });
+
   it('passes injuryId to the agent', async () => {
     const req: MockRequest = {
       body: {

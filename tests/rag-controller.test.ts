@@ -102,6 +102,33 @@ describe('rag controller', () => {
     );
   });
 
+  it('generates a request ID when the x-request-id header is empty', async () => {
+    const req: MockRequest = {
+      headers: {
+        'x-request-id': '',
+      },
+      body: {
+        question: 'What treatments failed?',
+      },
+    };
+
+    const res = mockResponse();
+
+    answerQuestionMock.mockResolvedValue({
+      answer: 'Shockwave therapy failed.',
+      citations: [],
+    });
+
+    await askQuestion(req as Request, res as Response);
+
+    expect(answerQuestionMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      undefined,
+      undefined,
+      expect.not.stringMatching(/^$/),
+    );
+  });
+
   it('returns safe response for blocked questions', async () => {
     const req: MockRequest = {
       body: {

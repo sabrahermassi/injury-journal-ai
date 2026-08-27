@@ -4,8 +4,11 @@ import { runAgent } from './ai-agent-orchestrator.js';
 
 export async function askAgent(req: Request, res: Response) {
   try {
+    const headerRequestId = req.headers?.['x-request-id'];
     const requestId =
-      (req.headers?.['x-request-id'] as string | undefined) ?? randomUUID();
+      typeof headerRequestId === 'string' && headerRequestId.trim().length > 0
+        ? headerRequestId
+        : randomUUID();
 
     const { question, injuryId } = req.body ?? {};
 
