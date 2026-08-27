@@ -13,7 +13,7 @@ The AI retrieval and RAG pipeline is implemented and tested: offline ingestion (
 Known gaps in what's implemented so far:
 - There is no runnable ingestion entrypoint yet — the pipeline stages exist and are tested individually, but nothing wires them together outside of test files.
 - The agent's journal-lookup path returns raw database records rather than an LLM-generated summary.
-- There is no authentication or per-user data isolation yet — every request is currently unauthenticated.
+- `POST /ai-agent` now requires a `Bearer` JWT (issue #94), but the verified identity isn't used to filter results yet — there is still no per-user data isolation (issue #95).
 
 Security/production hardening, AI observability, AWS deployment, and Infrastructure as Code are not yet started. See [docs/04-implementation-roadmap.md](docs/04-implementation-roadmap.md) for the full, current status of every step.
 
@@ -58,6 +58,7 @@ Set the following environment variables (see `.env.example` for a starting point
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `GROQ_API_KEY` | Yes | Used by `src/llm/llm-client.ts` for answer generation |
+| `JWT_SECRET` | Yes | Shared secret used to verify `Bearer` JWTs on `POST /ai-agent` (`src/auth/authenticate.ts`); tokens are expected to be issued by the separate journal application, not this backend |
 | `EMBEDDING_API_URL` | No | Defaults to `http://127.0.0.1:8000` |
 | `EMBEDDING_API_TIMEOUT_MS` | No | Defaults to 30000 |
 | `PORT` | No | Defaults to 3000 |
@@ -127,11 +128,13 @@ The API exposes a single endpoint:
 ```bash
 curl -X POST http://localhost:3000/ai-agent \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <JWT signed with JWT_SECRET>" \
   -d '{"question": "What treatments have I tried?", "injuryId": 1}'
 ```
 
-`injuryId` is optional. The endpoint requires no authentication today — see the Project Status
-section above.
+`injuryId` is optional. The `Authorization` header is required (a `Bearer` JWT with a numeric
+`sub` claim, signed with `JWT_SECRET`) — see the Project Status section above for what
+authentication does and doesn't cover yet.
 
 ## Tests
 

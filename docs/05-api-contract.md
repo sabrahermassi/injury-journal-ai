@@ -7,9 +7,9 @@ correct.
 
 ## 1. Scope
 
-One HTTP endpoint exists today, under a single unauthenticated Express app (`src/app.ts`):
-`POST /ai-agent`. Nothing else is exposed — no CRUD, no identity/session endpoints, no health
-check.
+One HTTP endpoint exists today, under a single Express app (`src/app.ts`): `POST /ai-agent`,
+which requires a bearer token (see §2). Nothing else is exposed — no CRUD, no identity/session
+endpoints, no health check.
 
 `POST /rag/ask` previously existed as a second, narrower entrypoint to the same underlying
 `answerQuestion()` function, but has been retired (issue #43, `docs/02-architecture.md` D7) —
@@ -19,16 +19,23 @@ check.
 
 ## 2. Authentication
 
-**None.** There is no auth middleware anywhere in `app.ts`/`index.ts`, no session, and no
-`userId` derived from request context at any layer. Every request is anonymous. Concretely:
+**Required, but not yet enforced past the door.** `POST /ai-agent` is protected by
+`authenticate` middleware (`src/auth/authenticate.ts`): callers must send
+`Authorization: Bearer <JWT>`, signed with the shared `JWT_SECRET` (HS256) and carrying a numeric
+`sub` claim. A missing/malformed header, or an invalid/expired/wrong-signature token, returns
+`401`. On success the middleware sets `req.userId` from the token's `sub`.
+
+`req.userId` is **not yet used for anything downstream** — no route or tool filters by it. Every
+authenticated user can still read any other user's data. Concretely:
 
 - `searchSimilarChunks` (`vector-storage.ts`) filters only by the optional `injuryId` (it also
   accepts an optional `sourceType`, but no production caller passes one) — never by owner.
 - `journalTool` (`journal-tool.ts`) does a bare `prisma.injury.findUnique({ where: { id } })` —
   no owner check.
 
-Any caller who knows or guesses an `injuryId` can read that injury's chunks and full journal
-record. This is a known, unaddressed gap (see CLAUDE.md §9 on user-level data isolation).
+Any authenticated caller who knows or guesses an `injuryId` can read that injury's chunks and full
+journal record. This is a known, unaddressed authorization gap — issue #95 — distinct from
+authentication itself (issue #94, done). See CLAUDE.md §9 on user-level data isolation.
 
 ## 3. Endpoints
 
@@ -69,6 +76,8 @@ refusal response. Tracked as issue #86.
 
 | Status | Body | Trigger |
 |--------|------|---------|
+| 401 | `{ "error": "Authentication required" }` | `Authorization: Bearer <token>` header missing or malformed |
+| 401 | `{ "error": "Invalid or expired token" }` | token present but fails signature/expiry/claim verification |
 | 400 | `{ "error": "Question is required" }` | body present but `question` missing/blank |
 | 400 | `{ "error": "Invalid injuryId" }` | `injuryId` present but fails the check above |
 | 429 | `{ "error": "Too many requests, please try again later." }` | more than 20 requests from the same IP within a 60s window (issue #89) |
@@ -114,11 +123,15 @@ limit of `5` for the `rag` intent path.
 
 This is the most important section — these are gaps, not just documentation debt:
 
-- **Authentication and session/identity, entirely.** There is no login, no token, no way to
-  establish "whose data is this" on any request. This blocks essentially all real frontend work
-  before it starts (see CLAUDE.md §9, and roadmap #31).
+- **A token issuer.** This repo verifies a `Bearer` JWT (issue #94) but does not issue one — by
+  design (D10, `docs/02-architecture.md`), the separate journal application is expected to own
+  login/session issuance. A frontend needs that other application's login flow before it can call
+  this API at all.
+- **Per-user data isolation.** The verified `userId` isn't used to filter retrieval or journal
+  results yet (issue #95, open) — any authenticated caller can still read any other user's data
+  (see CLAUDE.md §9, and roadmap #31).
 - **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. A frontend has no way to
-  discover which injuries belong to the current user even once auth exists.
+  discover which injuries belong to the current user even once #95 lands.
 - **CRUD for `Injury` and its child records** (`Treatment`, `Symptom`, `TimelineEvent`,
   `MedicalVisit`). Today the only read path is `journalTool`'s single `findUnique`, and there is
   no create/update/delete for any of these at all.
