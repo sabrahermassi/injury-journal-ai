@@ -108,6 +108,7 @@ describe('AI agent route integration', () => {
       answer:
         'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
       citations: [],
+      intent: 'safety',
       metadata: {
         retrievedChunks: [],
       },
@@ -150,6 +151,7 @@ describe('AI agent route integration', () => {
       answer:
         'Unable to generate a summary from your injury record right now.',
       citations: [],
+      intent: 'journal',
     });
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
@@ -165,6 +167,7 @@ describe('AI agent route integration', () => {
     expect(response.body).toEqual({
       answer: 'An injury must be selected for journal questions.',
       citations: [],
+      intent: 'journal',
     });
 
     expect(mockEmbedQuery).not.toHaveBeenCalled();

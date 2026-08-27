@@ -51,6 +51,7 @@ describe('agent orchestrator', () => {
     expect(result).toEqual({
       answer: 'I cannot diagnose medical conditions.',
       citations: [],
+      intent: 'safety',
       metadata: {
         retrievedChunks: [],
       },
@@ -102,6 +103,7 @@ describe('agent orchestrator', () => {
           sourceId: 42,
         },
       ],
+      intent: 'rag',
       metadata: {
         retrievedChunks: [
           {
@@ -151,6 +153,7 @@ describe('agent orchestrator', () => {
     expect(result).toEqual({
       answer: 'Your sprained ankle injury started on record.',
       citations: [],
+      intent: 'journal',
     });
   });
 
@@ -177,6 +180,7 @@ describe('agent orchestrator', () => {
       answer:
         'Unable to generate a summary from your injury record right now.',
       citations: [],
+      intent: 'journal',
     });
   });
 });

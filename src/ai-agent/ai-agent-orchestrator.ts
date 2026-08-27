@@ -23,6 +23,7 @@ export async function runAgent(
     return {
       answer: safety.message,
       citations: [],
+      intent: 'safety' as const,
       metadata: {
         retrievedChunks: [],
       },
@@ -41,6 +42,7 @@ export async function runAgent(
         return {
           answer: 'An injury must be selected for journal questions.',
           citations: [],
+          intent,
         };
       }
 
@@ -50,6 +52,7 @@ export async function runAgent(
         return {
           answer: 'No injury record was found.',
           citations: [],
+          intent,
         };
       }
 
@@ -62,12 +65,14 @@ export async function runAgent(
           answer:
             'Unable to generate a summary from your injury record right now.',
           citations: [],
+          intent,
         };
       }
 
       return {
         answer,
         citations: [],
+        intent,
       };
     }
 
@@ -81,6 +86,7 @@ export async function runAgent(
       return {
         answer: result.answer,
         citations: result.citations,
+        intent,
         metadata: {
           retrievedChunks: result.chunks.map((chunk) => ({
             sourceType: chunk.sourceType,
@@ -94,6 +100,7 @@ export async function runAgent(
       return {
         answer: 'Unable to determine how to handle this request.',
         citations: [],
+        intent,
         metadata: {
           retrievedChunks: [],
         },
