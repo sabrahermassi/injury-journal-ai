@@ -10,7 +10,6 @@ coverage/
 
 # AI/editor configuration
 .agents/
-.claude/
 .windsurf/
 
 # test files
