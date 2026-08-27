@@ -27,14 +27,13 @@ Do not introduce new retrieval infrastructure or an agent framework unless expli
 ## 3. Architecture
 
 Current path:
-
 `journal → chunk → Python embeddings → pgvector → cosine retrieval → LLM → citations`
 
-Safety checks MUST run before retrieval.
+- Safety checks MUST run before retrieval.
+- All LLM calls MUST go through `src/llm/llm-client.ts`.
+- Code is authoritative over documentation; verify important claims against the implementation.
 
-All LLM calls MUST go through `src/llm/llm-client.ts`.
-
-Code is authoritative over documentation. Check `docs/04-implementation-roadmap.md` for known gaps.
+See `docs/04-implementation-roadmap.md` for known gaps.
 
 ## 4. Sources of Truth
 
@@ -45,8 +44,6 @@ Code is authoritative over documentation. Check `docs/04-implementation-roadmap.
 - Roadmap/issues: `docs/04-implementation-roadmap.md` + GitHub Issues
 - API contract: `docs/05-api-contract.md`
 - Runtime flows: `docs/07-flows-review.md`
-
-Verify important claims against code rather than assuming documentation is current.
 
 ## 5. Coding Conventions
 
@@ -70,8 +67,6 @@ Verify important claims against code rather than assuming documentation is curre
 - Agent tools → `src/ai-agent/tools/`
 - Evaluation → `evaluation/ai-system/`
 
-Before adding new logic, check for an existing implementation first.
-
 ## 8. Safe-Change Rules
 
 - NEVER bypass user-level data isolation.
@@ -93,10 +88,9 @@ Before considering code changes complete, run:
 - `npx tsc --noEmit`
 - `npm run lint`
 - `npm test`
-- `npm run build` when build output or release readiness is relevant
+
+Run `npm run build` when build or release behavior is affected.
 
 Changes to retrieval, RAG, embeddings, or safety guardrails also require the evaluation harness.
-
 Use the relevant Skill for workflow-specific verification. Do not invent commands or scripts that do not exist.
-
 For setup, development, database, seeding, and embedding-service commands, see `README.md`.
