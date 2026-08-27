@@ -2,15 +2,15 @@ import { jest } from '@jest/globals';
 
 const findFirstMock = jest.fn();
 
-jest.unstable_mockModule('@prisma/client', () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
+jest.unstable_mockModule('../src/lib/prisma.js', () => ({
+  prisma: {
     treatment: {
       findFirst: findFirstMock,
     },
     medicalVisit: {
       findFirst: findFirstMock,
     },
-  })),
+  },
 }));
 
 const { verifyCitations } = await import('../src/rag/citation-verifier.js');

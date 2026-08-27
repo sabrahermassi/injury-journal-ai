@@ -30,15 +30,18 @@ const joinMock = jest.fn((values: unknown[], separator?: string) => ({
 const emptyMarker = { __empty__: true };
 
 jest.unstable_mockModule('@prisma/client', () => ({
-  PrismaClient: jest.fn().mockImplementation(() => ({
-    $executeRaw: executeRawMock,
-    $queryRaw: queryRawMock,
-    $disconnect: disconnectMock,
-  })),
   Prisma: {
     sql: sqlMock,
     join: joinMock,
     empty: emptyMarker,
+  },
+}));
+
+jest.unstable_mockModule('../src/lib/prisma.js', () => ({
+  prisma: {
+    $executeRaw: executeRawMock,
+    $queryRaw: queryRawMock,
+    $disconnect: disconnectMock,
   },
 }));
 
