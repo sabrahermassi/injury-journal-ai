@@ -83,8 +83,9 @@ limit of `5` for the `rag` intent path.
 
 - **Citation** — `{ sourceType: string, sourceId: number, label: string, date?: string }`. Built
   by `citation-builder.ts`, the only citation module actually wired into a response path.
-- **Raw Injury record** (journal path only, stringified) — `Injury` plus nested `Treatment[]`,
-  `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, exactly as Prisma returns it.
+- **Journal answer** (journal path only) — an LLM-generated prose summary of the `Injury` record
+  and its nested `Treatment[]`, `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, built via
+  `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`, not the raw Prisma row.
 - **`metadata.retrievedChunks`** (`rag`/safety/default paths only) — `{ sourceType, sourceId }[]`,
   a 2-field projection of the underlying `DocumentChunk` row (not the raw row itself).
 
