@@ -71,6 +71,7 @@ refusal response. Tracked as issue #86.
 |--------|------|---------|
 | 400 | `{ "error": "Question is required" }` | body present but `question` missing/blank |
 | 400 | `{ "error": "Invalid injuryId" }` | `injuryId` present but fails the check above |
+| 429 | `{ "error": "Too many requests, please try again later." }` | more than 20 requests from the same IP within a 60s window (issue #89) |
 | 500 | `{ "error": "Failed to process request" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key. All collapse to this one message; no error code/type distinguishes the cause. |
 
 `askAgent` destructures `req.body ?? {}`, so a body-less `POST /ai-agent` returns the 400 above
