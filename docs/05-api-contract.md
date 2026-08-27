@@ -41,16 +41,18 @@ record. This is a known, unaddressed gap (see CLAUDE.md §9 on user-level data i
 | `question`  | `string` | yes      | non-empty after trim |
 | `injuryId`  | `number` | no       | `Number.isSafeInteger`, `> 0`, **and** `<= 2147483647` |
 
-**Response — 200, shape depends on which internal path ran, with no field indicating which:**
+**Response — 200, shape depends on which internal path ran. An `intent` field
+(`"safety" | "journal" | "rag"`) is included on every response so the frontend can discriminate
+the branch without inferring it from shape (resolved as part of issue #45):**
 
 | Path | Body |
 |------|------|
-| Safety-blocked | `{ "answer": "<refusal>", "citations": [], "metadata": { "retrievedChunks": [] } }` |
-| `journal` intent, no `injuryId` given | `{ "answer": "An injury must be selected for journal questions.", "citations": [] }` — **no `metadata` key at all** |
-| `journal` intent, `injuryId` not found | `{ "answer": "No injury record was found.", "citations": [] }` — **no `metadata` key** |
-| `journal` intent, found | `{ "answer": "<JSON.stringify of the raw Injury row, including nested Treatment/Symptom/TimelineEvent/MedicalVisit arrays>", "citations": [] }` — **`answer` is not prose**, and there's still no `metadata` key |
-| `rag` intent | `{ "answer": "string", "citations": [...], "metadata": { "retrievedChunks": [{ "sourceType": "string", "sourceId": 1 }] } }` |
-| Unrecognized intent (and see note below) | `{ "answer": "Unable to determine how to handle this request.", "citations": [], "metadata": { "retrievedChunks": [] } }` |
+| Safety-blocked | `{ "answer": "<refusal>", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` |
+| `journal` intent, no `injuryId` given | `{ "answer": "An injury must be selected for journal questions.", "citations": [], "intent": "journal" }` — **no `metadata` key at all** |
+| `journal` intent, `injuryId` not found | `{ "answer": "No injury record was found.", "citations": [], "intent": "journal" }` — **no `metadata` key** |
+| `journal` intent, found | `{ "answer": "<LLM-generated prose summary of the injury record>", "citations": [], "intent": "journal" }` — generated via `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`; there's still no `metadata` key |
+| `rag` intent | `{ "answer": "string", "citations": [...], "intent": "rag", "metadata": { "retrievedChunks": [{ "sourceType": "string", "sourceId": 1 }] } }` |
+| Unrecognized intent (and see note below) | `{ "answer": "Unable to determine how to handle this request.", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` — `intent` here is whatever `routeIntent()` actually returned, which today is only reachable for the `'safety'`-value dead-branch case described below |
 
 **Important internal inconsistency, not just a documentation gap:** `routeIntent()` can return
 `'safety'` as an `AgentIntent` (it's a defined member of the type and is returned when the
@@ -81,20 +83,17 @@ limit of `5` for the `rag` intent path.
 
 - **Citation** — `{ sourceType: string, sourceId: number, label: string, date?: string }`. Built
   by `citation-builder.ts`, the only citation module actually wired into a response path.
-- **Raw Injury record** (journal path only, stringified) — `Injury` plus nested `Treatment[]`,
-  `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, exactly as Prisma returns it.
+- **Journal answer** (journal path only) — an LLM-generated prose summary of the `Injury` record
+  and its nested `Treatment[]`, `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, built via
+  `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`, not the raw Prisma row.
 - **`metadata.retrievedChunks`** (`rag`/safety/default paths only) — `{ sourceType, sourceId }[]`,
   a 2-field projection of the underlying `DocumentChunk` row (not the raw row itself).
 
 ## 5. Contract inconsistencies and instability
 
-- **The response is not self-describing.** A frontend must infer which branch ran from the shape
-  of the response (presence/absence of `metadata`, whether `answer` looks like JSON) rather than
-  from an explicit field. Tracked as a roadmap item (surface `AgentState.intent` in the response,
-  #45).
-- **The `journal` intent's placeholder behavior** (`JSON.stringify(injury)` as `answer`) is
-  explicitly known and tracked (`docs/04-implementation-roadmap.md`), not a stable contract to
-  build a frontend against yet.
+- **The `journal` intent produces an LLM-generated prose answer**, not a structured field-by-field
+  breakdown of the record — quality depends on the LLM correctly summarizing the context built by
+  `formatInjuryRecord()`.
 - **The dead `'safety'` intent branch** described in §3 — a real inconsistency between the type
   system (`AgentIntent`) and the orchestrator's actual handling, not just a documentation gap.
   Tracked as issue #86.
@@ -123,9 +122,6 @@ This is the most important section — these are gaps, not just documentation de
 - **CRUD for `Injury` and its child records** (`Treatment`, `Symptom`, `TimelineEvent`,
   `MedicalVisit`). Today the only read path is `journalTool`'s single `findUnique`, and there is
   no create/update/delete for any of these at all.
-- **A self-describing response envelope.** At minimum, an explicit `intent` or `responseType`
-  field so the frontend can pick a rendering branch without inferring from shape.
-- **Prose answers for the `journal` intent**, not a raw stringified DB record.
 - **Pagination or a client-settable retrieval limit.** The `rag` intent path hardcodes `5`
   internally with no way for the frontend to request more, or to page through additional chunks.
 - **Structured error information.** A `code`/`type` field distinct from the current single
