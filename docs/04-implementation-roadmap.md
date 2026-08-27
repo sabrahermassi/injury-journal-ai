@@ -111,8 +111,9 @@ Infrastructure as Code) — both are cloud-infra concepts with no local-codebase
   `citation-formatter.ts`, `citation-source-mapper.ts`) — either wire them into the response path
   as #35 already plans, or remove them; two of the three only handle 2 of 5 valid `sourceType`
   values (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`). (not yet filed)
-- [ ] Consolidate `PrismaClient` instantiation behind `src/lib/prisma.ts` — four files construct
-  their own client independently today. (#47)
+- [x] Consolidate `PrismaClient` instantiation behind `src/lib/prisma.ts` — the four files that
+  previously constructed their own client (`vector-storage.ts`, `journal-tool.ts`,
+  `citation-verifier.ts`, `citation-source-mapper.ts`) now import the shared singleton. (#47)
 - [x] Add `journal-tool.ts` test coverage — both `journalTool()` and `formatInjuryRecord()` are now
   covered in `tests/journal-tool.test.ts`. (#44)
 - [ ] Surface `AgentState.intent` in the actual HTTP response — it's computed, tracked, and then
