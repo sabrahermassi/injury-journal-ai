@@ -4,6 +4,10 @@ import {
   storeDocumentChunk,
   disconnectVectorStorage,
 } from '../../src/embeddings/vector-storage.js';
+import {
+  createTestInjury,
+  deleteTestInjury,
+} from './test-injury-fixuture.js';
 
 const prisma = new PrismaClient();
 
@@ -18,6 +22,14 @@ function vectorWith(first: number, second = 0, third = 0): number[] {
 }
 
 describe('vector storage integration', () => {
+  let injuryA: { userId: number; injuryId: number };
+  let injuryB: { userId: number; injuryId: number };
+
+  beforeAll(async () => {
+    injuryA = await createTestInjury('Vector Storage Test 1');
+    injuryB = await createTestInjury('Vector Storage Test 2');
+  });
+
   beforeEach(async () => {
     await prisma.$executeRaw`
       DELETE FROM "DocumentChunk"
@@ -31,6 +43,9 @@ describe('vector storage integration', () => {
       WHERE "sourceType" = 'vector-storage-integration-test'
     `;
 
+    await deleteTestInjury(injuryA.injuryId, injuryA.userId);
+    await deleteTestInjury(injuryB.injuryId, injuryB.userId);
+
     await disconnectVectorStorage();
 
     await prisma.$disconnect();
@@ -38,8 +53,8 @@ describe('vector storage integration', () => {
 
   it('retrieves chunks ordered by cosine similarity', async () => {
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       1,
       0,
@@ -48,8 +63,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       1,
       1,
@@ -58,8 +73,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       1,
       2,
@@ -86,8 +101,8 @@ describe('vector storage integration', () => {
 
   it('respects the result limit', async () => {
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       2,
       0,
@@ -96,8 +111,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       2,
       1,
@@ -106,8 +121,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       2,
       2,
@@ -127,8 +142,8 @@ describe('vector storage integration', () => {
 
   it('filters results by injuryId when provided', async () => {
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       3,
       0,
@@ -137,8 +152,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      2,
-      2,
+      injuryB.injuryId,
+      injuryB.userId,
       'vector-storage-integration-test',
       4,
       0,
@@ -148,20 +163,20 @@ describe('vector storage integration', () => {
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
-      1,
+      injuryA.injuryId,
       5,
       'vector-storage-integration-test',
     );
 
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('Injury 1 relevant chunk');
-    expect(results[0].injuryId).toBe(1);
+    expect(results[0].injuryId).toBe(injuryA.injuryId);
   });
 
   it('filters results by userId when provided', async () => {
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       6,
       0,
@@ -170,8 +185,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      2,
-      2,
+      injuryB.injuryId,
+      injuryB.userId,
       'vector-storage-integration-test',
       7,
       0,
@@ -184,18 +199,18 @@ describe('vector storage integration', () => {
       undefined,
       5,
       'vector-storage-integration-test',
-      1,
+      injuryA.userId,
     );
 
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('User 1 relevant chunk');
-    expect(results[0].userId).toBe(1);
+    expect(results[0].userId).toBe(injuryA.userId);
   });
 
   it('excludes rows from a different sourceType even when their vector is closer', async () => {
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'vector-storage-integration-test',
       5,
       0,
@@ -204,8 +219,8 @@ describe('vector storage integration', () => {
     );
 
     await storeDocumentChunk(
-      1,
-      1,
+      injuryA.injuryId,
+      injuryA.userId,
       'some-other-source-type',
       5,
       0,
