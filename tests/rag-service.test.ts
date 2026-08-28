@@ -206,6 +206,7 @@ describe('rag service', () => {
 
     expect(checkAnswerSafetyMock).toHaveBeenCalledWith(
       'Based on these symptoms, you may have a torn meniscus.',
+      "Doctor's note: diagnosis of torn meniscus.",
       undefined,
     );
 

@@ -71,7 +71,7 @@ export async function runAgent(
         };
       }
 
-      const answerSafety = checkAnswerSafety(answer, requestId);
+      const answerSafety = checkAnswerSafety(answer, context, requestId);
 
       if (!answerSafety.allowed) {
         return {

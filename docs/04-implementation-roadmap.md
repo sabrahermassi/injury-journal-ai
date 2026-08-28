@@ -91,10 +91,13 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
   on #94. (#95)
 - [x] Output-side safety check — `checkAnswerSafety` (`src/safety/safety-service.ts`) withholds
   an LLM answer that hedges toward its own diagnostic judgment ("you may have...", "this could
-  be..."). It's pattern-based text filtering only — it has no access to the journal record, so it
-  allows all definite diagnostic statements through unconditionally, grounded or not. Verifying
-  definite assertions against source evidence is separate follow-up work (#142). Wired into both
-  `rag-service.ts` and the journal-intent path in `ai-agent-orchestrator.ts`. (#96)
+  be..."). Wired into both `rag-service.ts` and the journal-intent path in
+  `ai-agent-orchestrator.ts`. (#96)
+- [x] Ground definite diagnostic assertions ("you have X", "diagnosis: X") against the
+  retrieved chunks / journal record passed into `checkAnswerSafety` as evidence, rather than
+  allowing them through unconditionally. Still keyword-based (`CONDITION_KEYWORDS`), so a
+  specific medical term outside that list is still invisible to the check — tracked separately
+  as a pre-existing coverage gap. (#142)
 
 *Optional (safe to defer indefinitely):*
 - [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)

@@ -242,4 +242,31 @@ describe('agent orchestrator', () => {
       intent: 'journal',
     });
   });
+
+  it('withholds a journal answer with a definite diagnosis not grounded in the record', async () => {
+    safetyToolMock.mockReturnValue({
+      allowed: true,
+    });
+
+    routeIntentMock.mockReturnValue('journal');
+
+    journalToolMock.mockResolvedValue({
+      id: 42,
+    });
+
+    formatInjuryRecordMock.mockReturnValue(
+      'Injury:\nSymptoms: knee pain and swelling after running.',
+    );
+
+    generateAnswerMock.mockResolvedValue('You have cancer.');
+
+    const result = await runAgent('Show my injury timeline', 42);
+
+    expect(result).toEqual({
+      answer:
+        'I withheld that response because it stated a diagnosis that is not supported by your recorded information. I can summarize what is actually documented in your journal instead.',
+      citations: [],
+      intent: 'journal',
+    });
+  });
 });
