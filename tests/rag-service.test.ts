@@ -358,7 +358,7 @@ describe('rag service', () => {
 
     semanticSearchMock.mockResolvedValue(chunks);
     buildContextMock.mockReturnValue('Shockwave therapy did not help.');
-    buildPromptMock.mockReturnValue('prompt');
+    buildUserPromptMock.mockReturnValue('prompt');
     generateAnswerMock.mockResolvedValue('The treatment failed.');
     buildCitationsMock.mockReturnValue([]);
 
