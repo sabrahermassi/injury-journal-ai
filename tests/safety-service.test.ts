@@ -184,6 +184,23 @@ describe('safety service', () => {
       expect(checkSafety(question).allowed).toBe(false);
     });
   });
+
+  // --- Coverage for specific terms outside the original generic keyword set (#143) ---
+
+  it('blocks diagnosis requests naming a specific term not in the original keyword set', () => {
+    const questions = [
+      'Do I have a meniscus tear?',
+      'Do I have an ACL injury?',
+      'Do I have sciatica?',
+      'Do I have pneumonia?',
+      'Do I have diabetes?',
+      'Is this sciatica?',
+    ];
+
+    questions.forEach((question) => {
+      expect(checkSafety(question).allowed).toBe(false);
+    });
+  });
 });
 
 describe('checkAnswerSafety', () => {
@@ -289,6 +306,38 @@ describe('checkAnswerSafety', () => {
     const result = checkAnswerSafety(
       'You recorded physiotherapy on three occasions.',
       '',
+    );
+
+    expect(result.allowed).toBe(true);
+  });
+
+  // --- Coverage for specific terms outside the original generic keyword set (#143) ---
+
+  it('blocks a hedged diagnosis naming a specific term not in the original keyword set', () => {
+    expect(
+      checkAnswerSafety('Based on these symptoms, you may have diabetes.')
+        .allowed,
+    ).toBe(false);
+  });
+
+  it('blocks an ungrounded definite diagnosis naming a specific term not in the original keyword set', () => {
+    const result = checkAnswerSafety(
+      'You have sciatica.',
+      'Notes: patient reports occasional headaches.',
+    );
+
+    expect(result).toEqual({
+      allowed: false,
+      reason: 'unsupported_diagnosis',
+      message:
+        'I withheld that response because it stated a diagnosis that is not supported by your recorded information. I can summarize what is actually documented in your journal instead.',
+    });
+  });
+
+  it('allows a grounded definite diagnosis naming a specific term not in the original keyword set', () => {
+    const result = checkAnswerSafety(
+      'You have a meniscus tear, first recorded on 2024-01-15.',
+      'Injury: meniscus tear, first recorded on 2024-01-15.',
     );
 
     expect(result.allowed).toBe(true);

@@ -13,7 +13,7 @@ export type SafetyResult =
 // treat this regex layer as a fast pre-filter, not the sole safety boundary. The downstream
 // LLM must also be instructed never to diagnose, regardless of how the question is phrased.
 export const CONDITION_KEYWORDS =
-  'injury|condition|disease|syndrome|disorder|diagnosis|tear|fracture|cancer|tumou?r|disc|herniation|infection|concussion|arthritis';
+  'injury|condition|disease|syndrome|disorder|diagnosis|tear|fracture|cancer|tumou?r|disc|herniation|infection|concussion|arthritis|meniscus|acl|mcl|pcl|lcl|sciatica|pneumonia|diabetes';
 
 const diagnosisPatterns = [
   // "Do I have X" — only allow a short qualifier (article + up to 2 words) between the verb

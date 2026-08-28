@@ -306,9 +306,10 @@ flowchart TD
 > asserted term does not appear anywhere in that evidence (issue #142) — a definite restatement
 > of a diagnosis already in the record is still allowed, since that's the app's core
 > journal-summary behavior. This grounding check is still keyword-based: a diagnostic statement
-> using a specific medical term outside `CONDITION_KEYWORDS` (e.g. "meniscus", "ACL") is
-> invisible to it, same as every other pattern in this module (tracked separately as a
-> pre-existing coverage gap).
+> using a specific medical term outside `CONDITION_KEYWORDS` is invisible to it, same as every
+> other pattern in this module. `CONDITION_KEYWORDS` was expanded with several known-bypassing
+> terms (issue #143), but the list remains finite and hand-maintained; closing the gap for
+> arbitrary open-vocabulary terms is tracked under #140 (guardrails framework evaluation).
 
 ### 5.5. AI Agent Architecture
 

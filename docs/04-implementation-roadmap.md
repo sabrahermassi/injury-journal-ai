@@ -98,6 +98,10 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
   allowing them through unconditionally. Still keyword-based (`CONDITION_KEYWORDS`), so a
   specific medical term outside that list is still invisible to the check — tracked separately
   as a pre-existing coverage gap. (#142)
+- [x] Expand `CONDITION_KEYWORDS` with specific terms (meniscus, ACL/MCL/PCL/LCL, sciatica,
+  pneumonia, diabetes) identified as bypassing every pattern in `safety-service.ts`. The list
+  remains finite and hand-maintained — arbitrary open-vocabulary terms still bypass every
+  check; closing that structurally is tracked under #140. (#143)
 
 *Optional (safe to defer indefinitely):*
 - [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)
