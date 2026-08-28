@@ -65,6 +65,12 @@ async function postEmbedding(
   path: string,
   text: string,
 ): Promise<EmbeddingResponse> {
+  const apiKey = process.env.EMBEDDING_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('EMBEDDING_API_KEY is not configured');
+  }
+
   const controller = new AbortController();
 
   const timeout = setTimeout(
@@ -77,6 +83,7 @@ async function postEmbedding(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ text }),
       signal: controller.signal,

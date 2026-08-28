@@ -1,11 +1,29 @@
-from fastapi import FastAPI
+import os
+import secrets
+
+from fastapi import Depends, FastAPI, Header
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
 from .embedding_service import EmbeddingService
 
 
-app = FastAPI()
+def verify_api_key(authorization: str | None = Header(default=None)) -> None:
+    expected_key = os.environ.get("EMBEDDING_API_KEY")
+
+    if not expected_key:
+        raise HTTPException(
+            status_code=500,
+            detail="EMBEDDING_API_KEY is not configured",
+        )
+
+    scheme, _, token = (authorization or "").partition(" ")
+
+    if scheme != "Bearer" or not token or not secrets.compare_digest(token, expected_key):
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+
+app = FastAPI(dependencies=[Depends(verify_api_key)])
 
 embedding_service = EmbeddingService()
 

@@ -19,6 +19,8 @@ from fastapi.testclient import TestClient
 
 SRC_DIR = Path(__file__).resolve().parent.parent
 
+TEST_API_KEY = "test-embedding-key"
+
 
 class FakeEncodedVector:
     """Stand-in for the numpy array normally returned by
@@ -89,6 +91,8 @@ def api_module(monkeypatch):
     for name in ("embeddings.embedding_api", "embeddings.embedding_service"):
         monkeypatch.delitem(sys.modules, name, raising=False)
 
+    monkeypatch.setenv("EMBEDDING_API_KEY", TEST_API_KEY)
+
     module = importlib.import_module("embeddings.embedding_api")
 
     yield module
@@ -106,7 +110,9 @@ def fake_service(api_module, monkeypatch):
 
 @pytest.fixture
 def client(api_module, fake_service):
-    return TestClient(api_module.app)
+    return TestClient(
+        api_module.app, headers={"Authorization": f"Bearer {TEST_API_KEY}"}
+    )
 
 
 class TestEmbedEndpoint:
@@ -273,3 +279,49 @@ class TestEmbedBatchEndpoint:
         )
 
         assert response.status_code == 200
+
+
+class TestAuthentication:
+    def test_rejects_request_with_no_authorization_header(
+        self, api_module, fake_service
+    ):
+        unauthenticated_client = TestClient(api_module.app)
+
+        response = unauthenticated_client.post("/embed", json={"text": "hello"})
+
+        assert response.status_code == 401
+        assert fake_service.embed_document_calls == []
+
+    def test_rejects_request_with_wrong_key(self, api_module, fake_service):
+        unauthenticated_client = TestClient(
+            api_module.app, headers={"Authorization": "Bearer wrong-key"}
+        )
+
+        response = unauthenticated_client.post("/embed", json={"text": "hello"})
+
+        assert response.status_code == 401
+        assert fake_service.embed_document_calls == []
+
+    def test_rejects_request_with_non_bearer_scheme(self, api_module, fake_service):
+        unauthenticated_client = TestClient(
+            api_module.app, headers={"Authorization": TEST_API_KEY}
+        )
+
+        response = unauthenticated_client.post("/embed", json={"text": "hello"})
+
+        assert response.status_code == 401
+        assert fake_service.embed_document_calls == []
+
+    def test_fails_closed_when_api_key_is_not_configured(
+        self, api_module, fake_service, monkeypatch
+    ):
+        monkeypatch.delenv("EMBEDDING_API_KEY", raising=False)
+
+        unconfigured_client = TestClient(
+            api_module.app, headers={"Authorization": f"Bearer {TEST_API_KEY}"}
+        )
+
+        response = unconfigured_client.post("/embed", json={"text": "hello"})
+
+        assert response.status_code == 500
+        assert fake_service.embed_document_calls == []

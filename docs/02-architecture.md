@@ -505,10 +505,10 @@ flowchart TD
   personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`). No data-retention or
   minimization control exists today; this is accepted as a tradeoff of using a third-party LLM
   provider, not yet mitigated. Tracked as issue #117 (decide accept-as-is vs. minimization).
-- **Embedding service has no auth boundary:** `EMBEDDING_API_URL` (the Python/FastAPI service)
-  has no authentication. Acceptable only while strictly localhost-bound; must be revisited before
-  any deployment step (#33/#34) exposes it beyond localhost. Out of scope for #94/#95, which only
-  cover `/ai-agent`. Tracked as issue #118.
+- **Embedding service auth (#118):** Resolved. `EMBEDDING_API_URL` (the Python/FastAPI service)
+  now requires a shared `EMBEDDING_API_KEY` sent as a `Bearer` token, verified via a FastAPI
+  dependency (`verify_api_key` in `embedding_api.py`) with a constant-time comparison, and fails
+  closed (500) if the key isn't configured. `embedding-client.ts` sends the key on every request.
 
 ## 11. Architectural Decision Log
 
