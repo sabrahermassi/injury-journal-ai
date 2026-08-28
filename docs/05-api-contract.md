@@ -144,10 +144,10 @@ This is the most important section — these are gaps, not just documentation de
   conversation UI without the frontend re-sending full context itself (and there's currently no
   mechanism to do even that).
 - **Streaming.** Evaluated and deliberately deferred (#52): the LLM call stays fully buffered
-  (`generateAnswer` awaits the entire completion) and the response contract is a single JSON
-  object. No frontend consumer exists yet to justify the added complexity, and citations are
-  derived from the complete answer, not individual tokens. Revisit if/when a frontend is built and
-  latency proves to be a real UX problem.
+  (`generateAnswer` awaits the entire completion), and the endpoint returns one completed answer
+  together with its chunk-derived citations in a single JSON object. No frontend consumer exists
+  yet to justify the added complexity of streaming. Revisit if/when a frontend is built and latency
+  proves to be a real UX problem.
 - **An explicit groundedness/confidence signal.** CLAUDE.md's stated priority — prefer an
   explicit lack-of-information response over an unsupported plausible answer — is enforced only
   as a soft instruction inside the LLM prompt (`prompt-builder.ts`), not as a structural check or

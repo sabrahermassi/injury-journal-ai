@@ -155,8 +155,8 @@ product decision that should be made explicitly rather than discovered by omissi
   one question in, one answer out — no way to thread multi-turn context server-side). (#51)
 - [x] Either way: decide on streaming vs. full-response for the LLM call before frontend work
   commits to one UX pattern. Decided: stay full-response/buffered — no frontend consumer exists
-  yet, and citations depend on the complete answer, not a token stream. Revisit once a frontend is
-  built if latency becomes a real UX problem. (#52)
+  yet to justify the added complexity of streaming. Revisit once a frontend is built if latency
+  becomes a real UX problem. (#52)
 
 **Surfaced during the docs-accuracy review (PR #53), tracked but not yet in this list:**
 
