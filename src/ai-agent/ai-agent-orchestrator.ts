@@ -11,6 +11,17 @@ import {
   DIAGNOSIS_REQUEST_MESSAGE,
 } from '../safety/safety-service.js';
 
+function safetyRefusalResponse(message: string) {
+  return {
+    answer: message,
+    citations: [],
+    intent: 'safety' as const,
+    metadata: {
+      retrievedChunks: [],
+    },
+  };
+}
+
 export async function runAgent(
   question: string,
   userId: number,
@@ -26,14 +37,7 @@ export async function runAgent(
   state.safety = safety;
 
   if (!safety.allowed) {
-    return {
-      answer: safety.message,
-      citations: [],
-      intent: 'safety' as const,
-      metadata: {
-        retrievedChunks: [],
-      },
-    };
+    return safetyRefusalResponse(safety.message);
   }
 
   const intent = routeIntent(question, requestId);
@@ -42,14 +46,7 @@ export async function runAgent(
 
   switch (intent) {
     case 'safety':
-      return {
-        answer: DIAGNOSIS_REQUEST_MESSAGE,
-        citations: [],
-        intent,
-        metadata: {
-          retrievedChunks: [],
-        },
-      };
+      return safetyRefusalResponse(DIAGNOSIS_REQUEST_MESSAGE);
 
     case 'journal': {
       state.toolUsed = 'journal-tool';

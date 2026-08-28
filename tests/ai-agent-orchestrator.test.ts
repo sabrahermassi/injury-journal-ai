@@ -67,6 +67,10 @@ describe('agent orchestrator', () => {
 
     const result = await runAgent('What condition might this be?', 1);
 
+    expect(routeIntentMock).toHaveBeenCalledWith(
+      'What condition might this be?',
+      undefined,
+    );
     expect(ragToolMock).not.toHaveBeenCalled();
     expect(journalToolMock).not.toHaveBeenCalled();
 
