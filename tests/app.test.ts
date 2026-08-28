@@ -129,6 +129,29 @@ describe('security headers and CORS', () => {
     }
   });
 
+  it('reflects the request origin when ALLOWED_ORIGIN is present but blank', async () => {
+    // Regression test: an unfilled `ALLOWED_ORIGIN=` copied verbatim from
+    // .env.example sets the env var to an empty string, not undefined --
+    // this must behave the same as fully unset, not silently block every
+    // cross-origin request.
+    process.env.ALLOWED_ORIGIN = '';
+
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app)
+        .post('/ai-agent')
+        .set('Origin', 'https://example.com')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(response.headers['access-control-allow-origin']).toBe(
+        'https://example.com',
+      );
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
   it('restricts CORS to the configured origins when ALLOWED_ORIGIN is set', async () => {
     process.env.ALLOWED_ORIGIN = 'https://allowed.example.com';
 
