@@ -30,16 +30,44 @@ describe('generateAnswer', () => {
       ],
     });
 
-    const result = await generateAnswer('What treatments failed?');
+    const result = await generateAnswer(
+      'system prompt',
+      'What treatments failed?',
+    );
 
     expect(result).toBe('Shockwave therapy did not help.');
 
     expect(createMock).toHaveBeenCalled();
   });
 
+  it('sends the system and user prompts as separate messages', async () => {
+    createMock.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: 'answer',
+          },
+        },
+      ],
+    });
+
+    await generateAnswer('system prompt', 'user prompt');
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: [
+          { role: 'system', content: 'system prompt' },
+          { role: 'user', content: 'user prompt' },
+        ],
+      }),
+    );
+  });
+
   it('propagates LLM errors', async () => {
     createMock.mockRejectedValue(new Error('LLM unavailable'));
 
-    await expect(generateAnswer('question')).rejects.toThrow('LLM unavailable');
+    await expect(
+      generateAnswer('system prompt', 'question'),
+    ).rejects.toThrow('LLM unavailable');
   });
 });

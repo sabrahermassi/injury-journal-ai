@@ -296,9 +296,9 @@ flowchart TD
     O -->|Diagnosis-like| R
 ```
 
-> **Current status:** both sides are covered, but only as pattern-based text filtering.
-> `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before retrieval;
-> `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
+> **Current status:** three checks exist, all pattern-based text filtering, no LLM-level
+> classification. `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before
+> retrieval; `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
 > `rag-service.ts` and the journal-intent branch of `ai-agent-orchestrator.ts`) and withholds it
 > if the LLM hedges toward its own diagnostic judgment ("you may have...", "this could be...").
 > `checkAnswerSafety` also receives the retrieved chunks / journal record text as grounding
@@ -310,6 +310,20 @@ flowchart TD
 > other pattern in this module. `CONDITION_KEYWORDS` was expanded with several known-bypassing
 > terms (issue #143), but the list remains finite and hand-maintained; closing the gap for
 > arbitrary open-vocabulary terms is tracked under #140 (guardrails framework evaluation).
+>
+> A third check, `checkContentSafety`, was added (issue #66) to close a gap where neither existing
+> check ever inspected the journal/RAG-derived *content* interpolated into the prompt — only the
+> question and the final answer. It runs on the assembled context (`buildContext()` output for the
+> RAG path, `formatInjuryRecord()` output for the journal path) before the LLM call, looking for
+> prompt-injection-style phrasing (e.g. "ignore previous instructions", "you are now a..."). This
+> is defense-in-depth, not the primary control: the primary control is that `prompt-builder.ts` now
+> sends fixed instructions as a `system`-role message (`SYSTEM_PROMPT`) separate from the
+> `user`-role message carrying the question and context, with journal/RAG content wrapped in
+> `<journal_data>` tags the system prompt explicitly marks as untrusted data. Literal
+> `<journal_data>`/`</journal_data>` occurring inside stored content is neutralized before
+> interpolation so it can't forge a fake boundary. Like the other two checks, this is regex-based
+> and will always be a step behind real-world phrasing — it narrows the attack surface, it doesn't
+> eliminate it.
 
 ### 5.5. AI Agent Architecture
 
