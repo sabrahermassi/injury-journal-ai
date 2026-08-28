@@ -10,6 +10,7 @@ const { askAgent } = await import('../src/ai-agent/ai-agent-controller.js');
 
 type MockRequest = {
   headers?: Record<string, string>;
+  userId?: number;
   body?: {
     question?: unknown;
     injuryId?: unknown;
@@ -34,6 +35,7 @@ describe('ai agent controller', () => {
 
   it('returns agent result', async () => {
     const req: MockRequest = {
+      userId: 1,
       body: {
         question: 'What treatments failed?',
       },
@@ -56,6 +58,7 @@ describe('ai agent controller', () => {
 
     expect(runAgentMock).toHaveBeenCalledWith(
       'What treatments failed?',
+      1,
       undefined,
       expect.any(String),
     );
@@ -74,6 +77,7 @@ describe('ai agent controller', () => {
 
   it('uses a supplied x-request-id header instead of generating one', async () => {
     const req: MockRequest = {
+      userId: 1,
       headers: {
         'x-request-id': 'client-supplied-id',
       },
@@ -93,6 +97,7 @@ describe('ai agent controller', () => {
 
     expect(runAgentMock).toHaveBeenCalledWith(
       'What treatments failed?',
+      1,
       undefined,
       'client-supplied-id',
     );
@@ -100,6 +105,7 @@ describe('ai agent controller', () => {
 
   it('generates a request ID when the x-request-id header is empty', async () => {
     const req: MockRequest = {
+      userId: 1,
       headers: {
         'x-request-id': '',
       },
@@ -119,6 +125,7 @@ describe('ai agent controller', () => {
 
     expect(runAgentMock).toHaveBeenCalledWith(
       'What treatments failed?',
+      1,
       undefined,
       expect.not.stringMatching(/^$/),
     );
@@ -126,6 +133,7 @@ describe('ai agent controller', () => {
 
   it('passes injuryId to the agent', async () => {
     const req: MockRequest = {
+      userId: 1,
       body: {
         question: 'Summarize my injury',
         injuryId: 42,
@@ -143,9 +151,29 @@ describe('ai agent controller', () => {
 
     expect(runAgentMock).toHaveBeenCalledWith(
       'Summarize my injury',
+      1,
       42,
       expect.any(String),
     );
+  });
+
+  it('returns 401 when the authenticated userId is missing', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 'What treatments failed?',
+      },
+    };
+
+    const res = mockResponse();
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Authentication required',
+    });
+
+    expect(runAgentMock).not.toHaveBeenCalled();
   });
 
   it('returns 400 without question', async () => {
@@ -198,6 +226,7 @@ describe('ai agent controller', () => {
 
   it('accepts a question at exactly the maximum length', async () => {
     const req: MockRequest = {
+      userId: 1,
       body: {
         question: 'x'.repeat(10_000),
       },
@@ -266,6 +295,7 @@ describe('ai agent controller', () => {
 
   it('returns 500 when agent fails', async () => {
     const req: MockRequest = {
+      userId: 1,
       body: {
         question: 'test',
       },

@@ -82,6 +82,7 @@ describe('RAG pipeline integration', () => {
     const result = await answerQuestion(
       'What treatments did I have?',
       injuryId,
+      userId,
       2,
     );
 
@@ -111,7 +112,7 @@ describe('RAG pipeline integration', () => {
   });
 
   it('blocks diagnosis requests before retrieval or LLM generation', async () => {
-    const result = await answerQuestion('Do I have a fracture?', injuryId);
+    const result = await answerQuestion('Do I have a fracture?', injuryId, userId);
 
     expect(result).toEqual({
       answer:

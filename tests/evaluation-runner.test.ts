@@ -26,7 +26,11 @@ describe('evaluation runner', () => {
     expect(runAgentMock).toHaveBeenCalledTimes(dataset.length);
 
     for (const item of dataset) {
-      expect(runAgentMock).toHaveBeenCalledWith(item.question, item.injuryId);
+      expect(runAgentMock).toHaveBeenCalledWith(
+        item.question,
+        item.userId,
+        item.injuryId,
+      );
     }
 
     expect(results.length).toBeGreaterThan(0);

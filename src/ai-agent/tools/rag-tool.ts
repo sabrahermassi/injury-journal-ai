@@ -2,9 +2,10 @@ import { answerQuestion } from '../../rag/rag-service.js';
 
 export async function ragTool(
   question: string,
-  injuryId?: number,
+  injuryId: number | undefined,
+  userId: number,
   limit = 5,
   requestId?: string,
 ) {
-  return answerQuestion(question, injuryId, limit, requestId);
+  return answerQuestion(question, injuryId, userId, limit, requestId);
 }

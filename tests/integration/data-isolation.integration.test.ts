@@ -1,8 +1,7 @@
-// These tests document the *current* absence of user-level data isolation (issue #91).
-// Requests are now authenticated (#94), but there is still no per-tool/retrieval authorization
-// (#95), so several assertions here lock in leaky-by-design behavior rather than correct
-// behavior: an authenticated caller can still read another user's data. Once #95 lands, the
-// tests that currently assert a leak should be rewritten to assert isolation instead.
+// These tests document user-level data isolation (issue #91), now enforced by per-tool and
+// retrieval/vector-level authorization (#95): an authenticated caller can only read their own
+// injuries and chunks, whether or not an injuryId is supplied, and an injuryId belonging to
+// another user is rejected rather than silently returning that user's data.
 
 import { jest } from '@jest/globals';
 import request from 'supertest';
@@ -113,7 +112,7 @@ describe('data isolation regression tests', () => {
     ]);
   });
 
-  it('leaks chunks across injuries/users when injuryId is omitted', async () => {
+  it('scopes retrieval to the caller\'s own chunks across injuries when injuryId is omitted', async () => {
     const response = await request(app)
       .post('/ai-agent')
       .set('Authorization', authHeader)
@@ -133,10 +132,10 @@ describe('data isolation regression tests', () => {
       .map((chunk) => chunk.sourceId)
       .sort();
 
-    expect(sourceIds).toEqual([1, 2]);
+    expect(sourceIds).toEqual([1]);
   });
 
-  it('returns any injury record to any caller with no ownership check', async () => {
+  it('rejects a journal request for an injuryId owned by another user', async () => {
     const response = await request(app)
       .post('/ai-agent')
       .set('Authorization', authHeader)
@@ -146,11 +145,12 @@ describe('data isolation regression tests', () => {
       });
 
     expect(response.status).toBe(200);
-    expect(response.body.intent).toBe('journal');
-    expect(response.body.answer).toBe('mocked agent answer');
+    expect(response.body).toEqual({
+      answer: 'No injury record was found.',
+      citations: [],
+      intent: 'journal',
+    });
 
-    expect(mockGenerateAnswer.mock.calls[0][0]).toContain(
-      'Data Isolation Test B',
-    );
+    expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 });

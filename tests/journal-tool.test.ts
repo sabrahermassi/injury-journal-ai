@@ -1,11 +1,11 @@
 import { jest } from '@jest/globals';
 
-const findUniqueMock = jest.fn();
+const findFirstMock = jest.fn();
 
 jest.unstable_mockModule('@prisma/client', () => ({
   PrismaClient: jest.fn().mockImplementation(() => ({
     injury: {
-      findUnique: findUniqueMock,
+      findFirst: findFirstMock,
     },
   })),
 }));
@@ -36,15 +36,16 @@ describe('journalTool', () => {
     jest.clearAllMocks();
   });
 
-  it('queries the injury by id with all relations included and returns the result', async () => {
+  it('queries the injury by id and userId with all relations included and returns the result', async () => {
     const injury = baseInjury();
-    findUniqueMock.mockResolvedValue(injury);
+    findFirstMock.mockResolvedValue(injury);
 
-    const result = await journalTool(1);
+    const result = await journalTool(1, 1);
 
-    expect(findUniqueMock).toHaveBeenCalledWith({
+    expect(findFirstMock).toHaveBeenCalledWith({
       where: {
         id: 1,
+        userId: 1,
       },
       include: {
         Treatment: true,
@@ -57,10 +58,30 @@ describe('journalTool', () => {
   });
 
   it('returns null when no injury is found', async () => {
-    findUniqueMock.mockResolvedValue(null);
+    findFirstMock.mockResolvedValue(null);
 
-    const result = await journalTool(999);
+    const result = await journalTool(999, 1);
 
+    expect(result).toBeNull();
+  });
+
+  it('returns null when the injury exists but belongs to a different user', async () => {
+    findFirstMock.mockResolvedValue(null);
+
+    const result = await journalTool(1, 2);
+
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: {
+        id: 1,
+        userId: 2,
+      },
+      include: {
+        Treatment: true,
+        Symptom: true,
+        TimelineEvent: true,
+        MedicalVisit: true,
+      },
+    });
     expect(result).toBeNull();
   });
 });

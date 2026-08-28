@@ -7,6 +7,15 @@ const generateAnswerMock = jest.fn();
 const buildCitationsMock = jest.fn();
 const checkSafetyMock = jest.fn();
 const checkAnswerSafetyMock = jest.fn();
+const findFirstMock = jest.fn();
+
+jest.unstable_mockModule('../src/lib/prisma.js', () => ({
+  prisma: {
+    injury: {
+      findFirst: findFirstMock,
+    },
+  },
+}));
 
 jest.unstable_mockModule('../src/rag/citation-builder.js', () => ({
   buildCitations: buildCitationsMock,
@@ -76,7 +85,7 @@ describe('rag service', () => {
 
     buildCitationsMock.mockReturnValue(citations);
 
-    const result = await answerQuestion('What treatments failed?');
+    const result = await answerQuestion('What treatments failed?', undefined, 1);
 
     expect(checkSafetyMock).toHaveBeenCalledWith(
       'What treatments failed?',
@@ -86,6 +95,7 @@ describe('rag service', () => {
     expect(semanticSearchMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
+      1,
       5,
       undefined,
     );
@@ -136,7 +146,7 @@ describe('rag service', () => {
 
     buildCitationsMock.mockReturnValue(citations);
 
-    const result = await answerQuestion('What treatments did not work?');
+    const result = await answerQuestion('What treatments did not work?', undefined, 1);
 
     expect(buildCitationsMock).toHaveBeenCalledWith(chunks, undefined);
 
@@ -154,7 +164,7 @@ describe('rag service', () => {
       message: 'I cannot diagnose medical conditions.',
     });
 
-    const result = await answerQuestion('Do I have cancer?');
+    const result = await answerQuestion('Do I have cancer?', undefined, 1);
 
     expect(checkSafetyMock).toHaveBeenCalledWith('Do I have cancer?', undefined);
 
@@ -192,7 +202,7 @@ describe('rag service', () => {
       message: 'I withheld that response because it read like a medical diagnosis.',
     });
 
-    const result = await answerQuestion('What did the doctor say?');
+    const result = await answerQuestion('What did the doctor say?', undefined, 1);
 
     expect(checkAnswerSafetyMock).toHaveBeenCalledWith(
       'Based on these symptoms, you may have a torn meniscus.',
@@ -222,7 +232,7 @@ describe('rag service', () => {
 
     buildCitationsMock.mockReturnValue([]);
 
-    const result = await answerQuestion('What treatments have I tried?');
+    const result = await answerQuestion('What treatments have I tried?', undefined, 1);
 
     expect(buildContextMock).toHaveBeenCalledWith([], undefined);
 
@@ -249,9 +259,66 @@ describe('rag service', () => {
   it('propagates retrieval errors', async () => {
     semanticSearchMock.mockRejectedValue(new Error('search failed'));
 
-    await expect(answerQuestion('question')).rejects.toThrow('search failed');
+    await expect(answerQuestion('question', undefined, 1)).rejects.toThrow(
+      'search failed',
+    );
 
     expect(generateAnswerMock).not.toHaveBeenCalled();
     expect(buildCitationsMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects an injuryId not owned by the caller without calling retrieval', async () => {
+    findFirstMock.mockResolvedValue(null);
+
+    const result = await answerQuestion('What treatments failed?', 99, 1);
+
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: { id: 99, userId: 1 },
+      select: { id: true },
+    });
+
+    expect(result).toEqual({
+      answer: 'No injury record was found.',
+      chunks: [],
+      citations: [],
+    });
+
+    expect(semanticSearchMock).not.toHaveBeenCalled();
+    expect(generateAnswerMock).not.toHaveBeenCalled();
+    expect(buildCitationsMock).not.toHaveBeenCalled();
+  });
+
+  it('proceeds with retrieval when the injuryId is owned by the caller', async () => {
+    findFirstMock.mockResolvedValue({ id: 42 });
+
+    const chunks = [
+      {
+        id: 1,
+        sourceType: 'treatment',
+        sourceId: 42,
+        content: 'Shockwave therapy did not help.',
+      },
+    ];
+
+    semanticSearchMock.mockResolvedValue(chunks);
+    buildContextMock.mockReturnValue('Shockwave therapy did not help.');
+    buildPromptMock.mockReturnValue('prompt');
+    generateAnswerMock.mockResolvedValue('The treatment failed.');
+    buildCitationsMock.mockReturnValue([]);
+
+    await answerQuestion('What treatments failed?', 42, 1);
+
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: { id: 42, userId: 1 },
+      select: { id: true },
+    });
+
+    expect(semanticSearchMock).toHaveBeenCalledWith(
+      'What treatments failed?',
+      42,
+      1,
+      5,
+      undefined,
+    );
   });
 });

@@ -41,7 +41,7 @@ describe('agent orchestrator', () => {
       message: 'I cannot diagnose medical conditions.',
     });
 
-    const result = await runAgent('Do I have cancer?');
+    const result = await runAgent('Do I have cancer?', 1);
 
     expect(safetyToolMock).toHaveBeenCalledWith('Do I have cancer?', undefined);
 
@@ -80,7 +80,7 @@ describe('agent orchestrator', () => {
       ],
     });
 
-    const result = await runAgent('What treatments failed?');
+    const result = await runAgent('What treatments failed?', 1);
 
     expect(routeIntentMock).toHaveBeenCalledWith(
       'What treatments failed?',
@@ -90,6 +90,7 @@ describe('agent orchestrator', () => {
     expect(ragToolMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
+      1,
       5,
       undefined,
     );
@@ -132,14 +133,14 @@ describe('agent orchestrator', () => {
       'Your sprained ankle injury started on record.',
     );
 
-    const result = await runAgent('Show my injury timeline', 42);
+    const result = await runAgent('Show my injury timeline', 1, 42);
 
     expect(routeIntentMock).toHaveBeenCalledWith(
       'Show my injury timeline',
       undefined,
     );
 
-    expect(journalToolMock).toHaveBeenCalledWith(42, undefined);
+    expect(journalToolMock).toHaveBeenCalledWith(42, 1, undefined);
 
     expect(formatInjuryRecordMock).toHaveBeenCalledWith(
       { id: 42 },
@@ -172,7 +173,7 @@ describe('agent orchestrator', () => {
 
     generateAnswerMock.mockResolvedValue('');
 
-    const result = await runAgent('Show my injury timeline', 42);
+    const result = await runAgent('Show my injury timeline', 1, 42);
 
     expect(generateAnswerMock).toHaveBeenCalled();
 
@@ -203,7 +204,7 @@ describe('agent orchestrator', () => {
       'Based on these symptoms, you may have a meniscus tear.',
     );
 
-    const result = await runAgent('Show my injury timeline', 42);
+    const result = await runAgent('Show my injury timeline', 1, 42);
 
     expect(result).toEqual({
       answer:
@@ -232,7 +233,7 @@ describe('agent orchestrator', () => {
       'You have a meniscus tear, as noted in your medical visit on 2024-01-15.',
     );
 
-    const result = await runAgent('Show my injury timeline', 42);
+    const result = await runAgent('Show my injury timeline', 1, 42);
 
     expect(result).toEqual({
       answer:
@@ -259,7 +260,7 @@ describe('agent orchestrator', () => {
 
     generateAnswerMock.mockResolvedValue('You have cancer.');
 
-    const result = await runAgent('Show my injury timeline', 42);
+    const result = await runAgent('Show my injury timeline', 1, 42);
 
     expect(result).toEqual({
       answer:
