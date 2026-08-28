@@ -153,8 +153,10 @@ product decision that should be made explicitly rather than discovered by omissi
   `GET /injuries` (list), login/session endpoints, a `GET /me` identity endpoint. (#50)
 - [ ] Either way: a conversation/thread concept for the assistant (currently fully stateless,
   one question in, one answer out — no way to thread multi-turn context server-side). (#51)
-- [ ] Either way: decide on streaming vs. full-response for the LLM call before frontend work
-  commits to one UX pattern. (#52)
+- [x] Either way: decide on streaming vs. full-response for the LLM call before frontend work
+  commits to one UX pattern. Decided: stay full-response/buffered — no frontend consumer exists
+  yet, and citations depend on the complete answer, not a token stream. Revisit once a frontend is
+  built if latency becomes a real UX problem. (#52)
 
 **Surfaced during the docs-accuracy review (PR #53), tracked but not yet in this list:**
 
