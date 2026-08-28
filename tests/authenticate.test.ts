@@ -107,6 +107,45 @@ describe('authenticate middleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('accepts a lowercase "bearer" scheme (RFC 7235 is case-insensitive)', () => {
+    const token = jwt.sign({ sub: '42' }, SECRET, { algorithm: 'HS256' });
+    const req: MockRequest = { headers: { authorization: `bearer ${token}` } };
+    const res = mockResponse();
+    const next = jest.fn();
+
+    authenticate(req as never, res as never, next as never);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.userId).toBe(42);
+  });
+
+  it('accepts extra whitespace between the scheme and the token', () => {
+    const token = jwt.sign({ sub: '42' }, SECRET, { algorithm: 'HS256' });
+    const req: MockRequest = { headers: { authorization: `Bearer   ${token}` } };
+    const res = mockResponse();
+    const next = jest.fn();
+
+    authenticate(req as never, res as never, next as never);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.userId).toBe(42);
+  });
+
+  it('rejects a header with trailing content after the token', () => {
+    const token = jwt.sign({ sub: '42' }, SECRET, { algorithm: 'HS256' });
+    const req: MockRequest = {
+      headers: { authorization: `Bearer ${token} extra` },
+    };
+    const res = mockResponse();
+    const next = jest.fn();
+
+    authenticate(req as never, res as never, next as never);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Authentication required' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('calls next() and sets req.userId for a valid token', () => {
     const token = jwt.sign({ sub: '42' }, SECRET, { algorithm: 'HS256' });
     const req: MockRequest = { headers: { authorization: `Bearer ${token}` } };
