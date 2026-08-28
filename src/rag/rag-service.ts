@@ -29,7 +29,7 @@ export async function answerQuestion(
 
   const answer = await generateAnswer(prompt, requestId);
 
-  const answerSafety = checkAnswerSafety(answer, requestId);
+  const answerSafety = checkAnswerSafety(answer, context, requestId);
 
   if (!answerSafety.allowed) {
     return {

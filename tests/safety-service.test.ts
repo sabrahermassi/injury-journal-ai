@@ -236,6 +236,7 @@ describe('checkAnswerSafety', () => {
   it('allows a definite restatement of a diagnosis already in the record', () => {
     const result = checkAnswerSafety(
       'You have an ACL tear from a football injury, first recorded on 2024-01-15.',
+      'Injury: ACL tear, first recorded on 2024-01-15.',
     );
 
     expect(result.allowed).toBe(true);
@@ -244,6 +245,7 @@ describe('checkAnswerSafety', () => {
   it('allows quoting a "Diagnosis:" label from a doctor\'s note', () => {
     const result = checkAnswerSafety(
       "Your medical visit on 2024-01-15 with Dr. Smith noted: Diagnosis: torn meniscus.",
+      "Medical visit 2024-01-15, Dr. Smith. Notes: Diagnosis: torn meniscus.",
     );
 
     expect(result.allowed).toBe(true);
@@ -252,6 +254,41 @@ describe('checkAnswerSafety', () => {
   it('allows a definite "this is" restatement of a recorded condition', () => {
     const result = checkAnswerSafety(
       'This is the fracture you recorded on 2023-06-01, treated with a cast.',
+      'Injury: fracture recorded on 2023-06-01, treated with a cast.',
+    );
+
+    expect(result.allowed).toBe(true);
+  });
+
+  // --- New coverage for #142: definite diagnostic assertions must be grounded in evidence ---
+
+  it('blocks a definite diagnosis that is not supported by the evidence', () => {
+    const result = checkAnswerSafety(
+      'You have cancer.',
+      'Notes: patient reports occasional headaches.',
+    );
+
+    expect(result).toEqual({
+      allowed: false,
+      reason: 'unsupported_diagnosis',
+      message:
+        'I withheld that response because it stated a diagnosis that is not supported by your recorded information. I can summarize what is actually documented in your journal instead.',
+    });
+  });
+
+  it('blocks a "diagnosis:" style assertion not present in the evidence', () => {
+    const result = checkAnswerSafety(
+      'Diagnosis: arthritis.',
+      'Notes: patient reports knee pain after running.',
+    );
+
+    expect(result.allowed).toBe(false);
+  });
+
+  it('allows an answer with no diagnostic assertion regardless of evidence', () => {
+    const result = checkAnswerSafety(
+      'You recorded physiotherapy on three occasions.',
+      '',
     );
 
     expect(result.allowed).toBe(true);

@@ -301,12 +301,14 @@ flowchart TD
 > `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
 > `rag-service.ts` and the journal-intent branch of `ai-agent-orchestrator.ts`) and withholds it
 > if the LLM hedges toward its own diagnostic judgment ("you may have...", "this could be...").
-> `checkAnswerSafety` receives only the answer text and `requestId` — it has no access to the
-> journal record or retrieved chunks, so it cannot distinguish a definite diagnostic statement
-> that's grounded in the record from one the LLM invented. It allows **all** definite diagnostic
-> statements through unconditionally ("you have X", "diagnosis: X"), whether or not they're
-> actually supported by the journal data. Verifying definite assertions against source evidence
-> is tracked separately (issue #142).
+> `checkAnswerSafety` also receives the retrieved chunks / journal record text as grounding
+> evidence, and blocks a definite diagnostic statement ("you have X", "diagnosis: X") whose
+> asserted term does not appear anywhere in that evidence (issue #142) — a definite restatement
+> of a diagnosis already in the record is still allowed, since that's the app's core
+> journal-summary behavior. This grounding check is still keyword-based: a diagnostic statement
+> using a specific medical term outside `CONDITION_KEYWORDS` (e.g. "meniscus", "ACL") is
+> invisible to it, same as every other pattern in this module (tracked separately as a
+> pre-existing coverage gap).
 
 ### 5.5. AI Agent Architecture
 
