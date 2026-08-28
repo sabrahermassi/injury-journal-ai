@@ -368,7 +368,7 @@ describe('checkContentSafety', () => {
       allowed: false,
       reason: 'content_injection_risk',
       message:
-        'I could not safely process the stored journal content for this request. Please rephrase your question or review the related journal entry.',
+        'I could not safely process some of the retrieved content for this request. Please rephrase your question, or ask about your recorded symptoms, tests, treatments, and medical history instead.',
     });
   });
 
