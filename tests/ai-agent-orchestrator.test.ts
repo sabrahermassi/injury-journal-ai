@@ -260,7 +260,7 @@ describe('agent orchestrator', () => {
 
     generateAnswerMock.mockResolvedValue('You have cancer.');
 
-    const result = await runAgent('Show my injury timeline', 42);
+    const result = await runAgent('Show my injury timeline', 1, 42);
 
     expect(result).toEqual({
       answer:
