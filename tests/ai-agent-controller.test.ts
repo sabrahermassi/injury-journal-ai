@@ -171,6 +171,7 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Authentication required',
+      code: 'authentication_required',
     });
 
     expect(runAgentMock).not.toHaveBeenCalled();
@@ -200,6 +201,7 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Question is required',
+      code: 'question_required',
     });
 
     expect(runAgentMock).not.toHaveBeenCalled();
@@ -219,6 +221,7 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Question exceeds maximum length of 10000 characters',
+      code: 'question_too_long',
     });
 
     expect(runAgentMock).not.toHaveBeenCalled();
@@ -255,6 +258,7 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Question is required',
+      code: 'question_required',
     });
 
     expect(runAgentMock).not.toHaveBeenCalled();
@@ -275,6 +279,7 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Invalid injuryId',
+      code: 'invalid_injury_id',
     });
   });
 
@@ -311,6 +316,7 @@ describe('ai agent controller', () => {
 
     expect(res.json).toHaveBeenCalledWith({
       error: 'Failed to process request',
+      code: 'internal_error',
     });
   });
 });

@@ -64,5 +64,8 @@
     "js-tiktoken": "^1.0.21",
     "jsonwebtoken": "^9.0.3",
     "zod": "^4.4.3"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
   }
 }

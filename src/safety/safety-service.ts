@@ -15,6 +15,9 @@ export type SafetyResult =
 export const CONDITION_KEYWORDS =
   'injury|condition|disease|syndrome|disorder|diagnosis|tear|fracture|cancer|tumou?r|disc|herniation|infection|concussion|arthritis|meniscus|acl|mcl|pcl|lcl|sciatica|pneumonia|diabetes';
 
+export const DIAGNOSIS_REQUEST_MESSAGE =
+  'I cannot diagnose medical conditions or identify what condition you may have, but I can help summarize your recorded symptoms, tests, treatments, and medical history.';
+
 const diagnosisPatterns = [
   // "Do I have X" — only allow a short qualifier (article + up to 2 words) between the verb
   // and the keyword, so unrelated context ("old notes about my fracture") isn't swallowed by
@@ -86,8 +89,7 @@ export function checkSafety(question: string, requestId?: string): SafetyResult 
     return {
       allowed: false,
       reason: 'diagnosis_request',
-      message:
-        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+      message: DIAGNOSIS_REQUEST_MESSAGE,
     };
   }
 
@@ -166,6 +168,49 @@ function findUngroundedDiagnosisTerm(
   }
 
   return null;
+}
+
+// Detects prompt-injection-style phrasing inside stored journal/RAG content (e.g. a
+// `notes` or `description` field) before it's interpolated into the LLM prompt. This is
+// defense-in-depth, not the primary control — the primary control is that the prompt
+// builder sends this content as clearly-delimited untrusted data in a separate message
+// from the fixed system instructions (see #66). Like `diagnosisPatterns`, this pattern
+// list will always be a step behind real-world phrasing.
+const promptInjectionPatterns = [
+  /ignore (?:the |all |any )?(?:previous|prior|above|earlier) instructions/i,
+  /disregard (?:the |all |any )?(?:previous|prior|above|earlier) instructions/i,
+  /forget (?:the |all |any )?(?:previous|prior|above|earlier) instructions/i,
+  /new instructions\s*:/i,
+  /system prompt/i,
+  /you are now (?:a|an)\b/i,
+  /act as (?:a|an)\b/i,
+  /pretend (?:you are|to be)\b/i,
+];
+
+export function checkContentSafety(
+  content: string,
+  requestId?: string,
+): SafetyResult {
+  void requestId; // unused for now — reserved for future log correlation (#32)
+
+  const normalizedContent = content.replace(/\s+/g, ' ').trim();
+
+  const isInjectionAttempt = promptInjectionPatterns.some((pattern) =>
+    pattern.test(normalizedContent),
+  );
+
+  if (isInjectionAttempt) {
+    return {
+      allowed: false,
+      reason: 'content_injection_risk',
+      message:
+        'I could not safely process some of the retrieved content for this request. Please rephrase your question, or ask about your recorded symptoms, tests, treatments, and medical history instead.',
+    };
+  }
+
+  return {
+    allowed: true,
+  };
 }
 
 export function checkAnswerSafety(

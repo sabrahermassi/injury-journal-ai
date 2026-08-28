@@ -123,12 +123,21 @@ query/document embedding-mode gap above).
 3. `buildContext(chunks)` — joins raw chunk `content` with `Source N:` headers and `---`
    separators. **No token-budget check** — if retrieval ever returns many/large chunks, nothing
    caps the resulting prompt size before it's sent to the LLM.
-4. `buildPrompt(question, context)` — a single fixed instruction ("answer using only the provided
-   journal information... if not present, say you don't have enough information") plus the raw
-   context and question, no few-shot examples, no output-format constraint.
-5. `generateAnswer(prompt)` (`llm-client.ts`) — one Groq chat-completion call, no streaming, no
+4. `checkContentSafety(context)` — regex-based pre-generation check over the assembled retrieval
+   context (not just the question), added to close a prompt-injection gap where journal-derived
+   content had no safety inspection of its own (issue #66). If blocked, returns immediately with a
+   refusal message, `chunks: []`, `citations: []` — no LLM call happens.
+5. `buildUserPrompt(question, context)` (`prompt-builder.ts`) — wraps `context` in `<journal_data>`
+   delimiters (any literal `<journal_data>`/`</journal_data>` occurring inside `context` itself is
+   neutralized first — including whitespace-tolerant variants like `< /journal_data>`, not just the
+   exact tag spelling — so stored content can't forge a fake boundary) plus the question. The fixed
+   grounding/safety instructions live separately in `SYSTEM_PROMPT`, which explicitly tells the
+   model to treat `<journal_data>` content as untrusted data, never as instructions.
+6. `generateAnswer(systemPrompt, userPrompt)` (`llm-client.ts`) — one Groq chat-completion call
+   sending `SYSTEM_PROMPT` as the `system` role message and the built user prompt as the `user`
+   role message (previously a single combined `user` message); no streaming, no
    timeout configured explicitly (relies on the SDK's default), no retry.
-6. `buildCitations(chunks)` — dedupes by `sourceType:sourceId`, builds a label + optional date
+7. `buildCitations(chunks)` — dedupes by `sourceType:sourceId`, builds a label + optional date
    from chunk metadata. **Does not consult the generated answer at all** — citations are a
    provenance list of what was retrieved, not a check of what the LLM actually used or said.
 
@@ -144,8 +153,8 @@ generic `500 { error: "Failed to generate answer" }` — no distinction between 
 **Missing tests — confirmed by direct check, not assumption:** `context-builder.ts`'s empty-input
 behavior (an empty `chunks` array still produces a valid, if minimal, context string — no crash),
 but there is **no test asserting what `answerQuestion` actually does when zero chunks are
-retrieved** (e.g., whether the LLM is still called with an essentially empty "Journal
-information:" section, and what it tends to answer). This matches the already-tracked roadmap item
+retrieved** (e.g., whether the LLM is still called with an essentially empty `<journal_data>`
+section, and what it tends to answer). This matches the already-tracked roadmap item
 ("Add a test for the empty-retrieval path in `answerQuestion`," issue referenced in
 `docs/04-implementation-roadmap.md`'s "do now" list) — confirmed still open, not stale.
 
@@ -162,7 +171,7 @@ Traced directly against the controllers and services, not assumed:
 | **DB fails** | Any Prisma/raw-SQL error (`vector-storage.ts`, `journal-tool.ts`) propagates uncaught up to the same controller-level `catch` → same generic 500. |
 | **Bad/malformed document (ingestion)** | Not directly applicable — `buildJournalDocuments` operates on already-typed Prisma results, not external/untrusted input. The closest analogue, a chunk whose content becomes empty after processing, is covered under Flow 2's chunker finding above. |
 | **Duplicate ingestion** | Handled correctly and idempotently — `storeDocumentChunk`'s `ON CONFLICT (sourceType, sourceId, chunkIndex) DO UPDATE` means re-ingesting the same source record updates existing rows rather than duplicating them, and `deleteDocumentChunksExcept` prunes chunks left over from a run that previously produced more chunks for that record. Verified via `vector-storage.ts` directly, not assumed. |
-| **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty "Journal information:" section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. Nothing short-circuits before the LLM call; whether the model actually follows that instruction is unverified — no test covers it (see Flow 4). |
+| **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty `<journal_data>` section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. `checkContentSafety` runs on the empty string but has nothing to match, so it doesn't short-circuit this case; whether the model actually follows the "say you lack enough information" instruction is unverified — no test covers it (see Flow 4). |
 
 **Cross-cutting observation:** every failure class above collapses into the same generic
 `{ error: "Failed to process request" }` 500 response, with no error code/type. A frontend cannot

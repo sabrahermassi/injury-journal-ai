@@ -115,7 +115,7 @@ describe('AI agent route integration', () => {
 
     expect(response.body).toEqual({
       answer:
-        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+        'I cannot diagnose medical conditions or identify what condition you may have, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
       citations: [],
       intent: 'safety',
       metadata: {
@@ -146,7 +146,7 @@ describe('AI agent route integration', () => {
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
 
-    expect(mockGenerateAnswer.mock.calls[0][0]).toContain(
+    expect(mockGenerateAnswer.mock.calls[0][1]).toContain(
       'AI Agent Route Test',
     );
   });
@@ -206,6 +206,7 @@ describe('AI agent route integration', () => {
 
     expect(response.body).toEqual({
       error: 'Question is required',
+      code: 'question_required',
     });
 
     expect(mockEmbedQuery).not.toHaveBeenCalled();
@@ -219,7 +220,10 @@ describe('AI agent route integration', () => {
     });
 
     expect(response.status).toBe(401);
-    expect(response.body).toEqual({ error: 'Authentication required' });
+    expect(response.body).toEqual({
+      error: 'Authentication required',
+      code: 'authentication_required',
+    });
     expect(mockEmbedQuery).not.toHaveBeenCalled();
   });
 
@@ -233,7 +237,10 @@ describe('AI agent route integration', () => {
       });
 
     expect(response.status).toBe(401);
-    expect(response.body).toEqual({ error: 'Invalid or expired token' });
+    expect(response.body).toEqual({
+      error: 'Invalid or expired token',
+      code: 'invalid_token',
+    });
     expect(mockEmbedQuery).not.toHaveBeenCalled();
   });
 });

@@ -116,7 +116,7 @@ describe('RAG pipeline integration', () => {
 
     expect(result).toEqual({
       answer:
-        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+        'I cannot diagnose medical conditions or identify what condition you may have, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
       chunks: [],
       citations: [],
     });

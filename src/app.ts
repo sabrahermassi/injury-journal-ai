@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import aiAgentRouter from './routes/ai-agent-router.js';
 import { authenticate } from './auth/authenticate.js';
+import { ApiErrorCode } from './lib/api-error.js';
 
 const app = express();
 
@@ -30,7 +31,10 @@ const aiAgentLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' },
+  message: {
+    error: 'Too many requests, please try again later.',
+    code: 'rate_limited' satisfies ApiErrorCode,
+  },
 });
 
 app.use('/ai-agent', aiAgentLimiter, authenticate, aiAgentRouter);

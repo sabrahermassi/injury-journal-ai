@@ -297,9 +297,9 @@ flowchart TD
     O -->|Diagnosis-like| R
 ```
 
-> **Current status:** both sides are covered, but only as pattern-based text filtering.
-> `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before retrieval;
-> `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
+> **Current status:** three checks exist, all pattern-based text filtering, no LLM-level
+> classification. `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before
+> retrieval; `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
 > `rag-service.ts` and the journal-intent branch of `ai-agent-orchestrator.ts`) and withholds it
 > if the LLM hedges toward its own diagnostic judgment ("you may have...", "this could be...").
 > `checkAnswerSafety` also receives the retrieved chunks / journal record text as grounding
@@ -311,6 +311,21 @@ flowchart TD
 > other pattern in this module. `CONDITION_KEYWORDS` was expanded with several known-bypassing
 > terms (issue #143), but the list remains finite and hand-maintained; closing the gap for
 > arbitrary open-vocabulary terms is tracked under #140 (guardrails framework evaluation).
+>
+> A third check, `checkContentSafety`, was added (issue #66) to close a gap where neither existing
+> check ever inspected the journal/RAG-derived *content* interpolated into the prompt — only the
+> question and the final answer. It runs on the assembled context (`buildContext()` output for the
+> RAG path, `formatInjuryRecord()` output for the journal path) before the LLM call, looking for
+> prompt-injection-style phrasing (e.g. "ignore previous instructions", "you are now a..."). This
+> is defense-in-depth, not the primary control: the primary control is that `prompt-builder.ts` now
+> sends fixed instructions as a `system`-role message (`SYSTEM_PROMPT`) separate from the
+> `user`-role message carrying the question and context, with journal/RAG content wrapped in
+> `<journal_data>` tags the system prompt explicitly marks as untrusted data. Literal
+> `<journal_data>`/`</journal_data>` occurring inside stored content is neutralized before
+> interpolation so it can't forge a fake boundary — including whitespace-tolerant variants
+> (e.g. `< /journal_data>`), not just the exact tag spelling. Like the other two checks, this is regex-based
+> and will always be a step behind real-world phrasing — it narrows the attack surface, it doesn't
+> eliminate it.
 
 ### 5.5. AI Agent Architecture
 
@@ -498,10 +513,14 @@ flowchart TD
 
 ### 10.1 Accepted risks (not yet mitigated)
 
-- **Third-party LLM data exposure (Groq):** every RAG answer sends matched journal excerpts —
-  personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`). No data-retention or
-  minimization control exists today; this is accepted as a tradeoff of using a third-party LLM
-  provider, not yet mitigated. Tracked as issue #117 (decide accept-as-is vs. minimization).
+- **Third-party LLM data exposure (Groq) — resolved, issue #117:** every RAG answer sends matched
+  journal excerpts — personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`).
+  **Decision: accept as-is, no redaction/minimization code.** Groq's default policy does not
+  retain inputs/outputs except up to 30 days of troubleshooting/abuse logs, and never trains on
+  customer data without explicit opt-in; Zero Data Retention (ZDR), removing even that 30-day
+  window, can be enabled in the Groq Console. Minimization would add complexity and degrade answer
+  quality, which isn't justified for this project's exposure. Enabling ZDR is an account-level
+  action outside this repo.
 - **Embedding service auth (#118):** Resolved. `EMBEDDING_API_URL` (the Python/FastAPI service)
   now requires a shared `EMBEDDING_API_KEY` sent as a `Bearer` token, verified via a FastAPI
   dependency (`verify_api_key` in `embedding_api.py`) with a constant-time comparison, and fails
@@ -623,16 +642,16 @@ quoted), what else was considered, whether it still holds, and whether it should
   its cost yet — this doc's own §5.5 calls it "an intentional MVP simplification, deferred until
   multi-step workflows justify" the change.
 - **ALTERNATIVES CONSIDERED:** An LLM-driven planner (function-calling / tool-use loop) — more
-  flexible and would remove the keyword-matching brittleness (see the dead `'safety'`
-  `AgentIntent` branch documented in `docs/05-api-contract.md` §3/§5), at the cost of
-  nondeterminism, added latency/cost per request, and a harder-to-evaluate routing step.
-- **CURRENT STATUS:** Still valid for "should we adopt a framework" — but the current
-  implementation has a concrete bug this decision doesn't excuse: `routeIntent()` can return
-  `'safety'`, and the orchestrator's `switch` has no case for it, so those requests silently fall
-  into the generic "unable to determine" response instead of a refusal. That's an implementation
-  defect in the current approach, not a reason to adopt a framework. Filed as issue #86.
-- **SHOULD THIS BE REVISITED:** No, not the framework decision — but the dead `'safety'` branch
-  should be fixed regardless of which routing approach is used long-term (#86).
+  flexible and would remove the keyword-matching brittleness (`routeIntent()`'s narrower
+  `'safety'` keyword list overlaps with, but isn't identical to, `checkSafety`'s more thorough
+  regex set — see `docs/05-api-contract.md` §3/§5), at the cost of nondeterminism, added
+  latency/cost per request, and a harder-to-evaluate routing step.
+- **CURRENT STATUS:** Still valid for "should we adopt a framework." The `routeIntent()` /
+  `'safety'` dead-branch defect noted here previously (issue #86) is fixed: the orchestrator's
+  `switch` now has a `case 'safety'` returning the same diagnosis-refusal message the earlier
+  `checkSafety` gate produces, so a `'safety'`-routed question no longer falls into the generic
+  "unable to determine" response.
+- **SHOULD THIS BE REVISITED:** No.
 
 ### D7 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint (resolved)
 

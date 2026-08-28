@@ -183,9 +183,9 @@ tracking issue on what's actually still needed for that work.
   the ingestion worker itself is built (#40) — tracked as #132 (distributed ingestion locking).
 - [x] #61 — `/ai-agent` now returns 400 instead of 500 for a body-less request.
 - [x] #43 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint.
-- [x] #86 — `routeIntent()` could return `'safety'`, but the orchestrator's `switch` had no case
-  for it (fell into the generic default response instead of a refusal). Surfaced while resolving
-  #43; the switch now handles it.
+- [x] #86 — `routeIntent()` can return `'safety'`; the orchestrator's `switch` now has a
+  `case 'safety'` that returns the same diagnosis-refusal message as the earlier `checkSafety`
+  gate, instead of falling into the generic default response. Surfaced while resolving #43.
 
 ---
 
