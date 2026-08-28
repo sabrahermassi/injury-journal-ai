@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { runAgent } from './ai-agent-orchestrator.js';
 import { logError } from '../lib/log-error.js';
+import { sendError } from '../lib/api-error.js';
 
 // Mirrors EmbeddingRequest.text's own Field(max_length=10_000) in
 // src/embeddings/embedding_api.py -- the question is what gets embedded.
@@ -33,14 +34,15 @@ export async function askAgent(req: Request, res: Response) {
 
       if (questionIssue) {
         if (questionIssue.code === 'too_big') {
-          return res.status(400).json({
-            error: `Question exceeds maximum length of ${MAX_QUESTION_LENGTH} characters`,
-          });
+          return sendError(
+            res,
+            400,
+            'question_too_long',
+            `Question exceeds maximum length of ${MAX_QUESTION_LENGTH} characters`,
+          );
         }
 
-        return res.status(400).json({
-          error: 'Question is required',
-        });
+        return sendError(res, 400, 'question_required', 'Question is required');
       }
 
       const injuryIdIssue = parsed.error.issues.find(
@@ -48,23 +50,19 @@ export async function askAgent(req: Request, res: Response) {
       );
 
       if (injuryIdIssue) {
-        return res.status(400).json({
-          error: 'Invalid injuryId',
-        });
+        return sendError(res, 400, 'invalid_injury_id', 'Invalid injuryId');
       }
 
       // Root-level type mismatch (e.g. a non-object JSON body like a bare
       // string or array) -- neither field can be resolved, so report the
       // same "missing question" error the old ad hoc checks gave for this case.
-      return res.status(400).json({
-        error: 'Question is required',
-      });
+      return sendError(res, 400, 'question_required', 'Question is required');
     }
 
     const { question, injuryId } = parsed.data;
 
     if (req.userId === undefined) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return sendError(res, 401, 'authentication_required', 'Authentication required');
     }
 
     const result = await runAgent(question, req.userId, injuryId, requestId);
@@ -73,8 +71,6 @@ export async function askAgent(req: Request, res: Response) {
   } catch (error) {
     logError('ai-agent request failed', error);
 
-    return res.status(500).json({
-      error: 'Failed to process request',
-    });
+    return sendError(res, 500, 'internal_error', 'Failed to process request');
   }
 }

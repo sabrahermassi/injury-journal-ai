@@ -75,14 +75,17 @@ missing-switch-case defect.
 
 **Errors**
 
+Every error body now includes a machine-readable `code` field alongside `error` (issue #123):
+
 | Status | Body | Trigger |
 |--------|------|---------|
-| 401 | `{ "error": "Authentication required" }` | `Authorization: Bearer <token>` header missing or malformed |
-| 401 | `{ "error": "Invalid or expired token" }` | token present but fails signature/expiry/claim verification |
-| 400 | `{ "error": "Question is required" }` | body present but `question` missing/blank |
-| 400 | `{ "error": "Invalid injuryId" }` | `injuryId` present but fails the check above |
-| 429 | `{ "error": "Too many requests, please try again later." }` | more than 20 requests from the same IP within a 60s window (issue #89) |
-| 500 | `{ "error": "Failed to process request" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key. All collapse to this one message; no error code/type distinguishes the cause. |
+| 401 | `{ "error": "Authentication required", "code": "authentication_required" }` | `Authorization: Bearer <token>` header missing or malformed |
+| 401 | `{ "error": "Invalid or expired token", "code": "invalid_token" }` | token present but fails signature/expiry/claim verification |
+| 400 | `{ "error": "Question is required", "code": "question_required" }` | body present but `question` missing/blank |
+| 400 | `{ "error": "Question exceeds maximum length of 10000 characters", "code": "question_too_long" }` | `question` longer than the 10,000-character limit |
+| 400 | `{ "error": "Invalid injuryId", "code": "invalid_injury_id" }` | `injuryId` present but fails the check above |
+| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | more than 20 requests from the same IP within a 60s window (issue #89) |
+| 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key, missing `JWT_SECRET`. All still collapse to the single `internal_error` code; it distinguishes 500s from other failure classes but not from each other. |
 
 `askAgent` destructures `req.body ?? {}`, so a body-less `POST /ai-agent` returns the 400 above
 rather than a 500 (fixed as issue #61).
@@ -118,9 +121,11 @@ limit of `5` for the `rag` intent path.
   `citation-formatter.ts` are not called from any response path. `citation-source-mapper.ts` is
   also unwired, and even if it were, it only maps 2 of the 5 valid `sourceType` values
   (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`).
-- **All failure modes collapse into one generic 500 message** — a client cannot distinguish
-  "embedding service unreachable" from "database error" from "LLM call failed" from an unexpected
-  exception.
+- **All 4xx/429 failure modes have a distinct `code` (issue #123), but 500s do not.** A client can
+  now tell "authentication required" from "rate limited" from "question too long" apart, but every
+  500 still reports `code: "internal_error"` regardless of whether the cause was the embedding
+  service being unreachable, a database error, or an LLM call failure — 500 causes are not
+  distinguishable from the response alone.
 
 ## 6. What the frontend will need that the backend doesn't provide yet
 
@@ -140,9 +145,9 @@ This is the most important section — these are gaps, not just documentation de
   no create/update/delete for any of these at all.
 - **Pagination or a client-settable retrieval limit.** The `rag` intent path hardcodes `5`
   internally with no way for the frontend to request more, or to page through additional chunks.
-- **Structured error information.** A `code`/`type` field distinct from the current single
-  generic error string, so the UI can differentiate "no results found," "service temporarily
-  unavailable," and "invalid input" instead of showing the same failure state for all three.
+- **Structured error information for 500s specifically.** Issue #123 added a `code` field
+  distinguishing every 4xx/429 case (see §3), but all 500s still share one `internal_error` code —
+  a UI still can't tell "service temporarily unavailable" apart from other internal failures.
 - **Conversation/thread state.** Every call is fully stateless — no way to support a multi-turn
   conversation UI without the frontend re-sending full context itself (and there's currently no
   mechanism to do even that).
