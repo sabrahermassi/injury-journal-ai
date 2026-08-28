@@ -7,9 +7,9 @@ correct.
 
 ## 1. Scope
 
-One HTTP endpoint exists today, under a single unauthenticated Express app (`src/app.ts`):
-`POST /ai-agent`. Nothing else is exposed — no CRUD, no identity/session endpoints, no health
-check.
+One HTTP endpoint exists today, under a single Express app (`src/app.ts`): `POST /ai-agent`,
+which requires a bearer token (see §2). Nothing else is exposed — no CRUD, no identity/session
+endpoints, no health check.
 
 `POST /rag/ask` previously existed as a second, narrower entrypoint to the same underlying
 `answerQuestion()` function, but has been retired (issue #43, `docs/02-architecture.md` D7) —
@@ -19,16 +19,23 @@ check.
 
 ## 2. Authentication
 
-**None.** There is no auth middleware anywhere in `app.ts`/`index.ts`, no session, and no
-`userId` derived from request context at any layer. Every request is anonymous. Concretely:
+**Required, but not yet enforced past the door.** `POST /ai-agent` is protected by
+`authenticate` middleware (`src/auth/authenticate.ts`): callers must send
+`Authorization: Bearer <JWT>`, signed with the shared `JWT_SECRET` (HS256) and carrying a numeric
+`sub` claim. A missing/malformed header, or an invalid/expired/wrong-signature token, returns
+`401`. On success the middleware sets `req.userId` from the token's `sub`.
+
+`req.userId` is **not yet used for anything downstream** — no route or tool filters by it. Every
+authenticated user can still read any other user's data. Concretely:
 
 - `searchSimilarChunks` (`vector-storage.ts`) filters only by the optional `injuryId` (it also
   accepts an optional `sourceType`, but no production caller passes one) — never by owner.
 - `journalTool` (`journal-tool.ts`) does a bare `prisma.injury.findUnique({ where: { id } })` —
   no owner check.
 
-Any caller who knows or guesses an `injuryId` can read that injury's chunks and full journal
-record. This is a known, unaddressed gap (see CLAUDE.md §9 on user-level data isolation).
+Any authenticated caller who knows or guesses an `injuryId` can read that injury's chunks and full
+journal record. This is a known, unaddressed authorization gap — issue #95 — distinct from
+authentication itself (issue #94, done). See CLAUDE.md §9 on user-level data isolation.
 
 ## 3. Endpoints
 
@@ -50,25 +57,28 @@ the branch without inferring it from shape (resolved as part of issue #45):**
 | Safety-blocked | `{ "answer": "<refusal>", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` |
 | `journal` intent, no `injuryId` given | `{ "answer": "An injury must be selected for journal questions.", "citations": [], "intent": "journal" }` — **no `metadata` key at all** |
 | `journal` intent, `injuryId` not found | `{ "answer": "No injury record was found.", "citations": [], "intent": "journal" }` — **no `metadata` key** |
-| `journal` intent, found | `{ "answer": "<LLM-generated prose summary of the injury record>", "citations": [], "intent": "journal" }` — generated via `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`; there's still no `metadata` key |
+| `journal` intent, found | `{ "answer": "<LLM-generated prose summary of the injury record>", "citations": [], "intent": "journal" }` — generated via `formatInjuryRecord()` → `checkContentSafety()` → `buildUserPrompt()` → `generateAnswer()`; there's still no `metadata` key |
+| `journal` intent, content-safety blocked | `{ "answer": "<refusal>", "citations": [], "intent": "journal" }` — `checkContentSafety()` flagged the formatted injury record itself (not the question) before any LLM call; **no `metadata` key**, same shape as the other journal early-return rows (issue #66) |
 | `rag` intent | `{ "answer": "string", "citations": [...], "intent": "rag", "metadata": { "retrievedChunks": [{ "sourceType": "string", "sourceId": 1 }] } }` |
-| Unrecognized intent (and see note below) | `{ "answer": "Unable to determine how to handle this request.", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` — `intent` here is whatever `routeIntent()` actually returned, which today is only reachable for the `'safety'`-value dead-branch case described below |
+| `safety` intent from `routeIntent()` | `{ "answer": "<refusal>", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` — same message/shape as the "Safety-blocked" row above, produced by a second, narrower keyword check (see note below) rather than the main `checkSafety` gate |
 
-**Important internal inconsistency, not just a documentation gap:** `routeIntent()` can return
+**Note — two distinct safety-routing paths, not a documentation gap:** `routeIntent()` can return
 `'safety'` as an `AgentIntent` (it's a defined member of the type and is returned when the
-question matches a small keyword list — `diagnose`, `do i have`, `cancer`, `condition`). But
-`runAgent`'s `switch` has no `case 'safety':` — it only handles `'journal'` and `'rag'`
-explicitly. A `'safety'`-routed question therefore falls into the generic default branch
-("Unable to determine how to handle this request.") instead of a safety refusal. This is separate
-from — and less thorough than — the actual safety gate that already runs earlier in the same
-function (`checkSafety`/`safetyTool`, a much larger regex set in `safety-service.ts`). The two
-mechanisms overlap but are not identical, and only one of them is actually wired to produce a
-refusal response. Tracked as issue #86.
+question matches a small keyword list — `diagnose`, `do i have`, `cancer`, `condition`).
+`runAgent`'s `switch` has a `case 'safety':` that returns the same refusal shape as the main
+safety gate. This is separate from — and less thorough than — the actual safety gate that already
+runs earlier in the same function (`checkSafety`/`safetyTool`, a much larger regex set in
+`safety-service.ts`). The two mechanisms overlap but are not identical: a question that slips past
+`checkSafety` but matches `routeIntent`'s narrower list still gets a proper refusal, just via the
+second path. Reconciling the two keyword sets is out of scope for issue #86, which only closed the
+missing-switch-case defect.
 
 **Errors**
 
 | Status | Body | Trigger |
 |--------|------|---------|
+| 401 | `{ "error": "Authentication required" }` | `Authorization: Bearer <token>` header missing or malformed |
+| 401 | `{ "error": "Invalid or expired token" }` | token present but fails signature/expiry/claim verification |
 | 400 | `{ "error": "Question is required" }` | body present but `question` missing/blank |
 | 400 | `{ "error": "Invalid injuryId" }` | `injuryId` present but fails the check above |
 | 429 | `{ "error": "Too many requests, please try again later." }` | more than 20 requests from the same IP within a 60s window (issue #89) |
@@ -86,7 +96,8 @@ limit of `5` for the `rag` intent path.
   by `citation-builder.ts`, the only citation module actually wired into a response path.
 - **Journal answer** (journal path only) — an LLM-generated prose summary of the `Injury` record
   and its nested `Treatment[]`, `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, built via
-  `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`, not the raw Prisma row.
+  `formatInjuryRecord()` → `checkContentSafety()` → `buildUserPrompt()` → `generateAnswer()`, not
+  the raw Prisma row.
 - **`metadata.retrievedChunks`** (`rag`/safety/default paths only) — `{ sourceType, sourceId }[]`,
   a 2-field projection of the underlying `DocumentChunk` row (not the raw row itself).
 
@@ -95,9 +106,10 @@ limit of `5` for the `rag` intent path.
 - **The `journal` intent produces an LLM-generated prose answer**, not a structured field-by-field
   breakdown of the record — quality depends on the LLM correctly summarizing the context built by
   `formatInjuryRecord()`.
-- **The dead `'safety'` intent branch** described in §3 — a real inconsistency between the type
-  system (`AgentIntent`) and the orchestrator's actual handling, not just a documentation gap.
-  Tracked as issue #86.
+- **Two overlapping-but-not-identical safety-detection mechanisms** (the main `checkSafety` gate
+  and `routeIntent()`'s narrower keyword list) both feed into the same `'safety'` intent/response
+  shape — see §3. Fixed as issue #86 (the switch previously had no case for the `routeIntent()`
+  path); reconciling the two keyword sets themselves remains unaddressed.
 - **An unused, unwired duplicate entrypoint exists in the codebase**:
   `src/ai-assistant/ai-assistant-api.ts` (a thin, otherwise-unused wrapper around `runAgent`). It is
   not reachable from any route. (`src/ai-agent/ai-agent-service.ts`, a dead duplicate of
@@ -114,11 +126,15 @@ limit of `5` for the `rag` intent path.
 
 This is the most important section — these are gaps, not just documentation debt:
 
-- **Authentication and session/identity, entirely.** There is no login, no token, no way to
-  establish "whose data is this" on any request. This blocks essentially all real frontend work
-  before it starts (see CLAUDE.md §9, and roadmap #31).
+- **A token issuer.** This repo verifies a `Bearer` JWT (issue #94) but does not issue one — by
+  design (D10, `docs/02-architecture.md`), the separate journal application is expected to own
+  login/session issuance. A frontend needs that other application's login flow before it can call
+  this API at all.
+- **Per-user data isolation.** The verified `userId` isn't used to filter retrieval or journal
+  results yet (issue #95, open) — any authenticated caller can still read any other user's data
+  (see CLAUDE.md §9, and roadmap #31).
 - **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. A frontend has no way to
-  discover which injuries belong to the current user even once auth exists.
+  discover which injuries belong to the current user even once #95 lands.
 - **CRUD for `Injury` and its child records** (`Treatment`, `Symptom`, `TimelineEvent`,
   `MedicalVisit`). Today the only read path is `journalTool`'s single `findUnique`, and there is
   no create/update/delete for any of these at all.

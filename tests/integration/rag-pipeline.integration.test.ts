@@ -82,6 +82,7 @@ describe('RAG pipeline integration', () => {
     const result = await answerQuestion(
       'What treatments did I have?',
       injuryId,
+      userId,
       2,
     );
 
@@ -111,11 +112,11 @@ describe('RAG pipeline integration', () => {
   });
 
   it('blocks diagnosis requests before retrieval or LLM generation', async () => {
-    const result = await answerQuestion('Do I have a fracture?', injuryId);
+    const result = await answerQuestion('Do I have a fracture?', injuryId, userId);
 
     expect(result).toEqual({
       answer:
-        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+        'I cannot diagnose medical conditions or identify what condition you may have, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
       chunks: [],
       citations: [],
     });

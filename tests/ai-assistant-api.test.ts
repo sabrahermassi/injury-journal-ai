@@ -20,9 +20,13 @@ describe('AI Assistant API', () => {
       citations: [],
     });
 
-    const result = await askAssistant('Summarize my injury history', 1);
+    const result = await askAssistant('Summarize my injury history', 1, 1);
 
-    expect(runAgentMock).toHaveBeenCalledWith('Summarize my injury history', 1);
+    expect(runAgentMock).toHaveBeenCalledWith(
+      'Summarize my injury history',
+      1,
+      1,
+    );
 
     expect(result).toEqual({
       answer: 'summary',

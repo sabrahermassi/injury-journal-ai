@@ -53,6 +53,7 @@ describe('embedText', () => {
 
   it('sends a POST request to the default embedding API URL with the expected payload', async () => {
     delete process.env.EMBEDDING_API_URL;
+    process.env.EMBEDDING_API_KEY = 'test-embedding-key';
 
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
@@ -77,7 +78,10 @@ describe('embedText', () => {
       'http://127.0.0.1:8000/embed',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-embedding-key',
+        },
         body: JSON.stringify({ text: 'hello world' }),
       }),
     );
@@ -272,6 +276,22 @@ describe('embedText', () => {
 
     expect(result.embedding).toEqual(TEST_EMBEDDING);
   });
+
+  it('throws without calling fetch when EMBEDDING_API_KEY is not configured', async () => {
+    delete process.env.EMBEDDING_API_KEY;
+
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { embedText } = await loadEmbeddingClient();
+
+    await expect(embedText('hi')).rejects.toThrow(
+      'EMBEDDING_API_KEY is not configured',
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('embedQuery', () => {
@@ -287,6 +307,7 @@ describe('embedQuery', () => {
 
   it('sends a POST request to /embed-query, not /embed', async () => {
     delete process.env.EMBEDDING_API_URL;
+    process.env.EMBEDDING_API_KEY = 'test-embedding-key';
 
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
 
@@ -300,7 +321,10 @@ describe('embedQuery', () => {
       'http://127.0.0.1:8000/embed-query',
       expect.objectContaining({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-embedding-key',
+        },
         body: JSON.stringify({ text: 'what treatments have I tried?' }),
       }),
     );
@@ -340,5 +364,21 @@ describe('embedQuery', () => {
     await expect(embedQuery('hi')).rejects.toThrow(
       'Embedding API request failed: 500 Internal Server Error',
     );
+  });
+
+  it('throws without calling fetch when EMBEDDING_API_KEY is not configured', async () => {
+    delete process.env.EMBEDDING_API_KEY;
+
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { embedQuery } = await loadEmbeddingClient();
+
+    await expect(embedQuery('hi')).rejects.toThrow(
+      'EMBEDDING_API_KEY is not configured',
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

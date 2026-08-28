@@ -19,11 +19,12 @@ describe('rag tool', () => {
       citations: [],
     });
 
-    const result = await ragTool('What treatments failed?');
+    const result = await ragTool('What treatments failed?', undefined, 1);
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'What treatments failed?',
       undefined,
+      1,
       5,
       undefined,
     );
@@ -40,11 +41,12 @@ describe('rag tool', () => {
       citations: [],
     });
 
-    await ragTool('Summarize treatments', 42, 5);
+    await ragTool('Summarize treatments', 42, 1, 5);
 
     expect(answerQuestionMock).toHaveBeenCalledWith(
       'Summarize treatments',
       42,
+      1,
       5,
       undefined,
     );

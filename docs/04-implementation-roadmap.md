@@ -21,7 +21,7 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
   - [x] 2.3 Semantic Retrieval (#25)
   - [x] 2.4 Basic RAG (#26)
   - [x] 2.5 Citations *(generation only — verification not wired in, see below)* (#27)
-  - [x] 2.6 Safety Guardrails *(input-side only — no output-side check)* (#28)
+  - [x] 2.6 Safety Guardrails *(input- and output-side)* (#28, #96)
   - [x] 2.7 AI Agent *(keyword routing, not per-tool authorization)* (#29)
 - [x] Step 3 — Evaluation *(harness exists; two of four dimensions are shallow, one is unimplemented)* (#30)
 - [x] Step 4 — Integration Tests (#17)
@@ -89,8 +89,19 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
   (does this backend own auth, or verify tokens from a separate app?). (#94)
 - [ ] Per-tool + retrieval/vector-level authorization enforcing user-level data isolation — depends
   on #94. (#95)
-- [ ] Output-side safety check — the current safety layer is entirely pre-generation; nothing
-  checks whether the LLM's answer echoes diagnosis-adjacent language from a chunk's raw content. (#96)
+- [x] Output-side safety check — `checkAnswerSafety` (`src/safety/safety-service.ts`) withholds
+  an LLM answer that hedges toward its own diagnostic judgment ("you may have...", "this could
+  be..."). Wired into both `rag-service.ts` and the journal-intent path in
+  `ai-agent-orchestrator.ts`. (#96)
+- [x] Ground definite diagnostic assertions ("you have X", "diagnosis: X") against the
+  retrieved chunks / journal record passed into `checkAnswerSafety` as evidence, rather than
+  allowing them through unconditionally. Still keyword-based (`CONDITION_KEYWORDS`), so a
+  specific medical term outside that list is still invisible to the check — tracked separately
+  as a pre-existing coverage gap. (#142)
+- [x] Expand `CONDITION_KEYWORDS` with specific terms (meniscus, ACL/MCL/PCL/LCL, sciatica,
+  pneumonia, diabetes) identified as bypassing every pattern in `safety-service.ts`. The list
+  remains finite and hand-maintained — arbitrary open-vocabulary terms still bypass every
+  check; closing that structurally is tracked under #140. (#143)
 
 *Optional (safe to defer indefinitely):*
 - [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)
@@ -160,8 +171,9 @@ product decision that should be made explicitly rather than discovered by omissi
   to the not-yet-built ingestion worker (#40).
 - [x] #61 — `/ai-agent` now returns 400 instead of 500 for a body-less request.
 - [x] #43 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint.
-- [ ] #86 — `routeIntent()` can return `'safety'`, but the orchestrator's `switch` has no case for
-  it (falls into the generic default response instead of a refusal). Surfaced while resolving #43.
+- [x] #86 — `routeIntent()` can return `'safety'`; the orchestrator's `switch` now has a
+  `case 'safety'` that returns the same diagnosis-refusal message as the earlier `checkSafety`
+  gate, instead of falling into the generic default response. Surfaced while resolving #43.
 
 ---
 

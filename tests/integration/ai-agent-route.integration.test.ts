@@ -3,6 +3,7 @@ import request from 'supertest';
 import { storeDocumentChunk } from '../../src/embeddings/vector-storage.js';
 import { prisma } from '../../src/lib/prisma.js';
 import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
+import { signTestToken } from '../helpers/auth.js';
 
 jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
   embedQuery: jest.fn(),
@@ -32,12 +33,14 @@ function vectorWith(first: number, second = 0, third = 0): number[] {
 describe('AI agent route integration', () => {
   let injuryId: number;
   let userId: number;
+  let authHeader: string;
 
   beforeAll(async () => {
     const testInjury = await createTestInjury('AI Agent Route Test');
 
     injuryId = testInjury.injuryId;
     userId = testInjury.userId;
+    authHeader = `Bearer ${signTestToken(userId)}`;
 
     await storeDocumentChunk(
       injuryId,
@@ -70,10 +73,13 @@ describe('AI agent route integration', () => {
   });
 
   it('routes a RAG question through the RAG tool', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'What treatments did I have?',
-      injuryId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'What treatments did I have?',
+        injuryId,
+      });
 
     expect(response.status).toBe(200);
 
@@ -97,16 +103,19 @@ describe('AI agent route integration', () => {
   });
 
   it('blocks safety-sensitive questions before retrieval or LLM generation', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'Do I have a fracture?',
-      injuryId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'Do I have a fracture?',
+        injuryId,
+      });
 
     expect(response.status).toBe(200);
 
     expect(response.body).toEqual({
       answer:
-        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+        'I cannot diagnose medical conditions or identify what condition you may have, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
       citations: [],
       intent: 'safety',
       metadata: {
@@ -119,10 +128,13 @@ describe('AI agent route integration', () => {
   });
 
   it('routes a journal question to the journal tool when injuryId is provided', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'Show me my injury timeline',
-      injuryId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'Show me my injury timeline',
+        injuryId,
+      });
 
     expect(response.status).toBe(200);
 
@@ -134,22 +146,26 @@ describe('AI agent route integration', () => {
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
 
-    expect(mockGenerateAnswer.mock.calls[0][0]).toContain('AI Agent Route Test');
+    expect(mockGenerateAnswer.mock.calls[0][1]).toContain(
+      'AI Agent Route Test',
+    );
   });
 
   it('returns a fallback message when journal answer generation is empty', async () => {
     mockGenerateAnswer.mockResolvedValue('');
 
-    const response = await request(app).post('/ai-agent').send({
-      question: 'Show me my injury timeline',
-      injuryId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'Show me my injury timeline',
+        injuryId,
+      });
 
     expect(response.status).toBe(200);
 
     expect(response.body).toEqual({
-      answer:
-        'Unable to generate a summary from your injury record right now.',
+      answer: 'Unable to generate a summary from your injury record right now.',
       citations: [],
       intent: 'journal',
     });
@@ -158,9 +174,12 @@ describe('AI agent route integration', () => {
   });
 
   it('requires an injuryId for journal questions', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'Show me my injury timeline',
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'Show me my injury timeline',
+      });
 
     expect(response.status).toBe(200);
 
@@ -175,10 +194,13 @@ describe('AI agent route integration', () => {
   });
 
   it('returns 400 when question is empty', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: '',
-      injuryId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: '',
+        injuryId,
+      });
 
     expect(response.status).toBe(400);
 
@@ -188,5 +210,30 @@ describe('AI agent route integration', () => {
 
     expect(mockEmbedQuery).not.toHaveBeenCalled();
     expect(mockGenerateAnswer).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when no Authorization header is provided', async () => {
+    const response = await request(app).post('/ai-agent').send({
+      question: 'What treatments did I have?',
+      injuryId,
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Authentication required' });
+    expect(mockEmbedQuery).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 for an invalid token', async () => {
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', 'Bearer not-a-real-token')
+      .send({
+        question: 'What treatments did I have?',
+        injuryId,
+      });
+
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({ error: 'Invalid or expired token' });
+    expect(mockEmbedQuery).not.toHaveBeenCalled();
   });
 });

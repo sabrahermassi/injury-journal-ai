@@ -194,13 +194,16 @@ flowchart TD
     DB --> DATA
 
     DATA --> G["LLM"]
-    G --> CV["Citation Generation"]
+    G --> OSC["Output Safety Check"]
+    OSC -->|Allowed| CV["Citation Generation"]
+    OSC -->|Diagnosis-like| REF
     CV --> OUT["Answer + Sources"]
 
     OUT --> U
 ```
 
-> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5.
+> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5. `OSC`
+> ("Output Safety Check") is `checkAnswerSafety` — see §5.4 for what it actually checks.
 
 ### 5.1. Semantic Retrieval Architecture
 
@@ -286,11 +289,42 @@ flowchart TD
 
     S -->|Allowed| C["Continue"]
     S -->|Boundary Violation| R["Refuse / Redirect"]
+
+    C --> G["Generate Answer"]
+    G --> O["Output Safety Check"]
+    O -->|Allowed| A["Return Answer"]
+    O -->|Diagnosis-like| R
 ```
 
-> **Current status:** this covers the input side only. There is no output-side check — nothing
-> verifies the LLM's generated answer against diagnosis-adjacent language it might echo from raw
-> journal content (e.g. a doctor's note). Output safety checks are future work.
+> **Current status:** three checks exist, all pattern-based text filtering, no LLM-level
+> classification. `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before
+> retrieval; `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
+> `rag-service.ts` and the journal-intent branch of `ai-agent-orchestrator.ts`) and withholds it
+> if the LLM hedges toward its own diagnostic judgment ("you may have...", "this could be...").
+> `checkAnswerSafety` also receives the retrieved chunks / journal record text as grounding
+> evidence, and blocks a definite diagnostic statement ("you have X", "diagnosis: X") whose
+> asserted term does not appear anywhere in that evidence (issue #142) — a definite restatement
+> of a diagnosis already in the record is still allowed, since that's the app's core
+> journal-summary behavior. This grounding check is still keyword-based: a diagnostic statement
+> using a specific medical term outside `CONDITION_KEYWORDS` is invisible to it, same as every
+> other pattern in this module. `CONDITION_KEYWORDS` was expanded with several known-bypassing
+> terms (issue #143), but the list remains finite and hand-maintained; closing the gap for
+> arbitrary open-vocabulary terms is tracked under #140 (guardrails framework evaluation).
+>
+> A third check, `checkContentSafety`, was added (issue #66) to close a gap where neither existing
+> check ever inspected the journal/RAG-derived *content* interpolated into the prompt — only the
+> question and the final answer. It runs on the assembled context (`buildContext()` output for the
+> RAG path, `formatInjuryRecord()` output for the journal path) before the LLM call, looking for
+> prompt-injection-style phrasing (e.g. "ignore previous instructions", "you are now a..."). This
+> is defense-in-depth, not the primary control: the primary control is that `prompt-builder.ts` now
+> sends fixed instructions as a `system`-role message (`SYSTEM_PROMPT`) separate from the
+> `user`-role message carrying the question and context, with journal/RAG content wrapped in
+> `<journal_data>` tags the system prompt explicitly marks as untrusted data. Literal
+> `<journal_data>`/`</journal_data>` occurring inside stored content is neutralized before
+> interpolation so it can't forge a fake boundary — including whitespace-tolerant variants
+> (e.g. `< /journal_data>`), not just the exact tag spelling. Like the other two checks, this is regex-based
+> and will always be a step behind real-world phrasing — it narrows the attack surface, it doesn't
+> eliminate it.
 
 ### 5.5. AI Agent Architecture
 
@@ -486,10 +520,12 @@ flowchart TD
   personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`). No data-retention or
   minimization control exists today; this is accepted as a tradeoff of using a third-party LLM
   provider, not yet mitigated. Tracked as issue #117 (decide accept-as-is vs. minimization).
-- **Embedding service has no auth boundary:** `EMBEDDING_API_URL` (the Python/FastAPI service)
-  has no authentication. Acceptable only while strictly localhost-bound; must be revisited before
-  any deployment step (#33/#34) exposes it beyond localhost. Out of scope for #94/#95, which only
-  cover `/ai-agent`. Tracked as issue #118.
+- **Embedding service auth (#118):** Resolved. `EMBEDDING_API_URL` (the Python/FastAPI service)
+  now requires a shared `EMBEDDING_API_KEY` sent as a `Bearer` token, verified via a FastAPI
+  dependency (`verify_api_key` in `embedding_api.py`) with a constant-time comparison, and fails
+  closed (500) if the key isn't configured. `embedding-client.ts` sends the key on every request.
+  The service's `/docs`, `/redoc`, and `/openapi.json` are also disabled, since FastAPI's
+  app-level `dependencies` list doesn't cover those auto-generated routes.
 
 ## 11. Architectural Decision Log
 
@@ -605,16 +641,16 @@ quoted), what else was considered, whether it still holds, and whether it should
   its cost yet — this doc's own §5.5 calls it "an intentional MVP simplification, deferred until
   multi-step workflows justify" the change.
 - **ALTERNATIVES CONSIDERED:** An LLM-driven planner (function-calling / tool-use loop) — more
-  flexible and would remove the keyword-matching brittleness (see the dead `'safety'`
-  `AgentIntent` branch documented in `docs/05-api-contract.md` §3/§5), at the cost of
-  nondeterminism, added latency/cost per request, and a harder-to-evaluate routing step.
-- **CURRENT STATUS:** Still valid for "should we adopt a framework" — but the current
-  implementation has a concrete bug this decision doesn't excuse: `routeIntent()` can return
-  `'safety'`, and the orchestrator's `switch` has no case for it, so those requests silently fall
-  into the generic "unable to determine" response instead of a refusal. That's an implementation
-  defect in the current approach, not a reason to adopt a framework. Filed as issue #86.
-- **SHOULD THIS BE REVISITED:** No, not the framework decision — but the dead `'safety'` branch
-  should be fixed regardless of which routing approach is used long-term (#86).
+  flexible and would remove the keyword-matching brittleness (`routeIntent()`'s narrower
+  `'safety'` keyword list overlaps with, but isn't identical to, `checkSafety`'s more thorough
+  regex set — see `docs/05-api-contract.md` §3/§5), at the cost of nondeterminism, added
+  latency/cost per request, and a harder-to-evaluate routing step.
+- **CURRENT STATUS:** Still valid for "should we adopt a framework." The `routeIntent()` /
+  `'safety'` dead-branch defect noted here previously (issue #86) is fixed: the orchestrator's
+  `switch` now has a `case 'safety'` returning the same diagnosis-refusal message the earlier
+  `checkSafety` gate produces, so a `'safety'`-routed question no longer falls into the generic
+  "unable to determine" response.
+- **SHOULD THIS BE REVISITED:** No.
 
 ### D7 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint (resolved)
 
@@ -689,17 +725,21 @@ quoted), what else was considered, whether it still holds, and whether it should
 
 - **DECISION:** This backend does not own `Injury` CRUD or authentication/session issuance; a
   separate existing Injury Journal application owns both. This repo remains AI/RAG/agent-only,
-  consuming journal data as its source of truth and (once #94 lands) verifying identity via
-  tokens/sessions issued by that other application rather than minting its own.
+  consuming journal data as its source of truth and verifying identity via tokens issued by that
+  other application rather than minting its own.
 - **RATIONALE:** Decided directly with the project owner while resolving issue #49; keeps this
   repo's scope aligned with its stated purpose (AI assistant on top of an existing journal app,
   per `docs/01-product.md` §1) rather than growing into a second product surface.
 - **ALTERNATIVES CONSIDERED:** This backend owns CRUD + auth end-to-end — rejected as unnecessary
   scope growth for a project whose value is the AI layer, not journal record-keeping.
-- **CURRENT STATUS:** Decided (issue #49). Downstream: #94 should be scoped as "verify
-  externally-issued tokens/sessions," not "build login/session issuance." #50 (`[P10]` journal
-  CRUD + auth endpoints) and #51 (`[P11]` conversation/thread concept) stay out of this repo's
-  scope under this decision; re-scoping or closing those issues is separate follow-up work, not
+- **CURRENT STATUS:** Decided (issue #49). Issue #94 implemented the "verify externally-issued
+  tokens" half: `POST /ai-agent` now requires a `Bearer` JWT (`src/auth/authenticate.ts`), verified
+  against `JWT_SECRET` — no login/session-issuance endpoint exists in this repo, matching this
+  decision. The verified `userId` is not yet used to filter retrieval or journal-tool results
+  (see issue #95, still open — see §10's authorization diagram, also still not built). #50
+  (`[P10]` journal CRUD + auth endpoints) and #51 (`[P11]` conversation/thread concept) stay out
+  of this repo's scope under this decision; re-scoping or closing those issues is separate
+  follow-up work, not
   part of this decision itself.
 - **SHOULD THIS BE REVISITED:** Only if the "existing Injury Journal application" assumption turns
   out to be wrong (e.g. no such external app actually exists yet) — not expected based on the

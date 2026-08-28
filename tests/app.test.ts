@@ -1,5 +1,8 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
+import { signTestToken } from './helpers/auth.js';
+
+const authHeader = `Bearer ${signTestToken(1)}`;
 
 /**
  * Uses a safety-blocked question so the request never reaches the DB,
@@ -42,6 +45,7 @@ describe('POST /ai-agent rate limiting', () => {
       const response = await request(app)
         .post('/ai-agent')
         .set('X-Forwarded-For', '203.0.113.5')
+        .set('Authorization', authHeader)
         .send({ question: SAFETY_BLOCKED_QUESTION });
 
       expect(response.status).toBe(200);
@@ -57,6 +61,7 @@ describe('POST /ai-agent rate limiting', () => {
       for (let i = 0; i < 20; i++) {
         const response = await request(app)
           .post('/ai-agent')
+          .set('Authorization', authHeader)
           .send({ question: SAFETY_BLOCKED_QUESTION });
 
         expect(response.status).toBe(200);
@@ -73,6 +78,103 @@ describe('POST /ai-agent rate limiting', () => {
       expect(limitedResponse.body).toEqual({
         error: 'Too many requests, please try again later.',
       });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+});
+
+describe('security headers and CORS', () => {
+  const originalAllowedOrigin = process.env.ALLOWED_ORIGIN;
+
+  afterEach(() => {
+    if (originalAllowedOrigin === undefined) {
+      delete process.env.ALLOWED_ORIGIN;
+    } else {
+      process.env.ALLOWED_ORIGIN = originalAllowedOrigin;
+    }
+  });
+
+  it('sets helmet security headers and removes X-Powered-By', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app)
+        .post('/ai-agent')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(response.headers['x-content-type-options']).toBe('nosniff');
+      expect(response.headers['x-powered-by']).toBeUndefined();
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('reflects the request origin when ALLOWED_ORIGIN is unset', async () => {
+    delete process.env.ALLOWED_ORIGIN;
+
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app)
+        .post('/ai-agent')
+        .set('Origin', 'https://example.com')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(response.headers['access-control-allow-origin']).toBe(
+        'https://example.com',
+      );
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('reflects the request origin when ALLOWED_ORIGIN is present but blank', async () => {
+    // Regression test: an unfilled `ALLOWED_ORIGIN=` copied verbatim from
+    // .env.example sets the env var to an empty string, not undefined --
+    // this must behave the same as fully unset, not silently block every
+    // cross-origin request.
+    process.env.ALLOWED_ORIGIN = '';
+
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app)
+        .post('/ai-agent')
+        .set('Origin', 'https://example.com')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(response.headers['access-control-allow-origin']).toBe(
+        'https://example.com',
+      );
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('restricts CORS to the configured origins when ALLOWED_ORIGIN is set', async () => {
+    process.env.ALLOWED_ORIGIN = 'https://allowed.example.com';
+
+    const { app, prisma } = await loadApp();
+
+    try {
+      const allowed = await request(app)
+        .post('/ai-agent')
+        .set('Origin', 'https://allowed.example.com')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(allowed.headers['access-control-allow-origin']).toBe(
+        'https://allowed.example.com',
+      );
+
+      const disallowed = await request(app)
+        .post('/ai-agent')
+        .set('Origin', 'https://not-allowed.example.com')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(
+        disallowed.headers['access-control-allow-origin'],
+      ).toBeUndefined();
     } finally {
       await prisma.$disconnect();
     }

@@ -1,13 +1,14 @@
-// These tests document the *current* absence of user-level data isolation (issue #91).
-// There is no auth/session concept yet (#94) and no per-tool authorization (#95), so several
-// assertions here lock in leaky-by-design behavior rather than correct behavior. Once #94/#95
-// land, the tests that currently assert a leak should be rewritten to assert isolation instead.
+// These tests document user-level data isolation (issue #91), now enforced by per-tool and
+// retrieval/vector-level authorization (#95): an authenticated caller can only read their own
+// injuries and chunks, whether or not an injuryId is supplied, and an injuryId belonging to
+// another user is rejected rather than silently returning that user's data.
 
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { storeDocumentChunk } from '../../src/embeddings/vector-storage.js';
 import { prisma } from '../../src/lib/prisma.js';
 import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
+import { signTestToken } from '../helpers/auth.js';
 
 jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
   embedQuery: jest.fn(),
@@ -39,6 +40,7 @@ describe('data isolation regression tests', () => {
   let userAId: number;
   let injuryBId: number;
   let userBId: number;
+  let authHeader: string;
 
   beforeAll(async () => {
     const a = await createTestInjury('Data Isolation Test A');
@@ -48,6 +50,7 @@ describe('data isolation regression tests', () => {
     userAId = a.userId;
     injuryBId = b.injuryId;
     userBId = b.userId;
+    authHeader = `Bearer ${signTestToken(userAId)}`;
 
     await storeDocumentChunk(
       injuryAId,
@@ -91,10 +94,13 @@ describe('data isolation regression tests', () => {
   });
 
   it('scopes RAG retrieval to the requested injuryId and excludes another injury/user', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'What treatments did I have?',
-      injuryId: injuryAId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'What treatments did I have?',
+        injuryId: injuryAId,
+      });
 
     expect(response.status).toBe(200);
 
@@ -106,33 +112,45 @@ describe('data isolation regression tests', () => {
     ]);
   });
 
-  it('leaks chunks across injuries/users when injuryId is omitted', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'What treatments did I have?',
-    });
+  it('scopes retrieval to the caller\'s own chunks across injuries when injuryId is omitted', async () => {
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'What treatments did I have?',
+      });
 
     expect(response.status).toBe(200);
 
     const sourceIds = (
-      response.body.metadata.retrievedChunks as { sourceType: string; sourceId: number }[]
+      response.body.metadata.retrievedChunks as {
+        sourceType: string;
+        sourceId: number;
+      }[]
     )
       .filter((chunk) => chunk.sourceType === 'data-isolation-integration-test')
       .map((chunk) => chunk.sourceId)
       .sort();
 
-    expect(sourceIds).toEqual([1, 2]);
+    expect(sourceIds).toEqual([1]);
   });
 
-  it('returns any injury record to any caller with no ownership check', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'Show me my injury timeline',
-      injuryId: injuryBId,
-    });
+  it('rejects a journal request for an injuryId owned by another user', async () => {
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'Show me my injury timeline',
+        injuryId: injuryBId,
+      });
 
     expect(response.status).toBe(200);
-    expect(response.body.intent).toBe('journal');
-    expect(response.body.answer).toBe('mocked agent answer');
+    expect(response.body).toEqual({
+      answer: 'No injury record was found.',
+      citations: [],
+      intent: 'journal',
+    });
 
-    expect(mockGenerateAnswer.mock.calls[0][0]).toContain('Data Isolation Test B');
+    expect(mockGenerateAnswer).not.toHaveBeenCalled();
   });
 });
