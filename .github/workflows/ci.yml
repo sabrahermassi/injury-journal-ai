@@ -30,6 +30,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testing_injury_ai?schema=public
+      JWT_SECRET: ci-test-only-jwt-secret
 
     steps:
       - name: Checkout repository
@@ -49,6 +50,7 @@ jobs:
       - name: Prepare test environment
         run: |
           echo "DATABASE_URL=$DATABASE_URL" > .env.test
+          echo "JWT_SECRET=$JWT_SECRET" >> .env.test
           npx prisma db push
           npx prisma db seed
 

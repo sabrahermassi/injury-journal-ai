@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import aiAgentRouter from './routes/ai-agent-router.js';
+import { authenticate } from './auth/authenticate.js';
 
 const app = express();
 
@@ -16,6 +17,6 @@ const aiAgentLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
 });
 
-app.use('/ai-agent', aiAgentLimiter, aiAgentRouter);
+app.use('/ai-agent', aiAgentLimiter, authenticate, aiAgentRouter);
 
 export default app;

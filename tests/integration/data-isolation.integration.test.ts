@@ -1,13 +1,15 @@
 // These tests document the *current* absence of user-level data isolation (issue #91).
-// There is no auth/session concept yet (#94) and no per-tool authorization (#95), so several
-// assertions here lock in leaky-by-design behavior rather than correct behavior. Once #94/#95
-// land, the tests that currently assert a leak should be rewritten to assert isolation instead.
+// Requests are now authenticated (#94), but there is still no per-tool/retrieval authorization
+// (#95), so several assertions here lock in leaky-by-design behavior rather than correct
+// behavior: an authenticated caller can still read another user's data. Once #95 lands, the
+// tests that currently assert a leak should be rewritten to assert isolation instead.
 
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { storeDocumentChunk } from '../../src/embeddings/vector-storage.js';
 import { prisma } from '../../src/lib/prisma.js';
 import { createTestInjury, deleteTestInjury } from './test-injury-fixuture.js';
+import { signTestToken } from '../helpers/auth.js';
 
 jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
   embedQuery: jest.fn(),
@@ -39,6 +41,7 @@ describe('data isolation regression tests', () => {
   let userAId: number;
   let injuryBId: number;
   let userBId: number;
+  let authHeader: string;
 
   beforeAll(async () => {
     const a = await createTestInjury('Data Isolation Test A');
@@ -48,6 +51,7 @@ describe('data isolation regression tests', () => {
     userAId = a.userId;
     injuryBId = b.injuryId;
     userBId = b.userId;
+    authHeader = `Bearer ${signTestToken(userAId)}`;
 
     await storeDocumentChunk(
       injuryAId,
@@ -91,10 +95,13 @@ describe('data isolation regression tests', () => {
   });
 
   it('scopes RAG retrieval to the requested injuryId and excludes another injury/user', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'What treatments did I have?',
-      injuryId: injuryAId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'What treatments did I have?',
+        injuryId: injuryAId,
+      });
 
     expect(response.status).toBe(200);
 
@@ -107,14 +114,20 @@ describe('data isolation regression tests', () => {
   });
 
   it('leaks chunks across injuries/users when injuryId is omitted', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'What treatments did I have?',
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'What treatments did I have?',
+      });
 
     expect(response.status).toBe(200);
 
     const sourceIds = (
-      response.body.metadata.retrievedChunks as { sourceType: string; sourceId: number }[]
+      response.body.metadata.retrievedChunks as {
+        sourceType: string;
+        sourceId: number;
+      }[]
     )
       .filter((chunk) => chunk.sourceType === 'data-isolation-integration-test')
       .map((chunk) => chunk.sourceId)
@@ -124,15 +137,20 @@ describe('data isolation regression tests', () => {
   });
 
   it('returns any injury record to any caller with no ownership check', async () => {
-    const response = await request(app).post('/ai-agent').send({
-      question: 'Show me my injury timeline',
-      injuryId: injuryBId,
-    });
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeader)
+      .send({
+        question: 'Show me my injury timeline',
+        injuryId: injuryBId,
+      });
 
     expect(response.status).toBe(200);
     expect(response.body.intent).toBe('journal');
     expect(response.body.answer).toBe('mocked agent answer');
 
-    expect(mockGenerateAnswer.mock.calls[0][0]).toContain('Data Isolation Test B');
+    expect(mockGenerateAnswer.mock.calls[0][0]).toContain(
+      'Data Isolation Test B',
+    );
   });
 });

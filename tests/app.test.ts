@@ -1,5 +1,8 @@
 import { jest } from '@jest/globals';
 import request from 'supertest';
+import { signTestToken } from './helpers/auth.js';
+
+const authHeader = `Bearer ${signTestToken(1)}`;
 
 /**
  * Uses a safety-blocked question so the request never reaches the DB,
@@ -42,6 +45,7 @@ describe('POST /ai-agent rate limiting', () => {
       const response = await request(app)
         .post('/ai-agent')
         .set('X-Forwarded-For', '203.0.113.5')
+        .set('Authorization', authHeader)
         .send({ question: SAFETY_BLOCKED_QUESTION });
 
       expect(response.status).toBe(200);
@@ -57,6 +61,7 @@ describe('POST /ai-agent rate limiting', () => {
       for (let i = 0; i < 20; i++) {
         const response = await request(app)
           .post('/ai-agent')
+          .set('Authorization', authHeader)
           .send({ question: SAFETY_BLOCKED_QUESTION });
 
         expect(response.status).toBe(200);
