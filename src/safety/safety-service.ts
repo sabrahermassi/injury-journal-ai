@@ -15,6 +15,9 @@ export type SafetyResult =
 export const CONDITION_KEYWORDS =
   'injury|condition|disease|syndrome|disorder|diagnosis|tear|fracture|cancer|tumou?r|disc|herniation|infection|concussion|arthritis|meniscus|acl|mcl|pcl|lcl|sciatica|pneumonia|diabetes';
 
+export const DIAGNOSIS_REQUEST_MESSAGE =
+  'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.';
+
 const diagnosisPatterns = [
   // "Do I have X" — only allow a short qualifier (article + up to 2 words) between the verb
   // and the keyword, so unrelated context ("old notes about my fracture") isn't swallowed by
@@ -86,8 +89,7 @@ export function checkSafety(question: string, requestId?: string): SafetyResult 
     return {
       allowed: false,
       reason: 'diagnosis_request',
-      message:
-        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+      message: DIAGNOSIS_REQUEST_MESSAGE,
     };
   }
 

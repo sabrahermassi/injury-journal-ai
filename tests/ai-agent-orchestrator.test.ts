@@ -58,6 +58,29 @@ describe('agent orchestrator', () => {
     });
   });
 
+  it('withholds a diagnosis-refusal answer when routeIntent flags a question the safety gate allowed', async () => {
+    safetyToolMock.mockReturnValue({
+      allowed: true,
+    });
+
+    routeIntentMock.mockReturnValue('safety');
+
+    const result = await runAgent('What condition might this be?', 1);
+
+    expect(ragToolMock).not.toHaveBeenCalled();
+    expect(journalToolMock).not.toHaveBeenCalled();
+
+    expect(result).toEqual({
+      answer:
+        'I cannot diagnose medical conditions, but I can help summarize your recorded symptoms, tests, treatments, and medical history.',
+      citations: [],
+      intent: 'safety',
+      metadata: {
+        retrievedChunks: [],
+      },
+    });
+  });
+
   it('uses RAG tool for treatment questions', async () => {
     safetyToolMock.mockReturnValue({
       allowed: true,

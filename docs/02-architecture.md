@@ -624,16 +624,16 @@ quoted), what else was considered, whether it still holds, and whether it should
   its cost yet — this doc's own §5.5 calls it "an intentional MVP simplification, deferred until
   multi-step workflows justify" the change.
 - **ALTERNATIVES CONSIDERED:** An LLM-driven planner (function-calling / tool-use loop) — more
-  flexible and would remove the keyword-matching brittleness (see the dead `'safety'`
-  `AgentIntent` branch documented in `docs/05-api-contract.md` §3/§5), at the cost of
-  nondeterminism, added latency/cost per request, and a harder-to-evaluate routing step.
-- **CURRENT STATUS:** Still valid for "should we adopt a framework" — but the current
-  implementation has a concrete bug this decision doesn't excuse: `routeIntent()` can return
-  `'safety'`, and the orchestrator's `switch` has no case for it, so those requests silently fall
-  into the generic "unable to determine" response instead of a refusal. That's an implementation
-  defect in the current approach, not a reason to adopt a framework. Filed as issue #86.
-- **SHOULD THIS BE REVISITED:** No, not the framework decision — but the dead `'safety'` branch
-  should be fixed regardless of which routing approach is used long-term (#86).
+  flexible and would remove the keyword-matching brittleness (`routeIntent()`'s narrower
+  `'safety'` keyword list overlaps with, but isn't identical to, `checkSafety`'s more thorough
+  regex set — see `docs/05-api-contract.md` §3/§5), at the cost of nondeterminism, added
+  latency/cost per request, and a harder-to-evaluate routing step.
+- **CURRENT STATUS:** Still valid for "should we adopt a framework." The `routeIntent()` /
+  `'safety'` dead-branch defect noted here previously (issue #86) is fixed: the orchestrator's
+  `switch` now has a `case 'safety'` returning the same diagnosis-refusal message the earlier
+  `checkSafety` gate produces, so a `'safety'`-routed question no longer falls into the generic
+  "unable to determine" response.
+- **SHOULD THIS BE REVISITED:** No.
 
 ### D7 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint (resolved)
 

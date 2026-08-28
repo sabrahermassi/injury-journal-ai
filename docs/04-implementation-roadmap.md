@@ -171,8 +171,9 @@ product decision that should be made explicitly rather than discovered by omissi
   to the not-yet-built ingestion worker (#40).
 - [x] #61 — `/ai-agent` now returns 400 instead of 500 for a body-less request.
 - [x] #43 — `POST /rag/ask` retired; `POST /ai-agent` is the sole public entrypoint.
-- [ ] #86 — `routeIntent()` can return `'safety'`, but the orchestrator's `switch` has no case for
-  it (falls into the generic default response instead of a refusal). Surfaced while resolving #43.
+- [x] #86 — `routeIntent()` can return `'safety'`; the orchestrator's `switch` now has a
+  `case 'safety'` that returns the same diagnosis-refusal message as the earlier `checkSafety`
+  gate, instead of falling into the generic default response. Surfaced while resolving #43.
 
 ---
 
