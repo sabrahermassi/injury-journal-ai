@@ -95,8 +95,10 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
 *Optional (safe to defer indefinitely):*
 - [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)
 - [ ] Add `npm audit`/Dependabot/SCA scanning to CI. (#98)
-- [ ] Document third-party LLM data exposure (Groq) and the embedding service's missing auth
-  boundary as accepted risks. (#99)
+- [x] Document third-party LLM data exposure (Groq) and the embedding service's missing auth
+  boundary as accepted risks — see `docs/02-architecture.md` §10.1. Follow-up action items
+  filed as #117 (Groq data-retention decision) and #118 (embedding-service auth before
+  non-localhost deployment). (#99)
 
 *Deliberately not duplicated:* safe logging → already tracked under #32 ([P19] AI Observability);
 least-privilege IAM (AWS roles/policies) and secret rotation → already tracked under #34 ([P21]
