@@ -19,23 +19,21 @@ endpoints, no health check.
 
 ## 2. Authentication
 
-**Required, but not yet enforced past the door.** `POST /ai-agent` is protected by
-`authenticate` middleware (`src/auth/authenticate.ts`): callers must send
-`Authorization: Bearer <JWT>`, signed with the shared `JWT_SECRET` (HS256) and carrying a numeric
-`sub` claim. A missing/malformed header, or an invalid/expired/wrong-signature token, returns
-`401`. On success the middleware sets `req.userId` from the token's `sub`.
+**Required and enforced.** `POST /ai-agent` is protected by `authenticate` middleware
+(`src/auth/authenticate.ts`): callers must send `Authorization: Bearer <JWT>`, signed with the
+shared `JWT_SECRET` (HS256) and carrying a numeric `sub` claim. A missing/malformed header, or an
+invalid/expired/wrong-signature token, returns `401`. On success the middleware sets `req.userId`
+from the token's `sub`.
 
-`req.userId` is **not yet used for anything downstream** — no route or tool filters by it. Every
-authenticated user can still read any other user's data. Concretely:
+`req.userId` is used downstream to scope every tool and vector query (issue #95, done):
 
-- `searchSimilarChunks` (`vector-storage.ts`) filters only by the optional `injuryId` (it also
-  accepts an optional `sourceType`, but no production caller passes one) — never by owner.
-- `journalTool` (`journal-tool.ts`) does a bare `prisma.injury.findUnique({ where: { id } })` —
-  no owner check.
+- `searchSimilarChunks` (`vector-storage.ts`) filters by `userId` (a real, indexed column on
+  `DocumentChunk`, issue #41), in addition to the optional `injuryId`/`sourceType` filters.
+- `journalTool` (`journal-tool.ts`) scopes its `prisma.injury.findUnique` lookup to the
+  authenticated `userId`, not just the record `id`.
 
-Any authenticated caller who knows or guesses an `injuryId` can read that injury's chunks and full
-journal record. This is a known, unaddressed authorization gap — issue #95 — distinct from
-authentication itself (issue #94, done). See CLAUDE.md §9 on user-level data isolation.
+An authenticated caller can no longer read another user's chunks or journal record by
+guessing/knowing an `injuryId`. See CLAUDE.md §9 on user-level data isolation.
 
 ## 3. Endpoints
 
@@ -127,14 +125,15 @@ This is the most important section — these are gaps, not just documentation de
   design (D10, `docs/02-architecture.md`), the separate journal application is expected to own
   login/session issuance. A frontend needs that other application's login flow before it can call
   this API at all.
-- **Per-user data isolation.** The verified `userId` isn't used to filter retrieval or journal
-  results yet (issue #95, open) — any authenticated caller can still read any other user's data
-  (see CLAUDE.md §9, and roadmap #31).
-- **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. A frontend has no way to
-  discover which injuries belong to the current user even once #95 lands.
+- **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. Per-user data isolation
+  is enforced (issue #95, done), but a frontend still has no way to *discover* which injuries
+  belong to the current user from this API — out of scope here under D10 (`docs/02-architecture.md`);
+  expected to come from the separate journal application.
 - **CRUD for `Injury` and its child records** (`Treatment`, `Symptom`, `TimelineEvent`,
-  `MedicalVisit`). Today the only read path is `journalTool`'s single `findUnique`, and there is
-  no create/update/delete for any of these at all.
+  `MedicalVisit`). Today the only read path is `journalTool`'s single `findFirst` (scoped to the
+  authenticated `userId`), and there is no create/update/delete for any of these at all —
+  deliberately, per D10: this repo stays read-only/AI-only, and CRUD is expected to live in the
+  separate journal application (#50, closed as out-of-scope).
 - **Pagination or a client-settable retrieval limit.** The `rag` intent path hardcodes `5`
   internally with no way for the frontend to request more, or to page through additional chunks.
 - **Structured error information.** A `code`/`type` field distinct from the current single
