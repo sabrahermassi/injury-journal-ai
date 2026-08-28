@@ -117,13 +117,66 @@ const diagnosisLeakPatterns = [
   ),
 ];
 
+// Definite diagnostic assertions ("you have X", "diagnosis: X") are the normal shape of a
+// faithful summary of recorded data, so they're not flagged outright like the hedged patterns
+// above. Instead each one is checked against `evidence` (the retrieved chunks / journal record
+// text that was actually fed to the LLM) — a definite statement naming a condition that never
+// appears in that evidence is far more likely fabricated than grounded. Each pattern captures
+// the matched CONDITION_KEYWORDS term so it can be looked up in the evidence text.
+const definiteDiagnosisPatterns = [
+  new RegExp(
+    `you (?:have|had|have been diagnosed with|were diagnosed with)\\s+(?:a|an|any)?\\s*(?:\\w+\\s+){0,2}(${CONDITION_KEYWORDS})\\b`,
+    'gi',
+  ),
+
+  new RegExp(
+    `diagnos(?:is|ed with)(?:\\s+is)?:?\\s+(?:a|an|any)?\\s*(?:\\w+\\s+){0,2}(${CONDITION_KEYWORDS})\\b`,
+    'gi',
+  ),
+
+  new RegExp(
+    `this is (?:the|a|an)?\\s*(?:\\w+\\s+){0,2}(${CONDITION_KEYWORDS})\\b`,
+    'gi',
+  ),
+];
+
+// Finds the first definite-diagnosis term asserted in `answer` that does not appear anywhere
+// in `evidence`, or null if every asserted term is grounded (or none were asserted at all).
+function findUngroundedDiagnosisTerm(
+  answer: string,
+  evidence: string,
+): string | null {
+  for (const pattern of definiteDiagnosisPatterns) {
+    pattern.lastIndex = 0;
+
+    let match: RegExpExecArray | null;
+
+    while ((match = pattern.exec(answer)) !== null) {
+      const term = match[1];
+      const isGrounded = new RegExp(`\\b${term}\\b`, 'i').test(evidence);
+
+      if (!isGrounded) {
+        return term;
+      }
+
+      if (match.index === pattern.lastIndex) {
+        pattern.lastIndex += 1;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function checkAnswerSafety(
   answer: string,
+  evidence = '',
   requestId?: string,
 ): SafetyResult {
   void requestId; // unused for now — reserved for future log correlation (#32)
 
   const normalizedAnswer = answer.replace(/\s+/g, ' ').trim();
+  const normalizedEvidence = evidence.replace(/\s+/g, ' ').trim();
 
   const isDiagnosisLeak = diagnosisLeakPatterns.some((pattern) =>
     pattern.test(normalizedAnswer),
@@ -135,6 +188,20 @@ export function checkAnswerSafety(
       reason: 'diagnosis_leak',
       message:
         'I withheld that response because it read like a medical diagnosis, which I cannot provide. I can summarize your recorded symptoms, tests, treatments, and medical history instead.',
+    };
+  }
+
+  const ungroundedTerm = findUngroundedDiagnosisTerm(
+    normalizedAnswer,
+    normalizedEvidence,
+  );
+
+  if (ungroundedTerm) {
+    return {
+      allowed: false,
+      reason: 'unsupported_diagnosis',
+      message:
+        'I withheld that response because it stated a diagnosis that is not supported by your recorded information. I can summarize what is actually documented in your journal instead.',
     };
   }
 
