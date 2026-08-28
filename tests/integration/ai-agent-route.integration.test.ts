@@ -146,7 +146,7 @@ describe('AI agent route integration', () => {
 
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
 
-    expect(mockGenerateAnswer.mock.calls[0][0]).toContain(
+    expect(mockGenerateAnswer.mock.calls[0][1]).toContain(
       'AI Agent Route Test',
     );
   });
