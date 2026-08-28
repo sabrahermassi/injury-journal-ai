@@ -321,7 +321,8 @@ flowchart TD
 > `user`-role message carrying the question and context, with journal/RAG content wrapped in
 > `<journal_data>` tags the system prompt explicitly marks as untrusted data. Literal
 > `<journal_data>`/`</journal_data>` occurring inside stored content is neutralized before
-> interpolation so it can't forge a fake boundary. Like the other two checks, this is regex-based
+> interpolation so it can't forge a fake boundary — including whitespace-tolerant variants
+> (e.g. `< /journal_data>`), not just the exact tag spelling. Like the other two checks, this is regex-based
 > and will always be a step behind real-world phrasing — it narrows the attack surface, it doesn't
 > eliminate it.
 
