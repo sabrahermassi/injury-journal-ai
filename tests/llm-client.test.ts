@@ -42,4 +42,30 @@ describe('generateAnswer', () => {
 
     await expect(generateAnswer('question')).rejects.toThrow('LLM unavailable');
   });
+
+  it('throws on a response with no choices', async () => {
+    createMock.mockResolvedValue({ choices: [] });
+
+    await expect(generateAnswer('question')).rejects.toThrow(
+      'LLM returned a malformed response',
+    );
+  });
+
+  it('throws on a choice with no message', async () => {
+    createMock.mockResolvedValue({ choices: [{}] });
+
+    await expect(generateAnswer('question')).rejects.toThrow(
+      'LLM returned a malformed response',
+    );
+  });
+
+  it('returns an empty string for a legitimately empty completion', async () => {
+    createMock.mockResolvedValue({
+      choices: [{ message: { content: '' } }],
+    });
+
+    const result = await generateAnswer('question');
+
+    expect(result).toBe('');
+  });
 });

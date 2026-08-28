@@ -22,5 +22,11 @@ export async function generateAnswer(
     ],
   });
 
-  return response.choices[0]?.message?.content ?? '';
+  const choice = response.choices[0];
+
+  if (!choice?.message) {
+    throw new Error('LLM returned a malformed response (missing choice/message)');
+  }
+
+  return choice.message.content ?? '';
 }
