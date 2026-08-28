@@ -53,6 +53,7 @@ describe('embedText', () => {
 
   it('sends a POST request to the default embedding API URL with the expected payload', async () => {
     delete process.env.EMBEDDING_API_URL;
+    process.env.EMBEDDING_API_KEY = 'test-embedding-key';
 
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
@@ -306,6 +307,7 @@ describe('embedQuery', () => {
 
   it('sends a POST request to /embed-query, not /embed', async () => {
     delete process.env.EMBEDDING_API_URL;
+    process.env.EMBEDDING_API_KEY = 'test-embedding-key';
 
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
 
