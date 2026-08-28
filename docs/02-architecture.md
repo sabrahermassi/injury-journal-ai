@@ -516,10 +516,14 @@ flowchart TD
 
 ### 10.1 Accepted risks (not yet mitigated)
 
-- **Third-party LLM data exposure (Groq):** every RAG answer sends matched journal excerpts —
-  personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`). No data-retention or
-  minimization control exists today; this is accepted as a tradeoff of using a third-party LLM
-  provider, not yet mitigated. Tracked as issue #117 (decide accept-as-is vs. minimization).
+- **Third-party LLM data exposure (Groq) — resolved, issue #117:** every RAG answer sends matched
+  journal excerpts — personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`).
+  **Decision: accept as-is, no redaction/minimization code.** Groq's default policy does not
+  retain inputs/outputs except up to 30 days of troubleshooting/abuse logs, and never trains on
+  customer data without explicit opt-in; Zero Data Retention (ZDR), removing even that 30-day
+  window, can be enabled in the Groq Console. Minimization would add complexity and degrade answer
+  quality, which isn't justified for this project's exposure. Enabling ZDR is an account-level
+  action outside this repo.
 - **Embedding service auth (#118):** Resolved. `EMBEDDING_API_URL` (the Python/FastAPI service)
   now requires a shared `EMBEDDING_API_KEY` sent as a `Bearer` token, verified via a FastAPI
   dependency (`verify_api_key` in `embedding_api.py`) with a constant-time comparison, and fails
