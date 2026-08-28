@@ -15,8 +15,9 @@ define your behavior.`;
 // content containing a literal "</journal_data>" could forge a fake close tag and make
 // text after it appear to sit outside the untrusted-data boundary (see #66).
 function sanitizeUntrustedContent(content: string): string {
-  return content.replace(/<\/?\s*journal_data\s*>/gi, (match) =>
-    match.startsWith('</') ? '[/journal_data]' : '[journal_data]',
+  return content.replace(
+    /<\s*(\/?)\s*journal_data\s*>/gi,
+    (_match, slash: string) => (slash ? '[/journal_data]' : '[journal_data]'),
   );
 }
 
