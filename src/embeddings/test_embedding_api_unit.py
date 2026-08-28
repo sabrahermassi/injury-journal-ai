@@ -281,39 +281,60 @@ class TestEmbedBatchEndpoint:
         assert response.status_code == 200
 
 
+ENDPOINTS = [
+    ("/embed", {"text": "hello"}),
+    ("/embed-query", {"text": "hello"}),
+    ("/embed-batch", {"texts": ["hello"]}),
+]
+
+
 class TestAuthentication:
+    @pytest.mark.parametrize("path,payload", ENDPOINTS)
     def test_rejects_request_with_no_authorization_header(
-        self, api_module, fake_service
+        self, api_module, fake_service, path, payload
     ):
         unauthenticated_client = TestClient(api_module.app)
 
-        response = unauthenticated_client.post("/embed", json={"text": "hello"})
+        response = unauthenticated_client.post(path, json=payload)
 
         assert response.status_code == 401
         assert fake_service.embed_document_calls == []
+        assert fake_service.embed_query_calls == []
+        assert fake_service.embed_batch_calls == []
 
-    def test_rejects_request_with_wrong_key(self, api_module, fake_service):
+    @pytest.mark.parametrize("path,payload", ENDPOINTS)
+    def test_rejects_request_with_wrong_key(
+        self, api_module, fake_service, path, payload
+    ):
         unauthenticated_client = TestClient(
             api_module.app, headers={"Authorization": "Bearer wrong-key"}
         )
 
-        response = unauthenticated_client.post("/embed", json={"text": "hello"})
+        response = unauthenticated_client.post(path, json=payload)
 
         assert response.status_code == 401
         assert fake_service.embed_document_calls == []
+        assert fake_service.embed_query_calls == []
+        assert fake_service.embed_batch_calls == []
 
-    def test_rejects_request_with_non_bearer_scheme(self, api_module, fake_service):
+    @pytest.mark.parametrize("path,payload", ENDPOINTS)
+    def test_rejects_request_with_non_bearer_scheme(
+        self, api_module, fake_service, path, payload
+    ):
         unauthenticated_client = TestClient(
             api_module.app, headers={"Authorization": TEST_API_KEY}
         )
 
-        response = unauthenticated_client.post("/embed", json={"text": "hello"})
+        response = unauthenticated_client.post(path, json=payload)
 
         assert response.status_code == 401
         assert fake_service.embed_document_calls == []
+        assert fake_service.embed_query_calls == []
+        assert fake_service.embed_batch_calls == []
 
+    @pytest.mark.parametrize("path,payload", ENDPOINTS)
     def test_fails_closed_when_api_key_is_not_configured(
-        self, api_module, fake_service, monkeypatch
+        self, api_module, fake_service, monkeypatch, path, payload
     ):
         monkeypatch.delenv("EMBEDDING_API_KEY", raising=False)
 
@@ -321,7 +342,26 @@ class TestAuthentication:
             api_module.app, headers={"Authorization": f"Bearer {TEST_API_KEY}"}
         )
 
-        response = unconfigured_client.post("/embed", json={"text": "hello"})
+        response = unconfigured_client.post(path, json=payload)
 
         assert response.status_code == 500
         assert fake_service.embed_document_calls == []
+        assert fake_service.embed_query_calls == []
+        assert fake_service.embed_batch_calls == []
+
+
+class TestDocsDisabled:
+    def test_openapi_json_is_disabled(self, client):
+        response = client.get("/openapi.json")
+
+        assert response.status_code == 404
+
+    def test_docs_ui_is_disabled(self, client):
+        response = client.get("/docs")
+
+        assert response.status_code == 404
+
+    def test_redoc_ui_is_disabled(self, client):
+        response = client.get("/redoc")
+
+        assert response.status_code == 404

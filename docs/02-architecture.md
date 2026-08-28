@@ -509,6 +509,8 @@ flowchart TD
   now requires a shared `EMBEDDING_API_KEY` sent as a `Bearer` token, verified via a FastAPI
   dependency (`verify_api_key` in `embedding_api.py`) with a constant-time comparison, and fails
   closed (500) if the key isn't configured. `embedding-client.ts` sends the key on every request.
+  The service's `/docs`, `/redoc`, and `/openapi.json` are also disabled, since FastAPI's
+  app-level `dependencies` list doesn't cover those auto-generated routes.
 
 ## 11. Architectural Decision Log
 

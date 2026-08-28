@@ -23,7 +23,12 @@ def verify_api_key(authorization: str | None = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
-app = FastAPI(dependencies=[Depends(verify_api_key)])
+app = FastAPI(
+    dependencies=[Depends(verify_api_key)],
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 
 embedding_service = EmbeddingService()
 
