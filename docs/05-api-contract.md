@@ -59,18 +59,18 @@ the branch without inferring it from shape (resolved as part of issue #45):**
 | `journal` intent, `injuryId` not found | `{ "answer": "No injury record was found.", "citations": [], "intent": "journal" }` — **no `metadata` key** |
 | `journal` intent, found | `{ "answer": "<LLM-generated prose summary of the injury record>", "citations": [], "intent": "journal" }` — generated via `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`; there's still no `metadata` key |
 | `rag` intent | `{ "answer": "string", "citations": [...], "intent": "rag", "metadata": { "retrievedChunks": [{ "sourceType": "string", "sourceId": 1 }] } }` |
-| Unrecognized intent (and see note below) | `{ "answer": "Unable to determine how to handle this request.", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` — `intent` here is whatever `routeIntent()` actually returned, which today is only reachable for the `'safety'`-value dead-branch case described below |
+| `safety` intent from `routeIntent()` | `{ "answer": "<refusal>", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` — same message/shape as the "Safety-blocked" row above, produced by a second, narrower keyword check (see note below) rather than the main `checkSafety` gate |
 
-**Important internal inconsistency, not just a documentation gap:** `routeIntent()` can return
+**Note — two distinct safety-routing paths, not a documentation gap:** `routeIntent()` can return
 `'safety'` as an `AgentIntent` (it's a defined member of the type and is returned when the
-question matches a small keyword list — `diagnose`, `do i have`, `cancer`, `condition`). But
-`runAgent`'s `switch` has no `case 'safety':` — it only handles `'journal'` and `'rag'`
-explicitly. A `'safety'`-routed question therefore falls into the generic default branch
-("Unable to determine how to handle this request.") instead of a safety refusal. This is separate
-from — and less thorough than — the actual safety gate that already runs earlier in the same
-function (`checkSafety`/`safetyTool`, a much larger regex set in `safety-service.ts`). The two
-mechanisms overlap but are not identical, and only one of them is actually wired to produce a
-refusal response. Tracked as issue #86.
+question matches a small keyword list — `diagnose`, `do i have`, `cancer`, `condition`).
+`runAgent`'s `switch` has a `case 'safety':` that returns the same refusal shape as the main
+safety gate. This is separate from — and less thorough than — the actual safety gate that already
+runs earlier in the same function (`checkSafety`/`safetyTool`, a much larger regex set in
+`safety-service.ts`). The two mechanisms overlap but are not identical: a question that slips past
+`checkSafety` but matches `routeIntent`'s narrower list still gets a proper refusal, just via the
+second path. Reconciling the two keyword sets is out of scope for issue #86, which only closed the
+missing-switch-case defect.
 
 **Errors**
 
@@ -104,9 +104,10 @@ limit of `5` for the `rag` intent path.
 - **The `journal` intent produces an LLM-generated prose answer**, not a structured field-by-field
   breakdown of the record — quality depends on the LLM correctly summarizing the context built by
   `formatInjuryRecord()`.
-- **The dead `'safety'` intent branch** described in §3 — a real inconsistency between the type
-  system (`AgentIntent`) and the orchestrator's actual handling, not just a documentation gap.
-  Tracked as issue #86.
+- **Two overlapping-but-not-identical safety-detection mechanisms** (the main `checkSafety` gate
+  and `routeIntent()`'s narrower keyword list) both feed into the same `'safety'` intent/response
+  shape — see §3. Fixed as issue #86 (the switch previously had no case for the `routeIntent()`
+  path); reconciling the two keyword sets themselves remains unaddressed.
 - **An unused, unwired duplicate entrypoint exists in the codebase**:
   `src/ai-assistant/ai-assistant-api.ts` (a thin, otherwise-unused wrapper around `runAgent`). It is
   not reachable from any route. (`src/ai-agent/ai-agent-service.ts`, a dead duplicate of

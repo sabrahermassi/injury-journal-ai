@@ -5,7 +5,10 @@ import { routeIntent } from './ai-agent-intent-router.js';
 import { AgentState } from './ai-agent-state.js';
 import { buildPrompt } from '../rag/prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
-import { checkAnswerSafety } from '../safety/safety-service.js';
+import {
+  checkAnswerSafety,
+  DIAGNOSIS_REQUEST_MESSAGE,
+} from '../safety/safety-service.js';
 
 export async function runAgent(
   question: string,
@@ -37,6 +40,16 @@ export async function runAgent(
   state.intent = intent;
 
   switch (intent) {
+    case 'safety':
+      return {
+        answer: DIAGNOSIS_REQUEST_MESSAGE,
+        citations: [],
+        intent,
+        metadata: {
+          retrievedChunks: [],
+        },
+      };
+
     case 'journal': {
       state.toolUsed = 'journal-tool';
 
