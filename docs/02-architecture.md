@@ -94,10 +94,11 @@ flowchart TB
 ```
 
 > **Current status:** "Per-Tool Authorization" (`AUTH`) and "Citation Generation" (`CIT`) are
-> shown here as part of the built flow. Per-tool authorization does not exist in any form yet —
-> both tools run unconditionally once safety passes. Citation generation exists, but only as
-> citation-building from retrieved chunks; it is not checked against the generated answer. See
-> §5.5 and §10 for the current-vs-planned detail on each.
+> shown here as part of the built flow. Per-tool authorization is now built (issue #95) —
+> `rag-tool.ts`, `journal-tool.ts`, and `vector-storage.ts` filter by the authenticated
+> `req.userId`. Citation generation exists, but only as citation-building from retrieved chunks;
+> it is not checked against the generated answer. See §5.5 and §10 for the current-vs-planned
+> detail on each.
 
 ## 4. Offline Architecture
 
@@ -487,18 +488,14 @@ flowchart TD
 > decide whether it stays a long-lived service, a sidecar, or a batch/Lambda-friendly on-demand
 > load before this Terraform work starts, since those have very different cost/latency profiles.
 
-## 10. Security Architecture: Target authorization design (not yet built)
+## 10. Security Architecture: authorization design
 
-> **Current status: none of this exists yet — not partially.** Every request today is anonymous
-> server-side; there is no authentication, no authorization step, and no enforced user/injury
-> filter anywhere in the request path. Any caller can supply any `injuryId` and receive that
-> injury's data. This diagram describes the target design for the open security work, not
-> current behavior — see `docs/04-implementation-roadmap.md` Step 5.
->
-> Closing this gap also requires a schema change, not just a middleware: `DocumentChunk` has no
-> real `userId` column today (it only exists inside an unindexed JSON metadata blob), so the
-> "User / Injury Filters" step below cannot be implemented against vector search results until
-> that column is added.
+> **Current status: built.** `POST /ai-agent` requires a Bearer JWT (issue #94), and every
+> request is scoped to the authenticated `req.userId`: `rag-tool.ts` and `journal-tool.ts` filter
+> by owner, and `vector-storage.ts`'s `searchSimilarChunks` filters vector search results by a
+> real, indexed `userId` column on `DocumentChunk` (issue #41) rather than an unindexed JSON
+> blob. A caller can no longer supply an arbitrary `injuryId` and receive another user's data
+> (issue #95). This diagram matches current behavior.
 
 ```mermaid
 flowchart TD
@@ -719,11 +716,10 @@ quoted), what else was considered, whether it still holds, and whether it should
   ingestion time (denormalized from `Injury.userId`) — already the explicitly recommended fix
   (§10, issue #41), needed specifically because vector search results can't be filtered by owner
   through a join the way a normal relational query could without real cost at scale.
-- **CURRENT STATUS:** Confirmed gap, and a hard blocker — §10 states plainly that the target
-  authorization design's "User / Injury Filters" step "cannot be implemented against vector search
-  results until that column is added." This is a schema migration, not just application code.
-- **SHOULD THIS BE REVISITED:** Yes — already tracked (issue #41) and correctly sequenced ahead of
-  the broader authorization work (#31), since #31 depends on it.
+- **CURRENT STATUS:** Resolved (issue #41) — `DocumentChunk.userId` is now a real, indexed column,
+  denormalized from `Injury.userId` at write time. §10's authorization design is built against it.
+- **SHOULD THIS BE REVISITED:** No — done, and correctly sequenced ahead of the broader
+  authorization work (#95), which depended on it.
 
 ### D10 — This backend does not own journal CRUD or authentication; a separate app does
 
@@ -736,15 +732,14 @@ quoted), what else was considered, whether it still holds, and whether it should
   per `docs/01-product.md` §1) rather than growing into a second product surface.
 - **ALTERNATIVES CONSIDERED:** This backend owns CRUD + auth end-to-end — rejected as unnecessary
   scope growth for a project whose value is the AI layer, not journal record-keeping.
-- **CURRENT STATUS:** Decided (issue #49). Issue #94 implemented the "verify externally-issued
-  tokens" half: `POST /ai-agent` now requires a `Bearer` JWT (`src/auth/authenticate.ts`), verified
-  against `JWT_SECRET` — no login/session-issuance endpoint exists in this repo, matching this
-  decision. The verified `userId` is not yet used to filter retrieval or journal-tool results
-  (see issue #95, still open — see §10's authorization diagram, also still not built). #50
-  (`[P10]` journal CRUD + auth endpoints) and #51 (`[P11]` conversation/thread concept) stay out
-  of this repo's scope under this decision; re-scoping or closing those issues is separate
-  follow-up work, not
-  part of this decision itself.
+- **CURRENT STATUS:** Decided (issue #49) and fully implemented. Issue #94 implemented the
+  "verify externally-issued tokens" half: `POST /ai-agent` now requires a `Bearer` JWT
+  (`src/auth/authenticate.ts`), verified against `JWT_SECRET` — no login/session-issuance endpoint
+  exists in this repo, matching this decision. The verified `userId` is now used to filter
+  retrieval and journal-tool results (issue #95, closed — see §10's authorization diagram, now
+  built). #50 (`[P10]` journal CRUD + auth endpoints) is closed as out-of-scope under this
+  decision; #51 (`[P11]` conversation/thread concept) stays out of scope for now but remains open,
+  deferred until frontend work actually starts.
 - **SHOULD THIS BE REVISITED:** Only if the "existing Injury Journal application" assumption turns
   out to be wrong (e.g. no such external app actually exists yet) — not expected based on the
   current product description.
