@@ -287,13 +287,7 @@ the failure mode this step exists to prevent.
 
 # Step 5 — Verify the Changes
 
-Run the relevant verification commands from `CLAUDE.md`.
-
-At minimum, when applicable:
-
-    npx tsc --noEmit
-    npm run lint
-    npm test
+Run the verification commands from `CLAUDE.md` §10.
 
 For integration-related changes, run the appropriate integration tests.
 

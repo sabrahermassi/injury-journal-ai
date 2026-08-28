@@ -41,7 +41,8 @@ Security/production hardening, AI observability, AWS deployment, and Infrastruct
 
 - Node.js 22 (matches CI)
 - A PostgreSQL database with the `pgvector` extension available (CI uses the `pgvector/pgvector:pg16` image)
-- A Python environment able to run the embedding service (`src/embeddings/embedding_api.py`) — FastAPI, `sentence-transformers`, and an ASGI server such as `uvicorn`. No dependency manifest for this service is currently committed to the repo.
+- `DATABASE_URL` should point at a dedicated, minimally-privileged application role — not a superuser or the role used to run migrations (see [Database roles and connection hygiene](#database-roles-and-connection-hygiene) below)
+- A Python environment able to run the embedding service (`src/embeddings/embedding_api.py`) — dependencies are pinned in `src/embeddings/requirements.txt`.
 
 ### Install
 
@@ -68,6 +69,34 @@ npx prisma generate
 npx prisma migrate deploy
 ```
 
+### Database roles and connection hygiene
+
+`npx prisma migrate deploy` needs a schema-owner role (DDL privileges). The role the running app
+connects as via `DATABASE_URL` should be a **different, minimally-privileged role** — the app
+never runs DDL and only needs:
+
+- `SELECT` on `Injury`, `Symptom`, `Treatment`, `MedicalVisit`, `TimelineEvent`, `User` (this
+  backend only reads journal records; see `docs/02-architecture.md` D-series decisions on CRUD
+  ownership)
+- `SELECT`, `INSERT`, `DELETE` on `DocumentChunk` (retrieval, and insert/prune during ingestion —
+  no `UPDATE`)
+
+```sql
+CREATE ROLE injury_journal_ai_app WITH LOGIN PASSWORD '...';
+
+GRANT SELECT ON "Injury", "Symptom", "Treatment", "MedicalVisit", "TimelineEvent", "User"
+  TO injury_journal_ai_app;
+GRANT SELECT, INSERT, DELETE ON "DocumentChunk" TO injury_journal_ai_app;
+```
+
+Point `DATABASE_URL` at `injury_journal_ai_app`, and keep the schema-owner credentials used for
+`prisma migrate deploy` separate (e.g. a different connection string used only in CI/deploy, not
+committed anywhere).
+
+For any hosted/non-local Postgres instance, append SSL parameters to `DATABASE_URL`, e.g.
+`?sslmode=require` (or stricter, depending on the provider). Local development against a
+Docker/local Postgres instance can omit `sslmode`.
+
 Seeding uses two separate scripts, both with hard safety checks against running against the wrong database:
 
 - `npx prisma db seed` runs `prisma/seed.ts`, which refuses to run unless `DATABASE_URL` contains `test`.
@@ -75,9 +104,11 @@ Seeding uses two separate scripts, both with hard safety checks against running 
 
 ### Run the embedding service
 
-Start `src/embeddings/embedding_api.py` (a FastAPI app exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
+Install the Python dependencies, then start `src/embeddings/embedding_api.py` (a FastAPI app
+exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
 
 ```bash
+pip install -r src/embeddings/requirements.txt
 uvicorn src.embeddings.embedding_api:app --port 8000
 ```
 

@@ -73,7 +73,10 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
 *Urgent (no dependencies, do first):*
 - [ ] Add rate limiting to prevent LLM/embedding cost-abuse and resource exhaustion — confirmed
   exploitable today (no auth, no rate limit, every request triggers a paid Groq + embedding call). (#89)
-- [ ] Add schema-based request input validation (Zod) incl. a max question length. (#90)
+- [x] Add schema-based request input validation (Zod) incl. a max question length —
+  `ai-agent-controller.ts` now validates `question`/`injuryId` via a Zod schema instead of ad hoc
+  inline checks, and `question` has a real 10,000-character upper bound (matching the embedding
+  service's own `EmbeddingRequest.text` limit). (#90)
 - [ ] Regression tests for data isolation boundaries — currently zero tests exist proving
   cross-user chunk leakage can't happen when `injuryId` is omitted (requested explicitly in #31's
   own text). (#91)
@@ -92,8 +95,10 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
 *Optional (safe to defer indefinitely):*
 - [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)
 - [ ] Add `npm audit`/Dependabot/SCA scanning to CI. (#98)
-- [ ] Document third-party LLM data exposure (Groq) and the embedding service's missing auth
-  boundary as accepted risks. (#99)
+- [x] Document third-party LLM data exposure (Groq) and the embedding service's missing auth
+  boundary as accepted risks — see `docs/02-architecture.md` §10.1. Follow-up action items
+  filed as #117 (Groq data-retention decision) and #118 (embedding-service auth before
+  non-localhost deployment). (#99)
 
 *Deliberately not duplicated:* safe logging → already tracked under #32 ([P19] AI Observability);
 least-privilege IAM (AWS roles/policies) and secret rotation → already tracked under #34 ([P21]
@@ -105,19 +110,22 @@ Infrastructure as Code) — both are cloud-infra concepts with no local-codebase
 
 **Fold into Step 9 backlog cleanup / general hygiene (not urgent, but shouldn't be lost):**
 
-- [ ] Delete or finish `src/ai-agent/ai-agent-service.ts` — a second, unused, partially-dead
+- [x] Delete `src/ai-agent/ai-agent-service.ts` — a second, unused, partially-dead
   duplicate of `ai-agent-orchestrator.ts`. (#46)
+- [x] Consolidate `PrismaClient` instantiation behind `src/lib/prisma.ts` — `vector-storage.ts`,
+  `journal-tool.ts`, `citation-source-mapper.ts`, and `citation-verifier.ts` now import the shared
+  singleton instead of each constructing their own client. (#47)
 - [ ] Resolve the three unwired citation modules (`citation-verifier.ts`,
   `citation-formatter.ts`, `citation-source-mapper.ts`) — either wire them into the response path
   as #35 already plans, or remove them; two of the three only handle 2 of 5 valid `sourceType`
   values (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`). (not yet filed)
-- [ ] Consolidate `PrismaClient` instantiation behind `src/lib/prisma.ts` — four files construct
-  their own client independently today. (#47)
-- [ ] Add `journal-tool.ts` test coverage — zero tests exist for it despite it being one of three
-  response branches in the agent. (#44)
+- [x] Add `journal-tool.ts` test coverage — both `journalTool()` and `formatInjuryRecord()` are now
+  covered in `tests/journal-tool.test.ts`. (#44)
 - [ ] Surface `AgentState.intent` in the actual HTTP response — it's computed, tracked, and then
   discarded; a frontend needs exactly this field to know which response shape it received. (#45)
-- [ ] Clean up the stray Python test functions embedded at module level in `embedding_api.py`. (#48)
+- [x] Clean up the stray Python test functions embedded at module level in `embedding_api.py` —
+  moved into `test_embedding_api_unit.py`'s existing `TestEmbedEndpoint`/`TestEmbedBatchEndpoint`
+  classes. (#48)
 
 **Frontend-readiness gaps — new "Step 10" candidate, sequenced after Step 5 (security), since
 building frontend-facing endpoints without auth would just mean redoing them:**

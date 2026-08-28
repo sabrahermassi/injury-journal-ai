@@ -480,6 +480,17 @@ flowchart TD
     V --> D["User's Journal Data"]
 ```
 
+### 10.1 Accepted risks (not yet mitigated)
+
+- **Third-party LLM data exposure (Groq):** every RAG answer sends matched journal excerpts —
+  personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`). No data-retention or
+  minimization control exists today; this is accepted as a tradeoff of using a third-party LLM
+  provider, not yet mitigated. Tracked as issue #117 (decide accept-as-is vs. minimization).
+- **Embedding service has no auth boundary:** `EMBEDDING_API_URL` (the Python/FastAPI service)
+  has no authentication. Acceptable only while strictly localhost-bound; must be revisited before
+  any deployment step (#33/#34) exposes it beyond localhost. Out of scope for #94/#95, which only
+  cover `/ai-agent`. Tracked as issue #118.
+
 ## 11. Architectural Decision Log
 
 For each major decision: what was chosen, why (as inferred from code, `CLAUDE.md`, and commit
@@ -673,3 +684,23 @@ quoted), what else was considered, whether it still holds, and whether it should
   results until that column is added." This is a schema migration, not just application code.
 - **SHOULD THIS BE REVISITED:** Yes — already tracked (issue #41) and correctly sequenced ahead of
   the broader authorization work (#31), since #31 depends on it.
+
+### D10 — This backend does not own journal CRUD or authentication; a separate app does
+
+- **DECISION:** This backend does not own `Injury` CRUD or authentication/session issuance; a
+  separate existing Injury Journal application owns both. This repo remains AI/RAG/agent-only,
+  consuming journal data as its source of truth and (once #94 lands) verifying identity via
+  tokens/sessions issued by that other application rather than minting its own.
+- **RATIONALE:** Decided directly with the project owner while resolving issue #49; keeps this
+  repo's scope aligned with its stated purpose (AI assistant on top of an existing journal app,
+  per `docs/01-product.md` §1) rather than growing into a second product surface.
+- **ALTERNATIVES CONSIDERED:** This backend owns CRUD + auth end-to-end — rejected as unnecessary
+  scope growth for a project whose value is the AI layer, not journal record-keeping.
+- **CURRENT STATUS:** Decided (issue #49). Downstream: #94 should be scoped as "verify
+  externally-issued tokens/sessions," not "build login/session issuance." #50 (`[P10]` journal
+  CRUD + auth endpoints) and #51 (`[P11]` conversation/thread concept) stay out of this repo's
+  scope under this decision; re-scoping or closing those issues is separate follow-up work, not
+  part of this decision itself.
+- **SHOULD THIS BE REVISITED:** Only if the "existing Injury Journal application" assumption turns
+  out to be wrong (e.g. no such external app actually exists yet) — not expected based on the
+  current product description.

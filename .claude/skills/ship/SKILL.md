@@ -36,13 +36,7 @@ Before committing:
    - no unresolved TODOs introduced by the change
    - no contradiction with `CLAUDE.md`
 
-3. Re-run the verification commands required by `CLAUDE.md`.
-
-At minimum, when applicable:
-
-- `npx tsc --noEmit`
-- `npm run lint`
-- `npm test`
+3. Re-run the verification commands from `CLAUDE.md` §10.
 
 Also run integration tests or the evaluation harness when the changed area requires them.
 

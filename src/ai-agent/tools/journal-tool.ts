@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma.js';
 
 export async function journalTool(injuryId: number, requestId?: string) {
   void requestId; // unused for now — reserved for future log correlation (#32)

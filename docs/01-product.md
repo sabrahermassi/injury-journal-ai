@@ -26,13 +26,14 @@ Injury Journal AI is an AI-powered assistant that helps users search, understand
 
 It works on top of an existing Injury Journal application and uses structured journal data — including injuries, symptoms, treatments, medical visits, and timeline events — as its source of truth.
 
-> **Scope clarification (added during the `docs/handoff/` review series):** this backend does
-> not implement journal record creation/editing or user authentication — those are assumed to be
-> owned by that existing Injury Journal application. Today, this repo exposes only one AI
-> endpoint (`POST /ai-agent`); there is no `GET /injuries`, no way to create or
-> edit a record, and no login. If a frontend is meant to be built against this backend for
-> anything beyond asking questions, that scope needs to be decided explicitly and is not yet.
-> See `docs/05-api-contract.md` §6.
+> **Scope decision (resolved via issue #49):** this backend does not implement journal record
+> creation/editing or user authentication/session issuance — a separate, existing Injury Journal
+> application owns both. This repo remains read-only/AI-only against journal data it ingests from
+> that application. Today, this repo exposes only one AI endpoint (`POST /ai-agent`); there is no
+> `GET /injuries`, no way to create or edit a record, and no login, and none of those are planned
+> for this repo. The practical implication for authentication (issue #94): this backend will
+> eventually verify tokens/sessions issued by that other application, not issue its own. See
+> `docs/05-api-contract.md` §6 and `docs/02-architecture.md` §11 (Decision D10).
 
 The system uses embeddings, semantic retrieval, RAG, and eventually AI agents to produce grounded answers and summaries.
 

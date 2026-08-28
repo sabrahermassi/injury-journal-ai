@@ -177,6 +177,60 @@ describe('ai agent controller', () => {
     expect(runAgentMock).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when question exceeds the maximum length', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 'x'.repeat(10_001),
+      },
+    };
+
+    const res = mockResponse();
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Question exceeds maximum length of 10000 characters',
+    });
+
+    expect(runAgentMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts a question at exactly the maximum length', async () => {
+    const req: MockRequest = {
+      body: {
+        question: 'x'.repeat(10_000),
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockResolvedValue({
+      answer: 'ok',
+      citations: [],
+    });
+
+    await askAgent(req, res);
+
+    expect(res.status).not.toHaveBeenCalledWith(400);
+    expect(runAgentMock).toHaveBeenCalled();
+  });
+
+  it('returns "Question is required" when the body is a non-object JSON value', async () => {
+    const req = { body: 'not an object' } as unknown as MockRequest;
+
+    const res = mockResponse();
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Question is required',
+    });
+
+    expect(runAgentMock).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when injuryId is not a number', async () => {
     const req: MockRequest = {
       body: {

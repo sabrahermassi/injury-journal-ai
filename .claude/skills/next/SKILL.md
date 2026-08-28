@@ -82,13 +82,7 @@ Make only changes required for the issue.
 
 ## 5. Verify
 
-Run the relevant checks required by `CLAUDE.md`.
-
-At minimum, when applicable:
-
-- `npx tsc --noEmit`
-- `npm run lint`
-- `npm test`
+Run the verification commands from `CLAUDE.md` §10.
 
 Run integration tests and the evaluation harness when the change requires them.
 

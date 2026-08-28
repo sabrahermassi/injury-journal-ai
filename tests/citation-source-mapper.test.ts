@@ -9,8 +9,8 @@ const prismaMock = {
   },
 };
 
-jest.unstable_mockModule('@prisma/client', () => ({
-  PrismaClient: jest.fn().mockImplementation(() => prismaMock),
+jest.unstable_mockModule('../src/lib/prisma.js', () => ({
+  prisma: prismaMock,
 }));
 
 const { mapCitationSources } =
