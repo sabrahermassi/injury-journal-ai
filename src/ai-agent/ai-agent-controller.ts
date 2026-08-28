@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
+import Groq from 'groq-sdk';
 import { runAgent } from './ai-agent-orchestrator.js';
 import { logError } from '../lib/log-error.js';
 import { sendError } from '../lib/api-error.js';
+import { EmbeddingServiceError } from '../embeddings/embedding-client.js';
 
 // Mirrors EmbeddingRequest.text's own Field(max_length=10_000) in
 // src/embeddings/embedding_api.py -- the question is what gets embedded.
@@ -70,6 +73,21 @@ export async function askAgent(req: Request, res: Response) {
     return res.json(result);
   } catch (error) {
     logError('ai-agent request failed', error);
+
+    if (error instanceof EmbeddingServiceError) {
+      return sendError(res, 500, 'embedding_service_error', 'Failed to process request');
+    }
+
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError ||
+      error instanceof Prisma.PrismaClientInitializationError
+    ) {
+      return sendError(res, 500, 'database_error', 'Failed to process request');
+    }
+
+    if (error instanceof Groq.APIError) {
+      return sendError(res, 500, 'llm_service_error', 'Failed to process request');
+    }
 
     return sendError(res, 500, 'internal_error', 'Failed to process request');
   }

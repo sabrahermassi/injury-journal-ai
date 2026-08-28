@@ -1,4 +1,6 @@
 import { jest } from '@jest/globals';
+import { Prisma } from '@prisma/client';
+import Groq from 'groq-sdk';
 
 const runAgentMock = jest.fn();
 
@@ -7,6 +9,9 @@ jest.unstable_mockModule('../src/ai-agent/ai-agent-orchestrator.js', () => ({
 }));
 
 const { askAgent } = await import('../src/ai-agent/ai-agent-controller.js');
+const { EmbeddingServiceError } = await import(
+  '../src/embeddings/embedding-client.js'
+);
 
 type MockRequest = {
   headers?: Record<string, string>;
@@ -298,7 +303,7 @@ describe('ai agent controller', () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it('returns 500 when agent fails', async () => {
+  it('returns 500 with internal_error when agent fails with an unrecognized error', async () => {
     const req: MockRequest = {
       userId: 1,
       body: {
@@ -317,6 +322,101 @@ describe('ai agent controller', () => {
     expect(res.json).toHaveBeenCalledWith({
       error: 'Failed to process request',
       code: 'internal_error',
+    });
+  });
+
+  it('returns 500 with embedding_service_error when the embedding service fails', async () => {
+    const req: MockRequest = {
+      userId: 1,
+      body: {
+        question: 'test',
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockRejectedValue(
+      new EmbeddingServiceError('Embedding API request failed: 503 Service Unavailable'),
+    );
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Failed to process request',
+      code: 'embedding_service_error',
+    });
+  });
+
+  it('returns 500 with database_error when Prisma throws a known request error', async () => {
+    const req: MockRequest = {
+      userId: 1,
+      body: {
+        question: 'test',
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '6.0.0',
+      }),
+    );
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Failed to process request',
+      code: 'database_error',
+    });
+  });
+
+  it('returns 500 with database_error when Prisma fails to initialize', async () => {
+    const req: MockRequest = {
+      userId: 1,
+      body: {
+        question: 'test',
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockRejectedValue(
+      new Prisma.PrismaClientInitializationError('Cannot reach database server', '6.0.0'),
+    );
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Failed to process request',
+      code: 'database_error',
+    });
+  });
+
+  it('returns 500 with llm_service_error when the Groq call fails', async () => {
+    const req: MockRequest = {
+      userId: 1,
+      body: {
+        question: 'test',
+      },
+    };
+
+    const res = mockResponse();
+
+    runAgentMock.mockRejectedValue(
+      new Groq.APIError(429, undefined, 'Rate limit exceeded', undefined),
+    );
+
+    await askAgent(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Failed to process request',
+      code: 'llm_service_error',
     });
   });
 });
