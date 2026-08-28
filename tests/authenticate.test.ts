@@ -1,6 +1,11 @@
 import { jest } from '@jest/globals';
 import jwt from 'jsonwebtoken';
 import { authenticate } from '../src/auth/authenticate.js';
+import {
+  signNoneAlgToken,
+  signRS256Token,
+  signTestTokenNoExpiry,
+} from './helpers/auth.js';
 
 type MockRequest = {
   headers: Record<string, string | undefined>;
@@ -118,6 +123,55 @@ describe('authenticate middleware', () => {
 
   it('calls next() and sets req.userId for a valid token', () => {
     const token = jwt.sign({ sub: '42' }, SECRET, { algorithm: 'HS256' });
+    const req: MockRequest = { headers: { authorization: `Bearer ${token}` } };
+    const res = mockResponse();
+    const next = jest.fn();
+
+    authenticate(req as never, res as never, next as never);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+    expect(req.userId).toBe(42);
+  });
+
+  it('returns 401 for a token signed with alg "none"', () => {
+    const token = signNoneAlgToken(1);
+    const req: MockRequest = { headers: { authorization: `Bearer ${token}` } };
+    const res = mockResponse();
+    const next = jest.fn();
+
+    authenticate(req as never, res as never, next as never);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Invalid or expired token',
+      code: 'invalid_token',
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 for an RS256-signed token (algorithm allowlist rejects it)', () => {
+    const token = signRS256Token(1);
+    const req: MockRequest = { headers: { authorization: `Bearer ${token}` } };
+    const res = mockResponse();
+    const next = jest.fn();
+
+    authenticate(req as never, res as never, next as never);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Invalid or expired token',
+      code: 'invalid_token',
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  // jwt.verify does not require an `exp` claim, so a token without one is
+  // currently accepted indefinitely. This documents that assumption (the
+  // external issuer is trusted to always set `exp`) rather than treating it
+  // as untested behavior.
+  it('accepts a token with no exp claim (documents current unbounded lifetime)', () => {
+    const token = signTestTokenNoExpiry(42);
     const req: MockRequest = { headers: { authorization: `Bearer ${token}` } };
     const res = mockResponse();
     const next = jest.fn();
