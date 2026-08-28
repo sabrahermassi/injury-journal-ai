@@ -59,6 +59,7 @@ Set the following environment variables (see `.env.example` for a starting point
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `GROQ_API_KEY` | Yes | Used by `src/llm/llm-client.ts` for answer generation |
 | `JWT_SECRET` | Yes | Shared secret used to verify `Bearer` JWTs on `POST /ai-agent` (`src/auth/authenticate.ts`); tokens are expected to be issued by the separate journal application, not this backend |
+| `EMBEDDING_API_KEY` | Yes | Shared secret sent as a `Bearer` token to the embedding service (`src/embeddings/embedding-client.ts`); the same value must be set in the embedding service's own process environment (see below) |
 | `EMBEDDING_API_URL` | No | Defaults to `http://127.0.0.1:8000` |
 | `EMBEDDING_API_TIMEOUT_MS` | No | Defaults to 30000 |
 | `PORT` | No | Defaults to 3000 |
@@ -111,8 +112,12 @@ exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` 
 
 ```bash
 pip install -r src/embeddings/requirements.txt
-uvicorn src.embeddings.embedding_api:app --port 8000
+EMBEDDING_API_KEY=<same value as the backend's .env> uvicorn src.embeddings.embedding_api:app --port 8000
 ```
+
+`EMBEDDING_API_KEY` must be set in this process's own environment — it is a separate Python
+process and does not read the Node backend's `.env` file. Every request must include
+`Authorization: Bearer <EMBEDDING_API_KEY>`; the service rejects requests without it.
 
 ### Run the backend
 
