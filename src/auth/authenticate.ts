@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { logError } from '../lib/log-error.js';
+import { sendError } from '../lib/api-error.js';
 
 function extractBearerToken(header: string | undefined): string | null {
   if (!header) {
@@ -25,13 +26,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
       new Error('Missing JWT_SECRET'),
     );
 
-    return res.status(500).json({ error: 'Failed to process request' });
+    return sendError(res, 500, 'internal_error', 'Failed to process request');
   }
 
   const token = extractBearerToken(req.headers.authorization);
 
   if (!token) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return sendError(res, 401, 'authentication_required', 'Authentication required');
   }
 
   try {
@@ -41,13 +42,13 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     const userId = Number(subject);
 
     if (!Number.isSafeInteger(userId) || userId <= 0) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return sendError(res, 401, 'invalid_token', 'Invalid or expired token');
     }
 
     req.userId = userId;
 
     return next();
   } catch {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    return sendError(res, 401, 'invalid_token', 'Invalid or expired token');
   }
 }

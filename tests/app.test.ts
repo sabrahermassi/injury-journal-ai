@@ -77,6 +77,7 @@ describe('POST /ai-agent rate limiting', () => {
       );
       expect(limitedResponse.body).toEqual({
         error: 'Too many requests, please try again later.',
+        code: 'rate_limited',
       });
     } finally {
       await prisma.$disconnect();

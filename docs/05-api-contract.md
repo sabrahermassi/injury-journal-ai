@@ -19,23 +19,21 @@ endpoints, no health check.
 
 ## 2. Authentication
 
-**Required, but not yet enforced past the door.** `POST /ai-agent` is protected by
-`authenticate` middleware (`src/auth/authenticate.ts`): callers must send
-`Authorization: Bearer <JWT>`, signed with the shared `JWT_SECRET` (HS256) and carrying a numeric
-`sub` claim. A missing/malformed header, or an invalid/expired/wrong-signature token, returns
-`401`. On success the middleware sets `req.userId` from the token's `sub`.
+**Required and enforced.** `POST /ai-agent` is protected by `authenticate` middleware
+(`src/auth/authenticate.ts`): callers must send `Authorization: Bearer <JWT>`, signed with the
+shared `JWT_SECRET` (HS256) and carrying a numeric `sub` claim. A missing/malformed header, or an
+invalid/expired/wrong-signature token, returns `401`. On success the middleware sets `req.userId`
+from the token's `sub`.
 
-`req.userId` is **not yet used for anything downstream** — no route or tool filters by it. Every
-authenticated user can still read any other user's data. Concretely:
+`req.userId` is used downstream to scope every tool and vector query (issue #95, done):
 
-- `searchSimilarChunks` (`vector-storage.ts`) filters only by the optional `injuryId` (it also
-  accepts an optional `sourceType`, but no production caller passes one) — never by owner.
-- `journalTool` (`journal-tool.ts`) does a bare `prisma.injury.findUnique({ where: { id } })` —
-  no owner check.
+- `searchSimilarChunks` (`vector-storage.ts`) filters by `userId` (a real, indexed column on
+  `DocumentChunk`, issue #41), in addition to the optional `injuryId`/`sourceType` filters.
+- `journalTool` (`journal-tool.ts`) scopes its `prisma.injury.findUnique` lookup to the
+  authenticated `userId`, not just the record `id`.
 
-Any authenticated caller who knows or guesses an `injuryId` can read that injury's chunks and full
-journal record. This is a known, unaddressed authorization gap — issue #95 — distinct from
-authentication itself (issue #94, done). See CLAUDE.md §9 on user-level data isolation.
+An authenticated caller can no longer read another user's chunks or journal record by
+guessing/knowing an `injuryId`. See CLAUDE.md §9 on user-level data isolation.
 
 ## 3. Endpoints
 
@@ -75,14 +73,17 @@ missing-switch-case defect.
 
 **Errors**
 
+Every error body now includes a machine-readable `code` field alongside `error` (issue #123):
+
 | Status | Body | Trigger |
 |--------|------|---------|
-| 401 | `{ "error": "Authentication required" }` | `Authorization: Bearer <token>` header missing or malformed |
-| 401 | `{ "error": "Invalid or expired token" }` | token present but fails signature/expiry/claim verification |
-| 400 | `{ "error": "Question is required" }` | body present but `question` missing/blank |
-| 400 | `{ "error": "Invalid injuryId" }` | `injuryId` present but fails the check above |
-| 429 | `{ "error": "Too many requests, please try again later." }` | more than 20 requests from the same IP within a 60s window (issue #89) |
-| 500 | `{ "error": "Failed to process request" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key. All collapse to this one message; no error code/type distinguishes the cause. |
+| 401 | `{ "error": "Authentication required", "code": "authentication_required" }` | `Authorization: Bearer <token>` header missing or malformed |
+| 401 | `{ "error": "Invalid or expired token", "code": "invalid_token" }` | token present but fails signature/expiry/claim verification |
+| 400 | `{ "error": "Question is required", "code": "question_required" }` | body present but `question` missing/blank |
+| 400 | `{ "error": "Question exceeds maximum length of 10000 characters", "code": "question_too_long" }` | `question` longer than the 10,000-character limit |
+| 400 | `{ "error": "Invalid injuryId", "code": "invalid_injury_id" }` | `injuryId` present but fails the check above |
+| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | more than 20 requests from the same IP within a 60s window (issue #89) |
+| 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key, missing `JWT_SECRET`. All still collapse to the single `internal_error` code; it distinguishes 500s from other failure classes but not from each other. |
 
 `askAgent` destructures `req.body ?? {}`, so a body-less `POST /ai-agent` returns the 400 above
 rather than a 500 (fixed as issue #61).
@@ -118,9 +119,11 @@ limit of `5` for the `rag` intent path.
   `citation-formatter.ts` are not called from any response path. `citation-source-mapper.ts` is
   also unwired, and even if it were, it only maps 2 of the 5 valid `sourceType` values
   (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`).
-- **All failure modes collapse into one generic 500 message** — a client cannot distinguish
-  "embedding service unreachable" from "database error" from "LLM call failed" from an unexpected
-  exception.
+- **All 4xx/429 failure modes have a distinct `code` (issue #123), but 500s do not.** A client can
+  now tell "authentication required" from "rate limited" from "question too long" apart, but every
+  500 still reports `code: "internal_error"` regardless of whether the cause was the embedding
+  service being unreachable, a database error, or an LLM call failure — 500 causes are not
+  distinguishable from the response alone.
 
 ## 6. What the frontend will need that the backend doesn't provide yet
 
@@ -130,24 +133,28 @@ This is the most important section — these are gaps, not just documentation de
   design (D10, `docs/02-architecture.md`), the separate journal application is expected to own
   login/session issuance. A frontend needs that other application's login flow before it can call
   this API at all.
-- **Per-user data isolation.** The verified `userId` isn't used to filter retrieval or journal
-  results yet (issue #95, open) — any authenticated caller can still read any other user's data
-  (see CLAUDE.md §9, and roadmap #31).
-- **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. A frontend has no way to
-  discover which injuries belong to the current user even once #95 lands.
+- **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. Per-user data isolation
+  is enforced (issue #95, done), but a frontend still has no way to *discover* which injuries
+  belong to the current user from this API — out of scope here under D10 (`docs/02-architecture.md`);
+  expected to come from the separate journal application.
 - **CRUD for `Injury` and its child records** (`Treatment`, `Symptom`, `TimelineEvent`,
-  `MedicalVisit`). Today the only read path is `journalTool`'s single `findUnique`, and there is
-  no create/update/delete for any of these at all.
+  `MedicalVisit`). Today the only read path is `journalTool`'s single `findFirst` (scoped to the
+  authenticated `userId`), and there is no create/update/delete for any of these at all —
+  deliberately, per D10: this repo stays read-only/AI-only, and CRUD is expected to live in the
+  separate journal application (#50, closed as out-of-scope).
 - **Pagination or a client-settable retrieval limit.** The `rag` intent path hardcodes `5`
   internally with no way for the frontend to request more, or to page through additional chunks.
-- **Structured error information.** A `code`/`type` field distinct from the current single
-  generic error string, so the UI can differentiate "no results found," "service temporarily
-  unavailable," and "invalid input" instead of showing the same failure state for all three.
+- **Structured error information for 500s specifically.** Issue #123 added a `code` field
+  distinguishing every 4xx/429 case (see §3), but all 500s still share one `internal_error` code —
+  a UI still can't tell "service temporarily unavailable" apart from other internal failures.
 - **Conversation/thread state.** Every call is fully stateless — no way to support a multi-turn
   conversation UI without the frontend re-sending full context itself (and there's currently no
   mechanism to do even that).
-- **Streaming.** The LLM call is fully buffered (`generateAnswer` awaits the entire completion)
-  before any response is returned — no partial/streaming UX is possible today.
+- **Streaming.** Evaluated and deliberately deferred (#52): the LLM call stays fully buffered
+  (`generateAnswer` awaits the entire completion), and the endpoint returns one completed answer
+  together with its chunk-derived citations in a single JSON object. No frontend consumer exists
+  yet to justify the added complexity of streaming. Revisit if/when a frontend is built and latency
+  proves to be a real UX problem.
 - **An explicit groundedness/confidence signal.** CLAUDE.md's stated priority — prefer an
   explicit lack-of-information response over an unsupported plausible answer — is enforced only
   as a soft instruction inside the LLM prompt (`prompt-builder.ts`), not as a structural check or
