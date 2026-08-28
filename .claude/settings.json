@@ -1,4 +1,8 @@
 {
+  "env": {
+    "SECURITY_REVIEW_MODEL": "sonnet",
+    "SG_AGENTIC_MODEL": "sonnet"
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -11,5 +15,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true
   }
 }
