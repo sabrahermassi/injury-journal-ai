@@ -3,9 +3,12 @@ import { ragTool } from './tools/rag-tool.js';
 import { journalTool, formatInjuryRecord } from './tools/journal-tool.js';
 import { routeIntent } from './ai-agent-intent-router.js';
 import { AgentState } from './ai-agent-state.js';
-import { buildPrompt } from '../rag/prompt-builder.js';
+import { SYSTEM_PROMPT, buildUserPrompt } from '../rag/prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
-import { checkAnswerSafety } from '../safety/safety-service.js';
+import {
+  checkContentSafety,
+  checkAnswerSafety,
+} from '../safety/safety-service.js';
 
 export async function runAgent(
   question: string,
@@ -59,8 +62,19 @@ export async function runAgent(
       }
 
       const context = formatInjuryRecord(result, requestId);
-      const prompt = buildPrompt(question, context, requestId);
-      const answer = await generateAnswer(prompt, requestId);
+
+      const contentSafety = checkContentSafety(context, requestId);
+
+      if (!contentSafety.allowed) {
+        return {
+          answer: contentSafety.message,
+          citations: [],
+          intent,
+        };
+      }
+
+      const userPrompt = buildUserPrompt(question, context, requestId);
+      const answer = await generateAnswer(SYSTEM_PROMPT, userPrompt, requestId);
 
       if (!answer) {
         return {

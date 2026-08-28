@@ -57,7 +57,8 @@ the branch without inferring it from shape (resolved as part of issue #45):**
 | Safety-blocked | `{ "answer": "<refusal>", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` |
 | `journal` intent, no `injuryId` given | `{ "answer": "An injury must be selected for journal questions.", "citations": [], "intent": "journal" }` — **no `metadata` key at all** |
 | `journal` intent, `injuryId` not found | `{ "answer": "No injury record was found.", "citations": [], "intent": "journal" }` — **no `metadata` key** |
-| `journal` intent, found | `{ "answer": "<LLM-generated prose summary of the injury record>", "citations": [], "intent": "journal" }` — generated via `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`; there's still no `metadata` key |
+| `journal` intent, found | `{ "answer": "<LLM-generated prose summary of the injury record>", "citations": [], "intent": "journal" }` — generated via `formatInjuryRecord()` → `checkContentSafety()` → `buildUserPrompt()` → `generateAnswer()`; there's still no `metadata` key |
+| `journal` intent, content-safety blocked | `{ "answer": "<refusal>", "citations": [], "intent": "journal" }` — `checkContentSafety()` flagged the formatted injury record itself (not the question) before any LLM call; **no `metadata` key**, same shape as the other journal early-return rows (issue #66) |
 | `rag` intent | `{ "answer": "string", "citations": [...], "intent": "rag", "metadata": { "retrievedChunks": [{ "sourceType": "string", "sourceId": 1 }] } }` |
 | Unrecognized intent (and see note below) | `{ "answer": "Unable to determine how to handle this request.", "citations": [], "intent": "safety", "metadata": { "retrievedChunks": [] } }` — `intent` here is whatever `routeIntent()` actually returned, which today is only reachable for the `'safety'`-value dead-branch case described below |
 
@@ -95,7 +96,8 @@ limit of `5` for the `rag` intent path.
   by `citation-builder.ts`, the only citation module actually wired into a response path.
 - **Journal answer** (journal path only) — an LLM-generated prose summary of the `Injury` record
   and its nested `Treatment[]`, `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, built via
-  `formatInjuryRecord()` → `buildPrompt()` → `generateAnswer()`, not the raw Prisma row.
+  `formatInjuryRecord()` → `checkContentSafety()` → `buildUserPrompt()` → `generateAnswer()`, not
+  the raw Prisma row.
 - **`metadata.retrievedChunks`** (`rag`/safety/default paths only) — `{ sourceType, sourceId }[]`,
   a 2-field projection of the underlying `DocumentChunk` row (not the raw row itself).
 

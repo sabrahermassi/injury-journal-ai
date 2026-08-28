@@ -1,9 +1,13 @@
 import { semanticSearch } from '../retrieval/semantic-search.js';
 import { buildContext } from './context-builder.js';
-import { buildPrompt } from './prompt-builder.js';
+import { SYSTEM_PROMPT, buildUserPrompt } from './prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
 import { buildCitations } from '../rag/citation-builder.js';
-import { checkSafety, checkAnswerSafety } from '../safety/safety-service.js';
+import {
+  checkSafety,
+  checkContentSafety,
+  checkAnswerSafety,
+} from '../safety/safety-service.js';
 import { prisma } from '../lib/prisma.js';
 
 export async function answerQuestion(
@@ -42,9 +46,19 @@ export async function answerQuestion(
 
   const context = buildContext(chunks, requestId);
 
-  const prompt = buildPrompt(question, context, requestId);
+  const contentSafety = checkContentSafety(context, requestId);
 
-  const answer = await generateAnswer(prompt, requestId);
+  if (!contentSafety.allowed) {
+    return {
+      answer: contentSafety.message,
+      chunks: [],
+      citations: [],
+    };
+  }
+
+  const userPrompt = buildUserPrompt(question, context, requestId);
+
+  const answer = await generateAnswer(SYSTEM_PROMPT, userPrompt, requestId);
 
   const answerSafety = checkAnswerSafety(answer, context, requestId);
 
