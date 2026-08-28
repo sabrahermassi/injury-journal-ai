@@ -1,11 +1,16 @@
 import { prisma } from '../../lib/prisma.js';
 
-export async function journalTool(injuryId: number, requestId?: string) {
+export async function journalTool(
+  injuryId: number,
+  userId: number,
+  requestId?: string,
+) {
   void requestId; // unused for now — reserved for future log correlation (#32)
 
-  const injury = await prisma.injury.findUnique({
+  const injury = await prisma.injury.findFirst({
     where: {
       id: injuryId,
+      userId,
     },
     include: {
       Treatment: true,

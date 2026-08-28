@@ -41,6 +41,8 @@ describe('semanticSearch', () => {
 
     const result = await semanticSearch(
       'Why does my lower back hurt after sitting?',
+      undefined,
+      1,
     );
 
     expect(embedQueryMock).toHaveBeenCalledWith(
@@ -53,7 +55,7 @@ describe('semanticSearch', () => {
       undefined,
       5,
       undefined,
-      undefined,
+      1,
       undefined,
     );
 
@@ -71,14 +73,14 @@ describe('semanticSearch', () => {
 
     searchSimilarChunksMock.mockResolvedValue([]);
 
-    await semanticSearch('lower back pain', undefined, 10);
+    await semanticSearch('lower back pain', undefined, 1, 10);
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
       undefined,
       10,
       undefined,
-      undefined,
+      1,
       undefined,
     );
   });
@@ -94,14 +96,14 @@ describe('semanticSearch', () => {
 
     searchSimilarChunksMock.mockResolvedValue([]);
 
-    await semanticSearch('lower back pain', 42, 5);
+    await semanticSearch('lower back pain', 42, 1, 5);
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
       42,
       5,
       undefined,
-      undefined,
+      1,
       undefined,
     );
   });
@@ -109,7 +111,7 @@ describe('semanticSearch', () => {
   it('propagates embedding errors', async () => {
     embedQueryMock.mockRejectedValue(new Error('embedding service unavailable'));
 
-    await expect(semanticSearch('lower back pain')).rejects.toThrow(
+    await expect(semanticSearch('lower back pain', undefined, 1)).rejects.toThrow(
       'embedding service unavailable',
     );
 
@@ -129,7 +131,7 @@ describe('semanticSearch', () => {
       new Error('database unavailable'),
     );
 
-    await expect(semanticSearch('lower back pain')).rejects.toThrow(
+    await expect(semanticSearch('lower back pain', undefined, 1)).rejects.toThrow(
       'database unavailable',
     );
   });

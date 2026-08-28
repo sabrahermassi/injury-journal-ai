@@ -12,7 +12,7 @@ export async function runEvaluation() {
   const results: EvaluationResult[] = [];
 
   for (const item of dataset) {
-    const output = await runAgent(item.question, item.injuryId);
+    const output = await runAgent(item.question, item.userId, item.injuryId);
 
     results.push({
       id: item.id,

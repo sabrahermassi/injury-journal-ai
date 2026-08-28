@@ -9,6 +9,7 @@ import { checkAnswerSafety } from '../safety/safety-service.js';
 
 export async function runAgent(
   question: string,
+  userId: number,
   injuryId?: number,
   requestId?: string,
 ) {
@@ -47,7 +48,7 @@ export async function runAgent(
         };
       }
 
-      const result = await journalTool(injuryId, requestId);
+      const result = await journalTool(injuryId, userId, requestId);
 
       if (!result) {
         return {
@@ -90,7 +91,7 @@ export async function runAgent(
     case 'rag': {
       state.toolUsed = 'rag-tool';
 
-      const result = await ragTool(question, injuryId, 5, requestId);
+      const result = await ragTool(question, injuryId, userId, 5, requestId);
 
       state.result = result;
 

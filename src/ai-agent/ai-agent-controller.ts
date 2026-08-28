@@ -63,7 +63,11 @@ export async function askAgent(req: Request, res: Response) {
 
     const { question, injuryId } = parsed.data;
 
-    const result = await runAgent(question, injuryId, requestId);
+    if (req.userId === undefined) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await runAgent(question, req.userId, injuryId, requestId);
 
     return res.json(result);
   } catch (error) {
