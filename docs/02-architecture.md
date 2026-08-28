@@ -194,13 +194,16 @@ flowchart TD
     DB --> DATA
 
     DATA --> G["LLM"]
-    G --> CV["Citation Generation"]
+    G --> OSC["Output Safety Check"]
+    OSC -->|Allowed| CV["Citation Generation"]
+    OSC -->|Diagnosis-like| REF
     CV --> OUT["Answer + Sources"]
 
     OUT --> U
 ```
 
-> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5.
+> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5. `OSC`
+> ("Output Safety Check") is `checkAnswerSafety` — see §5.4 for what it actually checks.
 
 ### 5.1. Semantic Retrieval Architecture
 
@@ -293,14 +296,17 @@ flowchart TD
     O -->|Diagnosis-like| R
 ```
 
-> **Current status:** both sides are covered. `checkSafety` (`src/safety/safety-service.ts`)
-> inspects the raw question before retrieval; `checkAnswerSafety` in the same file inspects the
-> LLM's generated answer afterward (in `rag-service.ts` and the journal-intent branch of
-> `ai-agent-orchestrator.ts`) and withholds it if the LLM hedges toward its own diagnostic
-> judgment ("you may have...", "this could be..."). It deliberately does not flag a definite
-> restatement of a diagnosis already present in the record (e.g. quoting a doctor's note) — that
-> grounded restatement is the app's core journal-summary behavior, not a leak; only the assistant
-> appearing to infer a *new* diagnosis on its own is treated as unsafe output.
+> **Current status:** both sides are covered, but only as pattern-based text filtering.
+> `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before retrieval;
+> `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
+> `rag-service.ts` and the journal-intent branch of `ai-agent-orchestrator.ts`) and withholds it
+> if the LLM hedges toward its own diagnostic judgment ("you may have...", "this could be...").
+> `checkAnswerSafety` receives only the answer text and `requestId` — it has no access to the
+> journal record or retrieved chunks, so it cannot distinguish a definite diagnostic statement
+> that's grounded in the record from one the LLM invented. It allows **all** definite diagnostic
+> statements through unconditionally ("you have X", "diagnosis: X"), whether or not they're
+> actually supported by the journal data. Verifying definite assertions against source evidence
+> is tracked separately (issue #142).
 
 ### 5.5. AI Agent Architecture
 
