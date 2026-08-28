@@ -62,6 +62,7 @@ Set the following environment variables (see `.env.example` for a starting point
 | `EMBEDDING_API_URL` | No | Defaults to `http://127.0.0.1:8000` |
 | `EMBEDDING_API_TIMEOUT_MS` | No | Defaults to 30000 |
 | `PORT` | No | Defaults to 3000 |
+| `ALLOWED_ORIGIN` | No | Comma-separated list of allowed CORS origins. Unset reflects the request's own origin (no restriction) — low value until a real frontend is deployed at a known origin, at which point set this to lock CORS down. |
 
 ### Database
 
