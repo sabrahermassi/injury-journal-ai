@@ -21,7 +21,7 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
   - [x] 2.3 Semantic Retrieval (#25)
   - [x] 2.4 Basic RAG (#26)
   - [x] 2.5 Citations *(generation only — verification not wired in, see below)* (#27)
-  - [x] 2.6 Safety Guardrails *(input-side only — no output-side check)* (#28)
+  - [x] 2.6 Safety Guardrails *(input- and output-side)* (#28, #96)
   - [x] 2.7 AI Agent *(keyword routing, not per-tool authorization)* (#29)
 - [x] Step 3 — Evaluation *(harness exists; two of four dimensions are shallow, one is unimplemented)* (#30)
 - [x] Step 4 — Integration Tests (#17)
@@ -89,8 +89,12 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
   (does this backend own auth, or verify tokens from a separate app?). (#94)
 - [ ] Per-tool + retrieval/vector-level authorization enforcing user-level data isolation — depends
   on #94. (#95)
-- [ ] Output-side safety check — the current safety layer is entirely pre-generation; nothing
-  checks whether the LLM's answer echoes diagnosis-adjacent language from a chunk's raw content. (#96)
+- [x] Output-side safety check — `checkAnswerSafety` (`src/safety/safety-service.ts`) withholds
+  an LLM answer that hedges toward its own diagnostic judgment ("you may have...", "this could
+  be..."). It's pattern-based text filtering only — it has no access to the journal record, so it
+  allows all definite diagnostic statements through unconditionally, grounded or not. Verifying
+  definite assertions against source evidence is separate follow-up work (#142). Wired into both
+  `rag-service.ts` and the journal-intent path in `ai-agent-orchestrator.ts`. (#96)
 
 *Optional (safe to defer indefinitely):*
 - [ ] Add helmet + CORS security headers — low value until a real deployed origin/frontend exists. (#97)

@@ -183,4 +183,62 @@ describe('agent orchestrator', () => {
       intent: 'journal',
     });
   });
+
+  it('withholds a journal answer where the assistant hedges toward its own diagnosis', async () => {
+    safetyToolMock.mockReturnValue({
+      allowed: true,
+    });
+
+    routeIntentMock.mockReturnValue('journal');
+
+    journalToolMock.mockResolvedValue({
+      id: 42,
+    });
+
+    formatInjuryRecordMock.mockReturnValue(
+      'Injury:\nSymptoms: knee pain and swelling after running.',
+    );
+
+    generateAnswerMock.mockResolvedValue(
+      'Based on these symptoms, you may have a meniscus tear.',
+    );
+
+    const result = await runAgent('Show my injury timeline', 42);
+
+    expect(result).toEqual({
+      answer:
+        'I withheld that response because it read like a medical diagnosis, which I cannot provide. I can summarize your recorded symptoms, tests, treatments, and medical history instead.',
+      citations: [],
+      intent: 'journal',
+    });
+  });
+
+  it('allows a journal answer that restates a diagnosis already in the record', async () => {
+    safetyToolMock.mockReturnValue({
+      allowed: true,
+    });
+
+    routeIntentMock.mockReturnValue('journal');
+
+    journalToolMock.mockResolvedValue({
+      id: 42,
+    });
+
+    formatInjuryRecordMock.mockReturnValue(
+      "Injury:\nNotes: Doctor's note: diagnosis of a meniscus tear.",
+    );
+
+    generateAnswerMock.mockResolvedValue(
+      'You have a meniscus tear, as noted in your medical visit on 2024-01-15.',
+    );
+
+    const result = await runAgent('Show my injury timeline', 42);
+
+    expect(result).toEqual({
+      answer:
+        'You have a meniscus tear, as noted in your medical visit on 2024-01-15.',
+      citations: [],
+      intent: 'journal',
+    });
+  });
 });

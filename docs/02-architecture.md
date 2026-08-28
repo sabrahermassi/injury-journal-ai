@@ -194,13 +194,16 @@ flowchart TD
     DB --> DATA
 
     DATA --> G["LLM"]
-    G --> CV["Citation Generation"]
+    G --> OSC["Output Safety Check"]
+    OSC -->|Allowed| CV["Citation Generation"]
+    OSC -->|Diagnosis-like| REF
     CV --> OUT["Answer + Sources"]
 
     OUT --> U
 ```
 
-> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5.
+> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5. `OSC`
+> ("Output Safety Check") is `checkAnswerSafety` — see §5.4 for what it actually checks.
 
 ### 5.1. Semantic Retrieval Architecture
 
@@ -286,11 +289,24 @@ flowchart TD
 
     S -->|Allowed| C["Continue"]
     S -->|Boundary Violation| R["Refuse / Redirect"]
+
+    C --> G["Generate Answer"]
+    G --> O["Output Safety Check"]
+    O -->|Allowed| A["Return Answer"]
+    O -->|Diagnosis-like| R
 ```
 
-> **Current status:** this covers the input side only. There is no output-side check — nothing
-> verifies the LLM's generated answer against diagnosis-adjacent language it might echo from raw
-> journal content (e.g. a doctor's note). Output safety checks are future work.
+> **Current status:** both sides are covered, but only as pattern-based text filtering.
+> `checkSafety` (`src/safety/safety-service.ts`) inspects the raw question before retrieval;
+> `checkAnswerSafety` in the same file inspects the LLM's generated answer afterward (in
+> `rag-service.ts` and the journal-intent branch of `ai-agent-orchestrator.ts`) and withholds it
+> if the LLM hedges toward its own diagnostic judgment ("you may have...", "this could be...").
+> `checkAnswerSafety` receives only the answer text and `requestId` — it has no access to the
+> journal record or retrieved chunks, so it cannot distinguish a definite diagnostic statement
+> that's grounded in the record from one the LLM invented. It allows **all** definite diagnostic
+> statements through unconditionally ("you have X", "diagnosis: X"), whether or not they're
+> actually supported by the journal data. Verifying definite assertions against source evidence
+> is tracked separately (issue #142).
 
 ### 5.5. AI Agent Architecture
 
