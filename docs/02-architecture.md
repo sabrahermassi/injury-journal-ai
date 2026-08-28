@@ -480,6 +480,17 @@ flowchart TD
     V --> D["User's Journal Data"]
 ```
 
+### 10.1 Accepted risks (not yet mitigated)
+
+- **Third-party LLM data exposure (Groq):** every RAG answer sends matched journal excerpts —
+  personal medical/injury data — to Groq's API (`src/llm/llm-client.ts`). No data-retention or
+  minimization control exists today; this is accepted as a tradeoff of using a third-party LLM
+  provider, not yet mitigated. Tracked as issue #117 (decide accept-as-is vs. minimization).
+- **Embedding service has no auth boundary:** `EMBEDDING_API_URL` (the Python/FastAPI service)
+  has no authentication. Acceptable only while strictly localhost-bound; must be revisited before
+  any deployment step (#33/#34) exposes it beyond localhost. Out of scope for #94/#95, which only
+  cover `/ai-agent`. Tracked as issue #118.
+
 ## 11. Architectural Decision Log
 
 For each major decision: what was chosen, why (as inferred from code, `CLAUDE.md`, and commit
