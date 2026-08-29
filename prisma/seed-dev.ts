@@ -26,14 +26,18 @@ async function main() {
     throw new Error(`Refusing to seed: unexpected database "${databaseName}".`);
   }
 
-  // Clean existing development data
-  await prisma.documentChunk.deleteMany();
-  await prisma.medicalVisit.deleteMany();
-  await prisma.treatment.deleteMany();
-  await prisma.symptom.deleteMany();
-  await prisma.timelineEvent.deleteMany();
-  await prisma.injury.deleteMany();
-  await prisma.user.deleteMany();
+  // Clean existing development data and reset autoincrement IDs so every seed run
+  // produces the same deterministic IDs (plain deleteMany() leaves sequences advanced,
+  // so re-seeding drifts the IDs that evaluation/ai-system/dataset.json hardcodes).
+  await prisma.$executeRaw`TRUNCATE TABLE
+    "DocumentChunk",
+    "MedicalVisit",
+    "Treatment",
+    "Symptom",
+    "TimelineEvent",
+    "Injury",
+    "User"
+    RESTART IDENTITY CASCADE`;
 
   // -------------------------
   // User 1

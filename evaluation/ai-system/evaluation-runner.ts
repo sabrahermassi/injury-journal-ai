@@ -3,6 +3,7 @@ import { runAgent } from '../../src/ai-agent/ai-agent-orchestrator.js';
 import {
   evaluateSafety,
   evaluateCitations,
+  evaluateNoInformation,
   //evaluateIntent,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
@@ -29,6 +30,7 @@ export async function runEvaluation() {
           item.expectedSources ?? [],
           output.metadata?.retrievedChunks ?? [],
         ),
+        noInformationPassed: evaluateNoInformation(item.expectedBehavior, output),
       },
     });
   }

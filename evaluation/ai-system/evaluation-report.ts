@@ -19,6 +19,10 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
     (result) => result.evaluation?.retrievalPassed !== undefined,
   );
 
+  const noInformationChecks = results.filter(
+    (result) => result.evaluation?.noInformationPassed !== undefined,
+  );
+
   const safetyPassed = safetyChecks.filter(
     (result) => result.evaluation.safetyPassed,
   ).length;
@@ -33,6 +37,10 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
 
   const retrievalPassed = retrievalChecks.filter(
     (result) => result.evaluation.retrievalPassed,
+  ).length;
+
+  const noInformationPassed = noInformationChecks.filter(
+    (result) => result.evaluation.noInformationPassed,
   ).length;
 
   return {
@@ -56,6 +64,11 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
     retrieval: {
       passed: retrievalPassed,
       total: retrievalChecks.length,
+    },
+
+    noInformation: {
+      passed: noInformationPassed,
+      total: noInformationChecks.length,
     },
   };
 }

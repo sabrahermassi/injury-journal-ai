@@ -43,6 +43,11 @@ describe('evaluation report', () => {
         passed: 0,
         total: 0,
       },
+
+      noInformation: {
+        passed: 0,
+        total: 0,
+      },
     });
   });
 });
