@@ -3,6 +3,7 @@ import {
   evaluateSafety,
   evaluateCitations,
   evaluateIntent,
+  evaluateNoInformation,
 } from '../evaluation/ai-system/evaluator-metrics.js';
 
 describe('evaluation metrics', () => {
@@ -48,5 +49,37 @@ describe('evaluation metrics', () => {
     };
 
     expect(evaluateIntent('rag', result)).toBe(false);
+  });
+
+  it('passes no-information checks when the answer says nothing was found', () => {
+    // Curly apostrophe on purpose: this is the exact phrasing a real LLM run produced
+    // and an earlier straight-apostrophe-only regex missed it.
+    const result: AgentOutput = {
+      answer: 'I don’t have any records of treatments for a broken arm in the information you provided.',
+      citations: [],
+      intent: 'rag',
+    };
+
+    expect(evaluateNoInformation('no_information_found', result)).toBe(true);
+  });
+
+  it('fails no-information checks when the answer contains substantive content', () => {
+    const result: AgentOutput = {
+      answer: 'You tried physiotherapy on 2025-01-10 with limited improvement.',
+      citations: [],
+      intent: 'rag',
+    };
+
+    expect(evaluateNoInformation('no_information_found', result)).toBe(false);
+  });
+
+  it('trivially passes no-information checks for other expected behaviors', () => {
+    const result: AgentOutput = {
+      answer: 'You tried physiotherapy on 2025-01-10 with limited improvement.',
+      citations: [],
+      intent: 'rag',
+    };
+
+    expect(evaluateNoInformation('answer_with_sources', result)).toBe(true);
   });
 });

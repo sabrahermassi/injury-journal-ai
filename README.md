@@ -103,7 +103,7 @@ Docker/local Postgres instance can omit `sslmode`.
 Seeding uses two separate scripts, both with hard safety checks against running against the wrong database:
 
 - `npx prisma db seed` runs `prisma/seed.ts`, which refuses to run unless `DATABASE_URL` contains `test`.
-- `npm run seed:dev` runs `prisma/seed-dev.ts`, which additionally requires `DATABASE_ENV=development`, `SEED_DEV_CONFIRM=true`, and a database named exactly `injury-journal-ai-db`.
+- `npm run seed:dev` runs `prisma/seed-dev.ts`, which additionally requires `DATABASE_ENV=development`, `SEED_DEV_CONFIRM=true`, and a database named exactly `injury-journal-ai-db`. It resets data with `TRUNCATE ... RESTART IDENTITY`, so `DATABASE_URL` must point at a role with `TRUNCATE`/DDL-adjacent privileges (e.g. the schema-owner role, or the database owner) — the minimal `injury_journal_ai_app` role described above is not sufficient for either seed script.
 
 ### Run the embedding service
 

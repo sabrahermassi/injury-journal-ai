@@ -43,6 +43,7 @@
   },
   {
     "id": "rag-treatment-multi-001",
+    "note": "Known-failing baseline as of #128: top-5 semantic search only surfaces one of the two expected Treatment sources for this question. Tracked by #122/#129 (similarity threshold / reranking); not a regression if it's still failing.",
     "userId": 1,
     "injuryId": 1,
     "question": "What treatments have I tried for my back pain?",
