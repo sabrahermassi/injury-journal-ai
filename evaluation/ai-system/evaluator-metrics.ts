@@ -22,6 +22,21 @@ export function evaluateCitations(
   return result.citations.length > 0;
 }
 
+export function evaluateNoInformation(
+  expectedBehavior: string,
+  result: AgentOutput,
+): boolean {
+  if (expectedBehavior !== 'no_information_found') {
+    return true;
+  }
+
+  const answer = result.answer.toLowerCase();
+
+  return /don['’]?t have (any|enough) (information|records|data)|no information|not enough information|no records/.test(
+    answer,
+  );
+}
+
 export function evaluateIntent(
   expectedIntent: string,
   result: AgentOutput,
