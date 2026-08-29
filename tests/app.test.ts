@@ -55,7 +55,7 @@ describe('POST /ai-agent rate limiting', () => {
     // First loadApp() in this file pays the ESM module-graph cold start
     // (jest.resetModules() + dynamic import of src/app.ts and Prisma), which
     // can exceed Jest's 5s default when the full suite runs in parallel.
-  }, 20_000);
+  }, 30_000);
 
   it('allows a user up to their configured limit, then returns 429 with a JSON error body', async () => {
     const { app, prisma } = await loadApp();
