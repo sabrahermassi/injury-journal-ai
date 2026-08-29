@@ -20,5 +20,6 @@ export type EvaluationResult = {
     citationsPassed: boolean | null;
     intentPassed: boolean | null;
     retrievalPassed: boolean | null;
+    faithfulnessPassed: boolean | null;
   };
 };

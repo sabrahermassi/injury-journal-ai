@@ -6,6 +6,7 @@ import {
   //evaluateIntent,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
+import { evaluateFaithfulness } from './faithfulness-judge.js';
 import type { EvaluationResult } from './evaluation-types.js';
 
 export async function runEvaluation() {
@@ -27,6 +28,11 @@ export async function runEvaluation() {
         // intentPassed: evaluateIntent(),
         retrievalPassed: evaluateRetrieval(
           item.expectedSources ?? [],
+          output.metadata?.retrievedChunks ?? [],
+        ),
+        faithfulnessPassed: await evaluateFaithfulness(
+          item.expectedBehavior,
+          output.answer,
           output.metadata?.retrievedChunks ?? [],
         ),
       },
