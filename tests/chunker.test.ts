@@ -140,4 +140,9 @@ describe('Document Chunker', () => {
 
     expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
   });
+
+  it('rejects a maxTokens value below one', () => {
+    expect(() => chunkDocument(smallDocument, 0)).toThrow();
+    expect(() => chunkDocument(smallDocument, -1)).toThrow();
+  });
 });

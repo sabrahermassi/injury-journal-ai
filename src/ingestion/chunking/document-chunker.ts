@@ -33,20 +33,38 @@ function splitOversizedWord(word: string, maxTokens: number): string[] {
   let start = 0;
 
   while (start < chars.length) {
-    let lo = start + 1;
-    let hi = chars.length;
+    const remaining = chars.length - start;
+
+    // Exponentially grow the candidate length to bound the search window
+    // near the true boundary first, rather than binary-searching the full
+    // remaining word on every piece — that re-tokenizes long suffixes and
+    // scales quadratically for large whitespace-free inputs.
+    let fit = 1;
+    let probe = 2;
+
+    while (
+      probe <= remaining &&
+      countTokens(chars.slice(start, start + probe).join('')) <= maxTokens
+    ) {
+      fit = probe;
+      probe *= 2;
+    }
+
+    let lo = fit;
+    let hi = Math.min(probe, remaining);
 
     while (lo < hi) {
-      const mid = Math.ceil((lo + hi) / 2);
-      if (countTokens(chars.slice(start, mid).join('')) <= maxTokens) {
+      const mid = lo + Math.ceil((hi - lo) / 2);
+      if (countTokens(chars.slice(start, start + mid).join('')) <= maxTokens) {
         lo = mid;
       } else {
         hi = mid - 1;
       }
     }
 
-    pieces.push(chars.slice(start, lo).join(''));
-    start = lo;
+    const pieceLength = Math.max(lo, 1);
+    pieces.push(chars.slice(start, start + pieceLength).join(''));
+    start += pieceLength;
   }
 
   return pieces;
@@ -71,6 +89,10 @@ export function chunkDocument(
   document: JournalDocument,
   maxTokens: number = DEFAULT_MAX_TOKENS,
 ): JournalDocument[] {
+  if (maxTokens < 1) {
+    throw new Error(`maxTokens must be at least 1, received ${maxTokens}`);
+  }
+
   // Keep small journal records intact.
   if (countTokens(document.content) <= maxTokens) {
     return [document];
