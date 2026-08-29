@@ -42,6 +42,7 @@ describe('data isolation regression tests', () => {
   let injuryBId: number;
   let userBId: number;
   let authHeader: string;
+  let authHeaderB: string;
 
   beforeAll(async () => {
     const a = await createTestInjury('Data Isolation Test A');
@@ -52,6 +53,7 @@ describe('data isolation regression tests', () => {
     injuryBId = b.injuryId;
     userBId = b.userId;
     authHeader = `Bearer ${signTestToken(userAId)}`;
+    authHeaderB = `Bearer ${signTestToken(userBId)}`;
 
     await storeDocumentChunk(
       injuryAId,
@@ -143,6 +145,25 @@ describe('data isolation regression tests', () => {
       .send({
         question: 'Show me my injury timeline',
         injuryId: injuryBId,
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      answer: 'No injury record was found.',
+      citations: [],
+      intent: 'journal',
+    });
+
+    expect(mockGenerateAnswer).not.toHaveBeenCalled();
+  });
+
+  it('rejects a journal request for an injuryId owned by another user (mirrored direction)', async () => {
+    const response = await request(app)
+      .post('/ai-agent')
+      .set('Authorization', authHeaderB)
+      .send({
+        question: 'Show me my injury timeline',
+        injuryId: injuryAId,
       });
 
     expect(response.status).toBe(200);
