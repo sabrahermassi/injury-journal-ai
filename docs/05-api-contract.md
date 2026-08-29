@@ -7,9 +7,16 @@ correct.
 
 ## 1. Scope
 
-One HTTP endpoint exists today, under a single Express app (`src/app.ts`): `POST /ai-agent`,
-which requires a bearer token (see §2). Nothing else is exposed — no CRUD, no identity/session
-endpoints, no health check.
+Two HTTP endpoints exist today, under a single Express app (`src/app.ts`), both requiring a bearer
+token (see §2): `POST /ai-agent`, and `GET /injuries`. Nothing else is exposed — no CRUD, no
+identity/session endpoints, no health check.
+
+`GET /injuries` is **temporary and deliberately out of line with D10**
+(`docs/02-architecture.md`), which assigns listing endpoints to the separate journal application.
+It exists only so the local frontend can offer an injury picker rather than asking the user to type
+a raw database id. The main application's own `GET /injuries` supersedes it when the two
+applications merge, at which point it is deleted — tracked in #195. Do not build anything further
+on it.
 
 `POST /rag/ask` previously existed as a second, narrower entrypoint to the same underlying
 `answerQuestion()` function, but has been retired (issue #43, `docs/02-architecture.md` D7) —
@@ -95,6 +102,40 @@ rather than a 500 (fixed as issue #61).
 **Pagination / filtering:** none exposed. `injuryId` is the only filter, with a fixed internal
 limit of `5` for the `rag` intent path.
 
+### `GET /injuries`
+
+Temporary — see §1 and #195. Lists the authenticated user's injuries so a frontend can offer a
+picker for the `injuryId` field of `POST /ai-agent`.
+
+**Request:** no body, no query parameters. `Authorization: Bearer <jwt>` required.
+
+**200 response:**
+
+```json
+{
+  "injuries": [
+    { "id": 7, "name": "Knee pain", "bodyArea": "knee", "side": "left" },
+    { "id": 3, "name": "Hip pain", "bodyArea": "hip", "side": null }
+  ]
+}
+```
+
+Ordered by `startDate` descending, then `id` ascending. Always scoped to the authenticated
+`userId` — a user can never see another user's injuries. Returns `{ "injuries": [] }` rather than a
+404 when the user has none. The object wrapper (rather than a bare array) leaves room to add
+pagination later without a breaking change.
+
+The four fields are exactly what a picker needs; this is deliberately not a general-purpose
+`Injury` read model, since D10 assigns that to the separate journal application.
+
+| Status | Body | When |
+|---|---|---|
+| 401 | `{ "error": "Authentication required", "code": "authentication_required" }` | missing or unparseable `Authorization` header |
+| 401 | `{ "error": "Invalid or expired token", "code": "invalid_token" }` | token fails verification (see §2) |
+| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | more than 60 requests from the same IP within a 60s window — its own limiter instance, separate from `/ai-agent`'s bucket |
+| 500 | `{ "error": "Failed to process request", "code": "database_error" }` | Prisma threw `PrismaClientKnownRequestError` or `PrismaClientInitializationError` |
+| 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | fallback for any other unexpected exception, including a missing `JWT_SECRET` |
+
 ## 4. Domain objects returned to the frontend
 
 - **Citation** — `{ sourceType: string, sourceId: number, label: string, date?: string }`. Built
@@ -137,10 +178,14 @@ This is the most important section — these are gaps, not just documentation de
   design (D10, `docs/02-architecture.md`), the separate journal application is expected to own
   login/session issuance. A frontend needs that other application's login flow before it can call
   this API at all.
-- **Any identity/listing endpoint** — no `GET /me`, no `GET /injuries`. Per-user data isolation
-  is enforced (issue #95, done), but a frontend still has no way to *discover* which injuries
-  belong to the current user from this API — out of scope here under D10 (`docs/02-architecture.md`);
-  expected to come from the separate journal application.
+- **An identity endpoint** — no `GET /me`. Out of scope here under D10
+  (`docs/02-architecture.md`); expected to come from the separate journal application.
+- **~~No `GET /injuries`~~ — partially closed, temporarily.** `GET /injuries` now exists (§3) so the
+  local frontend can offer an injury picker instead of asking the user to type a raw database id.
+  This is a deliberate deviation from D10, not a reversal of it: the endpoint is minimal
+  (four fields, no pagination, no CRUD), and the main application's own `GET /injuries` supersedes
+  it when the two applications merge. Removal is tracked in #195. Per-user data isolation
+  (issue #95) applies to it as it does everywhere else.
 - **CRUD for `Injury` and its child records** (`Treatment`, `Symptom`, `TimelineEvent`,
   `MedicalVisit`). Today the only read path is `journalTool`'s single `findFirst` (scoped to the
   authenticated `userId`), and there is no create/update/delete for any of these at all —

@@ -13,7 +13,25 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+
+// Radix Select has no concept of an empty value, so "all" stands in for
+// "no injuryId". It is never sent to the API -- see handleSubmit.
+const ALL_INJURIES = "all";
+
+type Injury = {
+  id: number;
+  name: string;
+  bodyArea: string;
+  side: string | null;
+};
 
 type Citation = {
   label?: string;
@@ -37,13 +55,111 @@ function formatCitation(citation: Citation) {
   return parts.filter(Boolean).join(" — ");
 }
 
+// Mirrors journalTool's own "Body area: knee (left)" formatting so the two
+// surfaces describe an injury the same way.
+function formatInjuryLabel(injury: Injury) {
+  const area = `${injury.bodyArea}${injury.side ? ` (${injury.side})` : ""}`;
+
+  return `${injury.name} — ${area}`;
+}
+
 export function AskForm() {
   const [token, setToken] = useState("");
   const [question, setQuestion] = useState("");
-  const [injuryId, setInjuryId] = useState("");
+  const [injuryId, setInjuryId] = useState(ALL_INJURIES);
+  const [injuries, setInjuries] = useState<Injury[]>([]);
+  const [injuriesLoading, setInjuriesLoading] = useState(false);
+  const [injuriesError, setInjuriesError] = useState("");
+  const [loadedForToken, setLoadedForToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AgentAnswer | null>(null);
+
+  // Drops the list and any selection made from it. Every exit that isn't a
+  // successful load must call this, so the dropdown never shows one token's
+  // injuries while the field holds another. Callers own injuriesError, since a
+  // failed load keeps its message on screen while a cleared field does not.
+  //
+  // Resetting loadedForToken also re-arms the fetch, so the next blur retries
+  // instead of being skipped by the already-loaded guard.
+  function clearInjuries() {
+    setInjuries([]);
+    setLoadedForToken("");
+    setInjuryId(ALL_INJURIES);
+  }
+
+  // GET /injuries is authenticated, so the list can only be fetched once a
+  // token exists. Triggered on blur rather than per keystroke.
+  async function loadInjuries() {
+    const trimmedToken = token.trim();
+
+    if (!trimmedToken) {
+      clearInjuries();
+      setInjuriesError("");
+      return;
+    }
+
+    if (trimmedToken === loadedForToken) {
+      return;
+    }
+
+    setInjuriesLoading(true);
+    setInjuriesError("");
+
+    try {
+      const response = await fetch("/injuries", {
+        headers: { Authorization: `Bearer ${trimmedToken}` },
+      });
+
+      let data: unknown;
+
+      try {
+        data = await response.json();
+      } catch {
+        clearInjuries();
+        setInjuriesError(
+          `Could not load injuries: unexpected non-JSON response (HTTP ${response.status}).`,
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        const { error: message, code } = (data ?? {}) as {
+          error?: string;
+          code?: string;
+        };
+
+        clearInjuries();
+        setInjuriesError(
+          `Could not load injuries: ${message ?? "request failed"}${code ? ` (${code})` : ""}`,
+        );
+        return;
+      }
+
+      const { injuries: loaded } = (data ?? {}) as { injuries?: Injury[] };
+
+      setInjuries(loaded ?? []);
+      setLoadedForToken(trimmedToken);
+      // A different token may be a different user, so any previous selection
+      // is no longer meaningful.
+      setInjuryId(ALL_INJURIES);
+    } catch {
+      clearInjuries();
+      setInjuriesError("Could not load injuries — is the server reachable?");
+    } finally {
+      setInjuriesLoading(false);
+    }
+  }
+
+  // SelectContent is unmounted until the dropdown is first opened, so Radix has
+  // no registered item text to reflect and SelectValue would render empty on
+  // load. Passing the label explicitly is Radix's supported escape hatch.
+  const selectedInjury = injuries.find(
+    (injury) => String(injury.id) === injuryId,
+  );
+  const selectedLabel = selectedInjury
+    ? formatInjuryLabel(selectedInjury)
+    : "All injuries";
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = async (event) => {
     event.preventDefault();
@@ -53,7 +169,6 @@ export function AskForm() {
 
     const trimmedToken = token.trim();
     const trimmedQuestion = question.trim();
-    const trimmedInjuryId = injuryId.trim();
 
     if (!trimmedToken) {
       setError("A bearer token is required.");
@@ -69,8 +184,8 @@ export function AskForm() {
       question: trimmedQuestion,
     };
 
-    if (trimmedInjuryId) {
-      body.injuryId = Number(trimmedInjuryId);
+    if (injuryId !== ALL_INJURIES) {
+      body.injuryId = Number(injuryId);
     }
 
     setLoading(true);
@@ -136,6 +251,7 @@ export function AskForm() {
                 autoComplete="off"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
+                onBlur={loadInjuries}
                 required
               />
 
@@ -144,6 +260,40 @@ export function AskForm() {
                 paste one signed with the server&apos;s{" "}
                 <code className="font-mono">JWT_SECRET</code>.
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="injury">Injury</Label>
+
+              <Select value={injuryId} onValueChange={setInjuryId}>
+                <SelectTrigger id="injury" className="w-full">
+                  <SelectValue>{selectedLabel}</SelectValue>
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value={ALL_INJURIES}>All injuries</SelectItem>
+
+                  {injuries.map((injury) => (
+                    <SelectItem key={injury.id} value={String(injury.id)}>
+                      {formatInjuryLabel(injury)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {injuriesError ? (
+                <p className="text-sm text-destructive">{injuriesError}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {injuriesLoading
+                    ? "Loading injuries..."
+                    : !loadedForToken
+                      ? "Paste a token to load your injuries."
+                      : injuries.length === 0
+                        ? "No injuries found for this token."
+                        : "Leave as All injuries to search across all of them."}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -157,21 +307,6 @@ export function AskForm() {
                 onChange={(e) => setQuestion(e.target.value)}
                 required
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="injuryId">Injury ID</Label>
-
-              <Input
-                id="injuryId"
-                type="number"
-                min={1}
-                step={1}
-                value={injuryId}
-                onChange={(e) => setInjuryId(e.target.value)}
-              />
-
-              <p className="text-sm text-muted-foreground">Optional.</p>
             </div>
 
             <Button type="submit" disabled={loading} className="w-full">

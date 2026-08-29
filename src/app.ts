@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import cors from 'cors';
 import aiAgentRouter from './routes/ai-agent-router.js';
+import injuriesRouter from './routes/injuries-router.js';
 import { authenticate } from './auth/authenticate.js';
 import { ApiErrorCode } from './lib/api-error.js';
 
@@ -37,6 +38,29 @@ const aiAgentLimiter = rateLimit({
   },
 });
 
+// A cheap indexed read (Injury has @@index([userId])), so it gets a more
+// generous budget than /ai-agent. Its own limiter instance keeps the two
+// counters independent -- one endpoint's traffic must not exhaust the other's.
+//
+// Like /ai-agent below, this limiter runs BEFORE authenticate, so unauthenticated
+// and invalid-token requests consume the same per-IP bucket as legitimate ones.
+// That is the open defect tracked in #145; this route inherits it rather than
+// fixing it, deliberately, so both endpoints stay consistent until #145 is
+// addressed for the app as a whole.
+const injuriesLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests, please try again later.',
+    code: 'rate_limited' satisfies ApiErrorCode,
+  },
+});
+
 app.use('/ai-agent', aiAgentLimiter, authenticate, aiAgentRouter);
+
+// Temporary -- see src/injuries/injuries-controller.ts and D10.
+app.use('/injuries', injuriesLimiter, authenticate, injuriesRouter);
 
 export default app;

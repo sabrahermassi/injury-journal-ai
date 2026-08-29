@@ -11,7 +11,10 @@ const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
 
   async rewrites() {
-    return [{ source: "/ai-agent", destination: `${apiOrigin}/ai-agent` }];
+    return [
+      { source: "/ai-agent", destination: `${apiOrigin}/ai-agent` },
+      { source: "/injuries", destination: `${apiOrigin}/injuries` },
+    ];
   },
 };
 

@@ -88,6 +88,27 @@ describe('POST /ai-agent rate limiting', () => {
   });
 });
 
+describe('GET /injuries', () => {
+  // Only the unauthenticated case is asserted here: it proves the route is
+  // mounted behind `authenticate` without needing a database. The listing
+  // behaviour itself is covered in tests/injuries-controller.test.ts.
+  it('requires authentication', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app).get('/injuries');
+
+      expect(response.status).toBe(401);
+      expect(response.body).toEqual({
+        error: 'Authentication required',
+        code: 'authentication_required',
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+});
+
 describe('security headers and CORS', () => {
   const originalAllowedOrigin = process.env.ALLOWED_ORIGIN;
 
