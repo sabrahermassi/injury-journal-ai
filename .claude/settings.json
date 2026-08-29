@@ -3,19 +3,6 @@
     "SECURITY_REVIEW_MODEL": "sonnet",
     "SG_AGENTIC_MODEL": "sonnet"
   },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npm run lint --silent 2>&1 | tail -20"
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "security-guidance@claude-plugins-official": true
   }

@@ -36,7 +36,9 @@ Before committing:
    - no unresolved TODOs introduced by the change
    - no contradiction with `CLAUDE.md`
 
-3. Re-run the verification commands from `CLAUDE.md` §10.
+3. Re-run the verification commands from `CLAUDE.md` §10 - UNLESS they already ran in this session and
+   no files have changed since. In that case say so and skip them. Never re-run an identical suite on
+   an unchanged tree.
 
 Also run integration tests or the evaluation harness when the changed area requires them.
 
@@ -53,6 +55,9 @@ For example:
 - workflow changes → relevant roadmap/workflow documentation
 
 Do NOT reread every project document automatically.
+
+Read any document at most once per session, and for large documents grep for the relevant section and
+read only that line range rather than the whole file.
 
 If the change affects an architectural decision, also inspect the relevant architecture documentation.
 
@@ -115,3 +120,78 @@ Then stage only the files belonging to this change:
 ```bash
 git add <specific-files>
 ```
+
+Inspect the staged diff before committing:
+
+```bash
+git diff --cached
+```
+
+Confirm only intended changes are staged, then commit with the approved message.
+
+Record the resulting commit hash.
+
+---
+
+## Step 3 — Push
+
+Before pushing, verify:
+
+```bash
+git remote -v
+git branch --show-current
+git status
+```
+
+Confirm:
+
+- the current branch is the intended feature branch, not `main`
+- the remote is this repository
+- the commit being pushed is the intended commit
+
+**STOP and wait for my explicit approval before pushing.**
+
+After approval:
+
+```bash
+git push -u origin <branch>
+```
+
+NEVER force-push. Never rewrite history.
+
+---
+
+## Step 4 — Create the PR
+
+Show me the proposed PR title and body first, and wait for approval.
+
+The body must include `Fixes #<issue-number>`.
+
+After approval:
+
+```bash
+gh pr create --repo <owner>/<name> --base <base-branch> --title "<title>" --body "<body>"
+```
+
+Then set the issue status using the mechanism the repository actually uses, as established in `/next` §3.
+
+---
+
+## Step 5 — Report and Stop
+
+Report:
+
+- commit hash
+- branch pushed
+- PR number and URL
+- issue status set
+
+Then STOP.
+
+Do not poll for CI results or review comments. Check CI once if I ask:
+
+```bash
+gh pr checks <PR-number> --repo <owner>/<name>
+```
+
+I will re-invoke you when review feedback arrives. Use `/address-review` for that.
