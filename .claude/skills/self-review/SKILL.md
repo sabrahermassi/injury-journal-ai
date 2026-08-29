@@ -11,12 +11,20 @@ Do not modify files, commit, push, comment, resolve review threads, or trigger e
 First inspect:
 
 - the complete diff against the relevant base branch
-- surrounding implementation and important data/control flows
+- the files in the diff, plus one hop of direct callers/consumers - do not survey the codebase
 - relevant tests and whether they actually exercise the changed behavior
-- `CLAUDE.md`
 - documentation relevant to the changed area; skip unrelated documentation
 - relevant database models, API contracts, and consumers when affected
 - existing GitHub issues when a pre-existing problem is relevant
+
+Do NOT read `CLAUDE.md`. It is already in context on every request.
+
+Read any document at most once per session. For files over ~3,000 tokens (`docs/01-product.md`,
+`docs/02-architecture.md`, `docs/04-implementation-roadmap.md`, `docs/05-api-contract.md`,
+`docs/07-flows-review.md`), grep for the relevant section and read only that line range rather than
+the whole file.
+
+If you want more context than this allows, ask me instead of exploring.
 
 Review for:
 
