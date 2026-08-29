@@ -7,6 +7,9 @@ export type ApiErrorCode =
   | 'question_too_long'
   | 'invalid_injury_id'
   | 'rate_limited'
+  | 'embedding_service_error'
+  | 'database_error'
+  | 'llm_service_error'
   | 'internal_error';
 
 export function sendError(
