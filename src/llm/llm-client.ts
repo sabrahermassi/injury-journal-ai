@@ -27,11 +27,17 @@ export async function generateAnswer(
     ],
   });
 
-  const choice = response.choices[0];
+  const choice = Array.isArray(response.choices) ? response.choices[0] : undefined;
 
   if (!choice?.message) {
     throw new Error('LLM returned a malformed response (missing choice/message)');
   }
 
-  return choice.message.content ?? '';
+  const { content } = choice.message;
+
+  if (content != null && typeof content !== 'string') {
+    throw new Error('LLM returned a malformed response (non-string content)');
+  }
+
+  return content ?? '';
 }

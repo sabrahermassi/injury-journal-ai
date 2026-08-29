@@ -74,8 +74,9 @@ issues — a security gap-analysis pass also surfaced items #31's own text never
   exploitable at the time this was filed (no auth, no rate limit, every request triggered a paid
   Groq + embedding call). The original single per-IP limiter ran *before* `authenticate`, sharing
   its bucket with failed-auth traffic; fixed as #145 with a two-tier limiter (a per-IP bound ahead
-  of `authenticate`, capped at 2x the per-user limit rather than looser, so per-IP cost-abuse
-  protection isn't weakened; and a stricter per-user bound keyed by `req.userId` after it). (#89, #145)
+  of `authenticate`, raised from the original 20 to 40 req/60s so legitimate traffic from a shared
+  IP isn't starved by one user's budget — a deliberately weaker per-IP cap, not a stronger one; and
+  a stricter per-user bound keyed by `req.userId`, at the original 20 req/60s, after it). (#89, #145)
 - [x] Add schema-based request input validation (Zod) incl. a max question length —
   `ai-agent-controller.ts` now validates `question`/`injuryId` via a Zod schema instead of ad hoc
   inline checks, and `question` has a real 10,000-character upper bound (matching the embedding

@@ -41,7 +41,8 @@ const rateLimitMessage = {
 const ipLimiter = rateLimit({
   windowMs: 60_000,
   limit: 40,
-  standardHeaders: true,
+  standardHeaders: 'draft-8',
+  identifier: 'ip',
   legacyHeaders: false,
   message: rateLimitMessage,
 });
@@ -52,7 +53,8 @@ const ipLimiter = rateLimit({
 const userLimiter = rateLimit({
   windowMs: 60_000,
   limit: 20,
-  standardHeaders: true,
+  standardHeaders: 'draft-8',
+  identifier: 'user',
   legacyHeaders: false,
   keyGenerator: (req) => String(req.userId),
   message: rateLimitMessage,

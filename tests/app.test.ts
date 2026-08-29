@@ -126,6 +126,25 @@ describe('POST /ai-agent rate limiting', () => {
     }
   });
 
+  it('reports both the ip and user rate-limit policies in the RateLimit headers', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app)
+        .post('/ai-agent')
+        .set('Authorization', authHeader)
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.ratelimit).toContain('"ip"');
+      expect(response.headers.ratelimit).toContain('"user"');
+      expect(response.headers['ratelimit-policy']).toContain('"ip"');
+      expect(response.headers['ratelimit-policy']).toContain('"user"');
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
   it('still bounds anonymous request volume via the per-IP limiter (#145)', async () => {
     const { app, prisma } = await loadApp();
 
