@@ -203,7 +203,8 @@ flowchart TD
     OUT --> U
 ```
 
-> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5. `OSC`
+> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is built (#95); `CIT` ("Citation
+> Generation") exists but isn't checked against the generated answer. See §5.5. `OSC`
 > ("Output Safety Check") is `checkAnswerSafety` — see §5.4 for what it actually checks.
 
 ### 5.1. Semantic Retrieval Architecture
@@ -337,7 +338,7 @@ flowchart TD
     A --> S["Initial Safety Check"]
 
     S -->|Boundary Violation| REF["Refuse / Redirect"]
-    S -->|Allowed| AUTH["Per-tool Authorization — PLANNED, not yet built"]
+    S -->|Allowed| AUTH["Per-tool Authorization"]
 
     AUTH --> R["RAG Tool"]
     AUTH --> J["Journal Tool"]
@@ -356,9 +357,9 @@ flowchart TD
 ```
 
 > **Current status vs. this diagram:**
-> - "Per-tool Authorization" does not exist in any form — both tools execute unconditionally once
->   the initial safety check passes. This is the concrete scope of the open security work (see
->   `docs/04-implementation-roadmap.md`).
+> - "Per-tool Authorization" is built (#95) — `rag-tool.ts`, `journal-tool.ts`, and
+>   `vector-storage.ts` filter by the authenticated `req.userId`. See
+>   `docs/04-implementation-roadmap.md` for the rest of the closed security scope.
 > - "Citation Check" does not exist — citations are built from retrieved chunks only (§5.3), with
 >   no verification against what the LLM actually generated.
 > - Tool selection ("the agent decides which tools are necessary") is currently fixed-keyword

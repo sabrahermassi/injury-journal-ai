@@ -23,6 +23,7 @@ export type EvaluationResult = {
     citationsPassed: boolean | null;
     intentPassed: boolean | null;
     retrievalPassed: boolean | null;
+    noInformationPassed: boolean | null;
     faithfulnessPassed: boolean | null;
   };
 };

@@ -4,6 +4,7 @@ import {
   evaluateSafety,
   evaluateCitations,
   evaluateIntent,
+  evaluateNoInformation,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
 import { evaluateFaithfulness } from './faithfulness-judge.js';
@@ -35,6 +36,7 @@ export async function runEvaluation() {
           output.answer,
           output.metadata?.retrievedChunks ?? [],
         ),
+        noInformationPassed: evaluateNoInformation(item.expectedBehavior, output),
       },
     });
   }

@@ -27,40 +27,67 @@ app.use(cors({ origin: allowedOrigins ?? true }));
 
 app.use(express.json());
 
-const aiAgentLimiter = rateLimit({
+const rateLimitMessage = {
+  error: 'Too many requests, please try again later.',
+  code: 'rate_limited' satisfies ApiErrorCode,
+};
+
+// Lenient, keyed by IP (default). Runs before authenticate to bound the cost
+// of an anonymous/invalid-token flood (JWT verification isn't free), not to
+// enforce a user-facing quota — that's the per-user limiters' job (see #145).
+// Kept at 2x the per-user limit rather than looser still: the original single
+// limiter (#89) was sized to bound per-IP LLM/embedding cost-abuse outright,
+// and this cap is what now stands between that goal and a multi-account
+// attacker sharing one IP, so it deliberately isn't raised further.
+//
+// Deliberately a single shared instance across both routes: it bounds the cost
+// of anonymous traffic from one IP, which is a property of the client rather
+// than of the endpoint. The per-user quotas below are what stay independent.
+const ipLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 40,
+  standardHeaders: 'draft-8',
+  identifier: 'ip',
+  legacyHeaders: false,
+  message: rateLimitMessage,
+});
+
+// The real per-user quota. Runs after authenticate and keys by req.userId so
+// one client's failed-auth traffic can no longer exhaust another
+// legitimately authenticated user's budget on a shared IP (#145).
+const userLimiter = rateLimit({
   windowMs: 60_000,
   limit: 20,
-  standardHeaders: true,
+  standardHeaders: 'draft-8',
+  identifier: 'user',
   legacyHeaders: false,
-  message: {
-    error: 'Too many requests, please try again later.',
-    code: 'rate_limited' satisfies ApiErrorCode,
-  },
+  keyGenerator: (req) => String(req.userId),
+  message: rateLimitMessage,
 });
 
-// A cheap indexed read (Injury has @@index([userId])), so it gets a more
-// generous budget than /ai-agent. Its own limiter instance keeps the two
-// counters independent -- one endpoint's traffic must not exhaust the other's.
-//
-// Like /ai-agent below, this limiter runs BEFORE authenticate, so unauthenticated
-// and invalid-token requests consume the same per-IP bucket as legitimate ones.
-// That is the open defect tracked in #145; this route inherits it rather than
-// fixing it, deliberately, so both endpoints stay consistent until #145 is
-// addressed for the app as a whole.
-const injuriesLimiter = rateLimit({
+// /injuries is a cheap indexed read (Injury has @@index([userId])), not an
+// LLM/embedding call, so it gets a more generous per-user budget than
+// /ai-agent. Its own instance keeps the two counters independent -- reloading
+// the injury picker must not spend the user's question budget.
+const injuriesUserLimiter = rateLimit({
   windowMs: 60_000,
   limit: 60,
-  standardHeaders: true,
+  standardHeaders: 'draft-8',
+  identifier: 'user-injuries',
   legacyHeaders: false,
-  message: {
-    error: 'Too many requests, please try again later.',
-    code: 'rate_limited' satisfies ApiErrorCode,
-  },
+  keyGenerator: (req) => String(req.userId),
+  message: rateLimitMessage,
 });
 
-app.use('/ai-agent', aiAgentLimiter, authenticate, aiAgentRouter);
+app.use('/ai-agent', ipLimiter, authenticate, userLimiter, aiAgentRouter);
 
 // Temporary -- see src/injuries/injuries-controller.ts and D10.
-app.use('/injuries', injuriesLimiter, authenticate, injuriesRouter);
+app.use(
+  '/injuries',
+  ipLimiter,
+  authenticate,
+  injuriesUserLimiter,
+  injuriesRouter,
+);
 
 export default app;

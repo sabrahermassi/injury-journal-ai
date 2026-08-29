@@ -90,7 +90,7 @@ Every error body includes a machine-readable `code` field alongside `error` (iss
 | 400 | `{ "error": "Question is required", "code": "question_required" }` | body present but `question` missing/blank |
 | 400 | `{ "error": "Question exceeds maximum length of 10000 characters", "code": "question_too_long" }` | `question` longer than the 10,000-character limit |
 | 400 | `{ "error": "Invalid injuryId", "code": "invalid_injury_id" }` | `injuryId` present but fails the check above |
-| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | more than 20 requests from the same IP within a 60s window (issue #89) |
+| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | two-tier limiting (issue #89, refined by #145): a lenient per-IP limiter (40 req/60s) runs before `authenticate` to bound anonymous/invalid-token request volume, and a stricter per-user limiter (20 req/60s, keyed by `req.userId`) runs after — so one client's failed-auth traffic can no longer exhaust another authenticated user's budget on a shared IP. The IP limiter is kept at only 2x the per-user limit, not looser, so it still bounds worst-case LLM/embedding cost-abuse from a multi-account attacker sharing one IP. |
 | 500 | `{ "error": "Failed to process request", "code": "embedding_service_error" }` | the embedding service call (`src/embeddings/embedding-client.ts`) failed — missing `EMBEDDING_API_KEY`, network/connection failure, non-OK HTTP response, or an invalid/malformed response shape |
 | 500 | `{ "error": "Failed to process request", "code": "database_error" }` | Prisma threw `PrismaClientKnownRequestError` or `PrismaClientInitializationError` (query failure or DB unreachable) |
 | 500 | `{ "error": "Failed to process request", "code": "llm_service_error" }` | the Groq LLM call threw a `Groq.APIError` (or subclass — rate limit, auth, connection, etc.) |
@@ -132,7 +132,7 @@ The four fields are exactly what a picker needs; this is deliberately not a gene
 |---|---|---|
 | 401 | `{ "error": "Authentication required", "code": "authentication_required" }` | missing or unparseable `Authorization` header |
 | 401 | `{ "error": "Invalid or expired token", "code": "invalid_token" }` | token fails verification (see §2) |
-| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | more than 60 requests from the same IP within a 60s window — its own limiter instance, separate from `/ai-agent`'s bucket |
+| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | same two-tier limiting as `/ai-agent` (see §3 above): the shared per-IP limiter (40 req/60s) runs before `authenticate`, then a per-user limiter of 60 req/60s keyed by `req.userId` runs after. The per-user budget is its own instance, deliberately more generous than `/ai-agent`'s 20 — this is a cheap indexed read, and reloading the injury picker must not spend the user's question budget. |
 | 500 | `{ "error": "Failed to process request", "code": "database_error" }` | Prisma threw `PrismaClientKnownRequestError` or `PrismaClientInitializationError` |
 | 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | fallback for any other unexpected exception, including a missing `JWT_SECRET` |
 
