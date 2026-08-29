@@ -142,6 +142,23 @@ curl -X POST http://localhost:3000/ai-agent \
 `sub` claim, signed with `JWT_SECRET`) — see the Project Status section above for what
 authentication does and doesn't cover yet.
 
+### Minimal frontend
+
+A static demo page is served at `http://localhost:3000/` (`public/index.html` +
+`public/app.js`, no build step) once the backend is running. It has a field for the question, an
+optional injury ID, and a bearer token — this repo verifies but does not issue JWTs (a separate
+journal application is expected to own login, see `docs/02-architecture.md` D10), so for local
+testing you need to mint your own token with `JWT_SECRET`:
+
+```bash
+JWT_SECRET=<same value as .env> npx tsx -e "
+import jwt from 'jsonwebtoken';
+console.log(jwt.sign({ sub: '1' }, process.env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '1h' }));
+"
+```
+
+Paste the printed token into the page's token field.
+
 ## Tests
 
 ```bash

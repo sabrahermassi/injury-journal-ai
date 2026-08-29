@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Injury Journal AI</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 640px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        color: #1a1a1a;
+      }
+      label {
+        display: block;
+        margin-top: 1rem;
+        font-weight: 600;
+      }
+      input,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.5rem;
+        margin-top: 0.25rem;
+        font: inherit;
+      }
+      textarea {
+        min-height: 5rem;
+        resize: vertical;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.6rem 1.2rem;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: default;
+        opacity: 0.6;
+      }
+      #status {
+        margin-top: 1rem;
+        font-style: italic;
+        color: #555;
+      }
+      #error {
+        margin-top: 1rem;
+        color: #b00020;
+        white-space: pre-wrap;
+      }
+      #result {
+        margin-top: 1.5rem;
+      }
+      #answer {
+        white-space: pre-wrap;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 1rem;
+      }
+      #citations {
+        margin-top: 0.75rem;
+        padding-left: 1.25rem;
+        font-size: 0.9rem;
+        color: #333;
+      }
+      .help {
+        font-weight: normal;
+        font-size: 0.85rem;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Injury Journal AI</h1>
+
+    <label for="token"
+      >Bearer token
+      <span class="help"
+        >This service verifies but does not issue tokens (see README) — paste one signed with the
+        server's <code>JWT_SECRET</code>.</span
+      ></label
+    >
+    <input id="token" type="text" autocomplete="off" placeholder="eyJhbGciOi..." />
+
+    <label for="question">Question</label>
+    <textarea id="question" maxlength="10000" placeholder="What treatments have I tried?"></textarea>
+
+    <label for="injuryId">Injury ID <span class="help">(optional)</span></label>
+    <input id="injuryId" type="number" min="1" step="1" />
+
+    <button id="submit">Ask</button>
+
+    <div id="status" hidden></div>
+    <div id="error" hidden></div>
+
+    <div id="result" hidden>
+      <div id="answer"></div>
+      <ul id="citations"></ul>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

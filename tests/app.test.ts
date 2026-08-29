@@ -34,6 +34,22 @@ async function loadApp() {
   return { app, prisma };
 }
 
+describe('GET / static frontend', () => {
+  it('serves the static index page', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app).get('/');
+
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/text\/html/);
+      expect(response.text).toContain('Injury Journal AI');
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+});
+
 describe('POST /ai-agent rate limiting', () => {
   it('does not crash when a reverse proxy sends X-Forwarded-For', async () => {
     // Regression test: express-rate-limit throws if a proxy header is
