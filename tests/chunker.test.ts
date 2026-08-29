@@ -103,4 +103,22 @@ describe('Document Chunker', () => {
       expect(countTokens(chunk.content)).toBeLessThanOrEqual(20);
     }
   });
+
+  it('splits a single word that exceeds the token limit', () => {
+    const longWord = 'a'.repeat(400);
+    const oversizedWordDocument: JournalDocument = {
+      content: `Short intro sentence here. ${longWord} tail.`,
+      metadata: oversizedSentenceDocument.metadata,
+    };
+
+    const chunks = chunkDocument(oversizedWordDocument, 20);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (const chunk of chunks) {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(20);
+    }
+
+    expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
+  });
 });

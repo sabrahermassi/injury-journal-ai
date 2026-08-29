@@ -23,6 +23,17 @@ function splitIntoSentences(text: string): string[] {
   );
 }
 
+function splitOversizedWord(word: string, maxTokens: number): string[] {
+  const tokens = encoding.encode(word);
+  const pieces: string[] = [];
+
+  for (let i = 0; i < tokens.length; i += maxTokens) {
+    pieces.push(encoding.decode(tokens.slice(i, i + maxTokens)));
+  }
+
+  return pieces;
+}
+
 function addChunk(
   chunks: JournalDocument[],
   document: JournalDocument,
@@ -109,6 +120,17 @@ export function chunkDocument(
 
         if (countTokens(candidate) <= maxTokens) {
           sentenceChunk = candidate;
+        } else if (countTokens(word) > maxTokens) {
+          if (sentenceChunk) {
+            addChunk(chunks, document, sentenceChunk);
+          }
+
+          const pieces = splitOversizedWord(word, maxTokens);
+          for (const piece of pieces.slice(0, -1)) {
+            addChunk(chunks, document, piece);
+          }
+
+          sentenceChunk = pieces[pieces.length - 1] ?? '';
         } else {
           if (sentenceChunk) {
             addChunk(chunks, document, sentenceChunk);
