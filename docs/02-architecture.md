@@ -203,7 +203,8 @@ flowchart TD
     OUT --> U
 ```
 
-> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is not implemented. See §5.5. `OSC`
+> Same caveat as §3: `AUTH` ("Per-Tool Authorization") is built (#95); `CIT` ("Citation
+> Generation") exists but isn't checked against the generated answer. See §5.5. `OSC`
 > ("Output Safety Check") is `checkAnswerSafety` — see §5.4 for what it actually checks.
 
 ### 5.1. Semantic Retrieval Architecture
@@ -337,7 +338,7 @@ flowchart TD
     A --> S["Initial Safety Check"]
 
     S -->|Boundary Violation| REF["Refuse / Redirect"]
-    S -->|Allowed| AUTH["Per-tool Authorization — PLANNED, not yet built"]
+    S -->|Allowed| AUTH["Per-tool Authorization"]
 
     AUTH --> R["RAG Tool"]
     AUTH --> J["Journal Tool"]
@@ -356,9 +357,9 @@ flowchart TD
 ```
 
 > **Current status vs. this diagram:**
-> - "Per-tool Authorization" does not exist in any form — both tools execute unconditionally once
->   the initial safety check passes. This is the concrete scope of the open security work (see
->   `docs/04-implementation-roadmap.md`).
+> - "Per-tool Authorization" is built (#95) — `rag-tool.ts`, `journal-tool.ts`, and
+>   `vector-storage.ts` filter by the authenticated `req.userId`. See
+>   `docs/04-implementation-roadmap.md` for the rest of the closed security scope.
 > - "Citation Check" does not exist — citations are built from retrieved chunks only (§5.3), with
 >   no verification against what the LLM actually generated.
 > - Tool selection ("the agent decides which tools are necessary") is currently fixed-keyword
@@ -740,6 +741,14 @@ quoted), what else was considered, whether it still holds, and whether it should
   built). #50 (`[P10]` journal CRUD + auth endpoints) is closed as out-of-scope under this
   decision; #51 (`[P11]` conversation/thread concept) stays out of scope for now but remains open,
   deferred until frontend work actually starts.
+- **KNOWN TEMPORARY DEVIATION:** a read-only `GET /injuries` (`src/injuries/injuries-controller.ts`)
+  now exists, which this decision would otherwise place out of scope. It was added so the local
+  frontend could offer an injury picker rather than asking the user to type a raw database
+  `injuryId`. It is deliberately minimal — four fields, scoped to the authenticated `userId`, no
+  pagination, no CRUD — and is *not* a reversal of this decision: the separate journal
+  application's own `GET /injuries` supersedes it once the two applications merge, at which point
+  it is deleted. Tracked in #195; also flagged in `docs/05-api-contract.md` §1 and §6. Do not build
+  further endpoints on this precedent.
 - **SHOULD THIS BE REVISITED:** Only if the "existing Injury Journal application" assumption turns
   out to be wrong (e.g. no such external app actually exists yet) — not expected based on the
   current product description.

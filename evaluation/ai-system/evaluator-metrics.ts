@@ -32,7 +32,7 @@ export function evaluateNoInformation(
 
   const answer = result.answer.toLowerCase();
 
-  return /don['’]?t have (any|enough) (information|records|data)|no information|not enough information|no records/.test(
+  return /do(?:es)?\s?(?:not|n['’]?t)\s(?:have|mention|contain|include)|no (?:information|records|data)\b|not enough information/.test(
     answer,
   );
 }

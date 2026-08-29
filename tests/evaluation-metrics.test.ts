@@ -51,14 +51,17 @@ describe('evaluation metrics', () => {
     expect(evaluateIntent('rag', result)).toBe(false);
   });
 
-  it('passes no-information checks when the answer says nothing was found', () => {
-    // Curly apostrophe on purpose: this is the exact phrasing a real LLM run produced
-    // and an earlier straight-apostrophe-only regex missed it.
-    const result: AgentOutput = {
-      answer: 'I don’t have any records of treatments for a broken arm in the information you provided.',
-      citations: [],
-      intent: 'rag',
-    };
+  // The exact wording varies run to run even with an unchanged SYSTEM_PROMPT (see
+  // prompt-builder.ts, updated in #183) -- these are all real phrasings a live Groq run
+  // produced for the same question, so the regex targets the underlying "verb + negation"
+  // structure rather than any single literal phrase.
+  it.each([
+    'I don’t have any records of treatments for a broken arm in the information you provided.',
+    'The journal entries you shared do not mention a broken arm or any treatments for it.',
+    'the journal data does not contain the needed detail to answer that.',
+    'I’m sorry, but the journal data you provided does not include any information about treatments for a broken arm.',
+  ])('passes no-information checks for real LLM phrasing: %s', (answer) => {
+    const result: AgentOutput = { answer, citations: [], intent: 'rag' };
 
     expect(evaluateNoInformation('no_information_found', result)).toBe(true);
   });

@@ -20,7 +20,7 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
   );
 
   const noInformationChecks = results.filter(
-    (result) => result.evaluation?.noInformationPassed !== undefined,
+    (result) => typeof result.evaluation?.noInformationPassed === 'boolean',
   );
 
   const faithfulnessChecks = results.filter(

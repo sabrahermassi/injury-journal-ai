@@ -100,3 +100,15 @@ Run `npm run build` when build or release behavior is affected.
 Changes to retrieval, RAG, embeddings, or safety guardrails also require the evaluation harness.
 Use the relevant Skill for workflow-specific verification. Do not invent commands or scripts that do not exist.
 For setup, development, database, seeding, and embedding-service commands, see `README.md`.
+
+## UI Guidelines
+
+For any UI work, always read `UI_GUIDE.md` first and follow its component
+library, design tokens, and patterns exactly. Do not introduce a different
+UI library, styling approach, or component structure than what's documented
+there.
+
+If a needed component isn't covered in UI_GUIDE.md, check the separate journal
+application's frontend (the app that owns CRUD + login, see
+`docs/02-architecture.md` D10) for a precedent before inventing a new pattern.
+It lives in its own repository, not this one.
