@@ -131,12 +131,11 @@ flowchart TD
     C --> OUT["Document Chunks"]
 ```
 
-> **Current status:** every stage below "Ingestion Worker" is implemented and unit/integration
-> tested (`postgres-reader.ts`, `document-builder.ts`, `document-chunker.ts`,
-> `embed-and-store.ts`). The "Ingestion Worker" node itself — something that actually calls these
-> stages in sequence on a schedule, webhook, or CLI trigger — does not exist yet. Today the only
-> place all stages run together is inside test files; there is no runnable entrypoint that
-> populates `DocumentChunk` in a live system.
+> **Current status:** every stage is implemented and unit/integration tested
+> (`postgres-reader.ts`, `document-builder.ts`, `document-chunker.ts`, `embed-and-store.ts`). The
+> "Ingestion Worker" node is also built (`src/ingestion/ingestion-worker.ts`, issue #40) and is
+> runnable via `npm run ingest`, calling the stages in sequence with idempotent storage and
+> concurrent-run serialization (`ingestion-lock.ts`).
 
 ### 4.2. Embedding Architecture
 
@@ -385,11 +384,10 @@ flowchart TD
     E --> S["Safety Adherence"]
 ```
 
-> **Current status:** the harness and "Retrieval Quality" scoring are implemented. "Citation
-> Accuracy" and "Safety Adherence" are implemented but shallow (they check for the presence of an
-> expected signal, not its correctness). "Answer Faithfulness" is not implemented at all — no
-> metric exists for it today. The evaluation dataset also currently has only 4 cases total (see
-> Decision D5 in §11 for why that matters beyond just this section).
+> **Current status:** the harness now implements six evaluation dimensions (safety, citations,
+> intent, retrieval, no-information, and faithfulness). See `evaluation/ai-system/` for the
+> current implementation and `evaluation/ai-system/dataset.json` for current dataset size and
+> coverage (see Decision D5 in §11 for why dataset size matters beyond just this section).
 
 ## 7. Observability Architecture
 
@@ -529,6 +527,13 @@ flowchart TD
   The service's `/docs`, `/redoc`, and `/openapi.json` are also disabled, since FastAPI's
   app-level `dependencies` list doesn't cover those auto-generated routes.
 
+### 10.2 Rate limiting
+
+A two-tier limiter (`src/app.ts`, issues #89/#145) sits alongside the authorization design above:
+a per-IP limit (40 req/60s) runs ahead of `authenticate` to bound anonymous/invalid-token traffic,
+and a stricter per-user limit keyed by `req.userId` runs after (20 req/60s for `/ai-agent`, 60
+req/60s for `/injuries`). See `docs/05-api-contract.md` §3 for exact values and response shape.
+
 ## 11. Architectural Decision Log
 
 For each major decision: what was chosen, why (as inferred from code, `CLAUDE.md`, and commit
@@ -621,15 +626,16 @@ quoted), what else was considered, whether it still holds, and whether it should
   wrong problem or optimizing on vibes.
 - **ALTERNATIVES CONSIDERED:** A similarity threshold (return nothing below a cosine-distance
   cutoff) — would directly help the "no relevant information" case, but requires a calibrated
-  cutoff value the project doesn't have evidence for yet (only 4 evaluation cases exist today, per
-  §6). Hybrid (keyword + vector) search or a cross-encoder rerank stage — both add real complexity
-  and a second scoring signal to tune, for a corpus size where it's not yet clear pure vector
-  top-k is actually underperforming.
-- **CURRENT STATUS:** Still valid as a deliberate deferral, but increasingly time-pressured: the
-  evaluation dataset (4 cases) is too small to produce the evaluation data this decision says it's
-  waiting on. The deferral and the thing blocking un-deferring it are in tension.
+  cutoff value the project doesn't have strong evidence for yet (see
+  `evaluation/ai-system/dataset.json` for current case count and coverage). Hybrid (keyword +
+  vector) search or a cross-encoder rerank stage — both add real complexity and a second scoring
+  signal to tune, for a corpus size where it's not yet clear pure vector top-k is actually
+  underperforming.
+- **CURRENT STATUS:** Still valid as a deliberate deferral. Whether the evaluation dataset is now
+  large enough to inform this decision on evidence should be checked against its current size
+  (`evaluation/ai-system/dataset.json`) rather than a number restated here.
 - **SHOULD THIS BE REVISITED:** Maybe — not by implementing threshold/hybrid/rerank now, but by
-  growing the evaluation dataset enough to actually make this decision on evidence rather than
+  confirming the evaluation dataset is large enough to make this decision on evidence rather than
   leaving it open indefinitely.
 
 ### D6 — Hand-written deterministic intent router instead of an agent framework (LangGraph deferred)
@@ -682,26 +688,22 @@ quoted), what else was considered, whether it still holds, and whether it should
   deliberately skips intent routing (e.g. an internal debugging tool) — that would be a new,
   explicitly-scoped decision, not a reason to bring back `/rag/ask` as-is.
 
-### D8 — Ingestion built as isolated, tested stages with no runnable end-to-end worker
+### D8 — Ingestion built as isolated, tested stages, now wired by a CLI worker
 
 - **DECISION:** Each offline stage (read → build documents → chunk → embed → store) is
-  implemented and tested independently; nothing currently calls them in sequence outside test
-  files.
-- **RATIONALE:** Building and testing each stage in isolation first is a reasonable incremental
-  approach — it means the hard parts (idempotent storage, chunk boundary handling, embedding
-  correctness) are solid before wiring them into a schedule/trigger. There's no evidence this is a
-  permanent design choice rather than a sequencing gap; §4.1 explicitly frames it as: "the
-  'Ingestion Worker' node itself... does not exist yet."
-- **ALTERNATIVES CONSIDERED:** Not really applicable — this reads as "not yet done" rather than
-  "chose not to do." The real open question is *how* it should run once built: a scheduled job, a
-  webhook off journal-record writes, or a manual/CLI trigger — not addressed anywhere yet.
-- **CURRENT STATUS:** Confirmed gap, not a stable design — `DocumentChunk` is never populated in a
-  running system today. Already tracked (issue #40, "Build the ingestion worker/entrypoint")
-  and flagged in the roadmap as a "do now" item given how cheap it is relative to the value (it's
-  the only thing standing between the tested pipeline and a system that actually retrieves real
-  data end-to-end).
-- **SHOULD THIS BE REVISITED:** Yes, in the sense that it needs to be *built*, not reconsidered —
-  the design of each stage is sound; only the orchestrating entrypoint is missing.
+  implemented and tested independently, and `src/ingestion/ingestion-worker.ts` calls them in
+  sequence via a CLI entrypoint (`npm run ingest`).
+- **RATIONALE:** Building and testing each stage in isolation first was a reasonable incremental
+  approach — it meant the hard parts (idempotent storage, chunk boundary handling, embedding
+  correctness) were solid before wiring them into a trigger.
+- **ALTERNATIVES CONSIDERED:** *How* the worker should run: a scheduled job, a webhook off
+  journal-record writes, or a manual/CLI trigger. A CLI trigger was chosen as the initial
+  entrypoint; a schedule or webhook trigger is not addressed yet.
+- **CURRENT STATUS:** Resolved (issue #40) — `DocumentChunk` is populated by running
+  `npm run ingest`. Cross-process locking during concurrent ingestion runs is a separate, still-open
+  item (issue #132).
+- **SHOULD THIS BE REVISITED:** No — the design of each stage and the orchestrating entrypoint are
+  both in place. Revisit only if a scheduled/webhook trigger becomes necessary.
 
 ### D9 — `userId` lives only on `Injury` and inside an unindexed JSON metadata blob on `DocumentChunk`, not as a real column there
 

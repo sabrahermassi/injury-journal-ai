@@ -89,12 +89,12 @@ The product is designed around **one user's private journal data**.
   > **Status:** not yet enforced. Today's citations list what was *retrieved*, not what the
   > answer actually *used* — there is no claim-level verification. See
   > `docs/02-architecture.md` §5.3.
-- **Useful summaries:** Users can generate concise summaries of their injury history. *(Implemented for the RAG path; the journal-lookup path currently returns raw unsummarized data — see §6 below.)*
+- **Useful summaries:** Users can generate concise summaries of their injury history. *(Implemented for both the RAG path and the journal-lookup path, both via LLM-generated prose — see §6 below.)*
 - **Healthcare safety:** The assistant operates within explicit healthcare boundaries. *(Implemented on the input side; see §7.)*
 - **Privacy:** Users can only access their own journal data.
-  > **Status: not yet implemented.** There is currently no authentication and no per-request user
-  > identity at all — any caller can supply any `injuryId` and receive that injury's data. This is
-  > the single highest-priority open item; see `docs/04-implementation-roadmap.md` Step 5.
+  > **Status: implemented.** `POST /ai-agent` requires a Bearer JWT (`src/auth/authenticate.ts`,
+  > issue #94), and retrieval/journal lookups filter by the authenticated `userId` (issue #95).
+  > See `docs/05-api-contract.md` §2.
 
 ---
 
@@ -110,7 +110,7 @@ Retrieve relevant treatment records and summarize them. *(Implemented via the RA
 
 > Which treatments did not improve my symptoms?
 
-Retrieve relevant treatment and outcome information and summarize it. *(Implemented via the RAG path — quality depends on the LLM correctly reading `outcome` free text, since there is no structured outcome field to query directly.)*
+Retrieve relevant treatment and outcome information and summarize it. *(Implemented via the RAG path. `Treatment.outcome` is a structured column, retrieved and summarized by the LLM from context rather than queried directly.)*
 
 ### Search Symptoms and Events
 
@@ -159,11 +159,11 @@ Generated answers identify the journal records used to support their claims.
 > deterministic keyword matching (not model-driven decision-making), and covers:
 
 - RAG retrieval *(implemented, full pipeline)*
-- Journal/database access *(implemented, but returns a raw unsummarized database record with no LLM synthesis and no citations — an unfinished placeholder, not a deliberate simplification)*
-- Safety checks *(implemented, input-side only)*
+- Journal/database access *(implemented — returns an LLM-generated prose summary of the injury record via `formatInjuryRecord()` → `generateAnswer()`, no citations)*
+- Safety checks *(implemented, input- and output-side)*
 - Citation verification *(not implemented — the verification module exists in code but is not wired into any response path)*
 
-Per-tool authorization (deciding whether this specific request may use this specific tool) is not implemented at all yet. See `docs/02-architecture.md` §5.5.
+Per-tool authorization (retrieval and journal lookups scoped to the authenticated `userId`) is implemented — see `docs/05-api-contract.md` §2.
 
 ### Evaluation
 
@@ -174,7 +174,7 @@ The system measures:
 - Citation accuracy *(implemented, but shallow — only checks that at least one citation exists when one is expected, not that the citations are the correct ones)*
 - Safety adherence *(implemented, but shallow — checks for the literal substrings "cannot"/"unable" in a refusal, nothing more)*
 
-The evaluation dataset currently has 4 cases total — a smoke test, not a regression suite. See `docs/02-architecture.md` §6.
+See `evaluation/ai-system/dataset.json` for the current dataset size and coverage, and `docs/02-architecture.md` §6 for the evaluation dimensions.
 
 ### AI Observability
 
@@ -218,17 +218,20 @@ It does not diagnose conditions or make medical decisions.
 
 Requests outside these boundaries should be refused or redirected. *(Implemented via a regex-based pre-generation filter — well-tested for the phrasings it covers, but it is a pre-generation filter only: nothing checks whether the LLM's generated answer echoes diagnosis-adjacent language it might read verbatim from raw journal content, e.g. a doctor's visit notes. See `docs/02-architecture.md` §5.4.)*
 
-The initial safety decision must occur **before retrieving journal data or invoking RAG/journal tools**. *(Implemented and verified by an integration test.)* Per-tool authorization remains a separate control before each tool accesses user data.
+The initial safety decision must occur **before retrieving journal data or invoking RAG/journal tools**. *(Implemented and verified by an integration test.)* Per-tool authorization is a separate control before each tool accesses user data.
 
-> **Status:** this per-tool authorization control does not exist yet. See
-> `docs/04-implementation-roadmap.md` Step 5.
+> **Status:** implemented. `rag-tool.ts` and `journal-tool.ts` scope every lookup to the
+> authenticated `userId` (issue #95). See `docs/05-api-contract.md` §2.
 
 ---
 
 ## 8. Privacy and Security Requirements
 
-> **Status: none of the items below are implemented yet.** This section describes requirements
-> for Step 5 of the roadmap (`docs/04-implementation-roadmap.md`), not current behavior.
+> **Status:** authentication, authorization, and user-level data isolation are implemented (issues
+> #94, #95). Secure database access and least-privilege roles are documented in `README.md`
+> ("Database roles and connection hygiene"). Secret management, telemetry protection, log access,
+> and retention/deletion policies remain open — see `docs/04-implementation-roadmap.md` for
+> current per-item status.
 
 The journal may contain sensitive personal and health information.
 
@@ -256,10 +259,9 @@ User A's journal data
 
 Ownership must be enforced explicitly rather than relying solely on opaque metadata.
 
-> **Status:** this exact anti-pattern exists in the current schema today — `DocumentChunk`'s only
-> reference to `userId` is inside an unindexed JSON metadata blob, not a real, queryable column.
-> Closing this gap requires a schema change (adding a real `userId` column), not just an
-> application-level check. See `docs/02-architecture.md` §11 (D9).
+> **Status:** resolved. `DocumentChunk.userId` is a real, indexed column, denormalized from
+> `Injury.userId` at write time, and retrieval/journal lookups filter by it. See
+> `docs/02-architecture.md` §11 (D9, resolved).
 
 Telemetry should prefer identifiers and metadata over raw journal content. Sensitive content must be redacted when logging is necessary, and telemetry must have appropriate encryption, access controls, and retention policies.
 
@@ -277,8 +279,7 @@ The product is not intended to:
 - Automatically modify the user's original journal records
 - Expose one user's journal data to another user
 
-> **Status note:** the last item — "expose one user's journal data to another user" — is not
-> currently prevented by any code. See §8 above.
+> **Status note:** the last item is now enforced — see §8 above.
 
 ---
 
@@ -294,7 +295,7 @@ Important claims should be connected to their underlying journal records. *(Not 
 
 ### Private by Default
 
-Only access the user's data when necessary, and avoid exposing personal health information through telemetry or other users' requests. *(Not yet implemented — see §8.)*
+Only access the user's data when necessary, and avoid exposing personal health information through telemetry or other users' requests. *(Data isolation implemented — see §8. Telemetry protection remains open.)*
 
 ### Safe by Default
 

@@ -10,12 +10,14 @@ Injury Journal AI sits on top of an existing Injury Journal PostgreSQL applicati
 
 The AI retrieval and RAG pipeline is implemented and tested: offline ingestion (reader → document builder → chunker → embedder → pgvector storage), semantic retrieval, RAG generation, citation generation, input-side safety guardrails, a hand-written AI agent with intent routing, and an evaluation harness.
 
-Known gaps in what's implemented so far:
-- There is no runnable ingestion entrypoint yet — the pipeline stages exist and are tested individually, but nothing wires them together outside of test files.
-- The agent's journal-lookup path returns raw database records rather than an LLM-generated summary.
-- `POST /ai-agent` now requires a `Bearer` JWT (issue #94), but the verified identity isn't used to filter results yet — there is still no per-user data isolation (issue #95).
+A runnable ingestion entrypoint exists (`npm run ingest`, `src/ingestion/ingestion-worker.ts`)
+wiring reader → document builder → chunker → embedder → pgvector storage into one pipeline. The
+agent's journal-lookup path returns an LLM-generated summary of the injury record, the same as the
+RAG path. `POST /ai-agent` requires a `Bearer` JWT (issue #94), and retrieval/journal lookups
+filter by the authenticated `userId` (issue #95).
 
-Security/production hardening, AI observability, AWS deployment, and Infrastructure as Code are not yet started. See [docs/04-implementation-roadmap.md](docs/04-implementation-roadmap.md) for the full, current status of every step.
+Security/production hardening is mostly done (see the roadmap); AI observability, AWS deployment,
+and Infrastructure as Code are not yet started. See [docs/04-implementation-roadmap.md](docs/04-implementation-roadmap.md) for the full, current status of every step.
 
 ## Tech Stack
 
@@ -34,6 +36,8 @@ Security/production hardening, AI observability, AWS deployment, and Infrastruct
 - [Architecture](docs/02-architecture.md) — Overall system architecture and technical design.
 - [Chunker Architecture](docs/03-chunker-architecture.md) — Detailed design of the document chunking component.
 - [Implementation Roadmap](docs/04-implementation-roadmap.md) — Current status per step, linked to GitHub issues.
+- [API Contract](docs/05-api-contract.md) — Request/response shapes, error codes, and endpoint behavior.
+- [Flows Review](docs/07-flows-review.md) — End-to-end trace of real function calls and error paths.
 
 ## Setup
 
@@ -52,7 +56,7 @@ npm install
 
 ### Configure environment
 
-Set the following environment variables (see `.env.example` for a starting point — note it does not currently list every variable the code reads):
+Set the following environment variables (see `.env.example` for a starting point — note it does not currently list `EMBEDDING_API_URL`, `EMBEDDING_API_TIMEOUT_MS`, or `PORT`, since all three are optional with defaults):
 
 | Variable | Required | Notes |
 |---|---|---|
