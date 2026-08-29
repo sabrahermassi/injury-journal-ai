@@ -5,6 +5,12 @@ const config: Config = {
 
   testEnvironment: 'node',
 
+  // Cap parallelism: unbounded workers all pay a cold ESM/ts-jest import
+  // cost at once, which was starving CPU time from the first Prisma/app.ts
+  // import in tests/app.test.ts and intermittently blowing its timeout
+  // under full-suite load (#186).
+  maxWorkers: '50%',
+
   extensionsToTreatAsEsm: ['.ts'],
 
   setupFiles: ['<rootDir>/tests/setup.ts'],
