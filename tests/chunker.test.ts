@@ -80,6 +80,50 @@ describe('Document Chunker', () => {
     });
   });
 
+  it('keeps multiple small documents separate', () => {
+    const secondDocument: JournalDocument = {
+      ...smallDocument,
+      content: 'A second short journal entry with unrelated content.',
+      metadata: { ...smallDocument.metadata, sourceId: 3 },
+    };
+    const thirdDocument: JournalDocument = {
+      ...smallDocument,
+      content: 'A third short journal entry, also unrelated.',
+      metadata: { ...smallDocument.metadata, sourceId: 4 },
+    };
+
+    const chunks = chunkDocuments(
+      [smallDocument, secondDocument, thirdDocument],
+      100,
+    );
+
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0].content).toBe(smallDocument.content);
+    expect(chunks[1].content).toBe(secondDocument.content);
+    expect(chunks[2].content).toBe(thirdDocument.content);
+  });
+
+  it('does not split chunks mid-sentence', () => {
+    const chunks = chunkDocument(largeDocument, 30);
+
+    chunks.forEach((chunk) => {
+      expect(chunk.content.trim()).toMatch(/[.!?]$/);
+    });
+  });
+
+  it.failing('does not create chunks for empty content', () => {
+    // Tracked in #59: chunkDocument currently returns the empty document
+    // unchanged instead of producing zero chunks.
+    const emptyDocument: JournalDocument = {
+      ...smallDocument,
+      content: '',
+    };
+
+    const chunks = chunkDocument(emptyDocument, 100);
+
+    expect(chunks).toHaveLength(0);
+  });
+
   it('flattens multiple documents', () => {
     const chunks = chunkDocuments([smallDocument, largeDocument], 30);
 
@@ -94,8 +138,6 @@ describe('Document Chunker', () => {
 
   it('splits a sentence that exceeds the token limit', () => {
     const chunks = chunkDocument(oversizedSentenceDocument, 20);
-
-    console.log(chunks);
 
     expect(chunks.length).toBeGreaterThan(1);
 
