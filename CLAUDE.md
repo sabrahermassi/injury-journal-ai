@@ -53,6 +53,12 @@ See `docs/04-implementation-roadmap.md` for known gaps.
 - Do not leave superseded implementations behind.
 - Keep responsibilities separated and avoid unnecessary coupling.
 - Prefer simple solutions over new infrastructure or abstractions.
+- Prefer targeted lookups over broad exploration: scope `Glob`/`Grep` to a specific path before any
+  open-ended search, and do not spawn an exploration subagent for work confined to a known directory.
+- Read a file at most once per session. For documents over ~3,000 tokens, grep for the relevant
+  section and read only that line range.
+- Request only the JSON fields you need from `gh` (avoid `body` on list commands) and pipe long
+  command output through `tail`.
 
 ## 6. Content and Copy Guidance
 

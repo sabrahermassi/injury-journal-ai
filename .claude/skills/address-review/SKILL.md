@@ -178,11 +178,13 @@ The comment is incorrect, misunderstands the implementation, or conflicts with a
 
 Check:
 
-- `CLAUDE.md`
-- relevant architecture documentation
+- relevant architecture documentation - grep for the relevant section, do not read the whole file
 - `docs/handoff/architecture-review.md`
 - current source code
 - relevant GitHub issues
+
+Do NOT read `CLAUDE.md`. It is already in context on every request. Read any document at most once
+per session.
 
 ## Nitpick / Out of Scope
 
@@ -287,7 +289,9 @@ the failure mode this step exists to prevent.
 
 # Step 5 — Verify the Changes
 
-Run the verification commands from `CLAUDE.md` §10.
+Run the verification commands from `CLAUDE.md` §10 - UNLESS they already ran in this session and no
+files have changed since. In that case say so and skip them. Never re-run an identical suite on an
+unchanged tree.
 
 For integration-related changes, run the appropriate integration tests.
 
@@ -431,23 +435,24 @@ If CI fails:
 - report the findings
 - do NOT automatically make additional fixes without approval
 
-Refresh the review comments after the push to detect newly generated feedback.
+Do not refresh the review comments after the push. New feedback is handled when I re-invoke this
+workflow (see Step 9b).
 
 ---
 
-# Step 9b — Proactively Monitor for New Review Activity
+# Step 9b — Do NOT Poll for New Review Activity
 
-Do not wait to be asked whether new comments have arrived.
+Do NOT poll GitHub in a loop waiting for CodeRabbit, Greptile, or a human reviewer.
 
-After Step 9's CI check, and during any pause while waiting on CodeRabbit or another automated
-reviewer, check for new review activity:
+Every poll is a full round trip at whatever context the session has already accumulated, and it almost
+always returns "nothing new". Report that the push succeeded and STOP.
 
-    gh pr view <PR-number> --repo <owner>/<name> --json reviews,comments
-    gh api repos/<owner>/<name>/pulls/<PR-number>/comments
+I will re-invoke this workflow when new review activity actually arrives.
 
-If new comments are found — from CodeRabbit, Greptile, a human reviewer, or any other source:
+If I explicitly ask you to watch for new activity, use the `Monitor` tool rather than repeated `gh`
+calls, so that waiting costs no context.
 
-Triage them using the exact same classification defined in Step 3:
+When I re-invoke you with new comments, triage them using the exact same classification defined in Step 3:
 
 - Clearly Correct / Low Risk
 - Valid but a Judgment Call
@@ -459,11 +464,7 @@ Present the complete triage before making any changes, in the same format as Ste
 **STOP and wait for my approval before modifying any files.**
 
 A comment being classified as "Clearly Correct" does NOT by itself authorize code changes — this
-applies here exactly as it does in Step 3. Proactive detection removes the need for me to manually
-ask whether anything new has landed; it does not relax any approval gate.
-
-This applies for the remainder of the workflow — continue checking for new activity after any
-subsequent push as well, not only once.
+applies here exactly as it does in Step 3.
 
 ---
 
