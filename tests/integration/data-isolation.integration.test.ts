@@ -12,6 +12,7 @@ import { signTestToken } from '../helpers/auth.js';
 
 jest.unstable_mockModule('../../src/embeddings/embedding-client.js', () => ({
   embedQuery: jest.fn(),
+  EmbeddingServiceError: class EmbeddingServiceError extends Error {},
 }));
 
 jest.unstable_mockModule('../../src/llm/llm-client.js', () => ({
