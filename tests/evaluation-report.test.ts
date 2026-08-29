@@ -43,6 +43,67 @@ describe('evaluation report', () => {
         passed: 0,
         total: 0,
       },
+
+      faithfulness: {
+        passed: 0,
+        total: 0,
+      },
+    });
+  });
+
+  it('counts faithfulness results when present', () => {
+    const results = [
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          faithfulnessPassed: true,
+        },
+      },
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          faithfulnessPassed: false,
+        },
+      },
+    ];
+
+    const report = generateEvaluationReport(results);
+
+    expect(report.faithfulness).toEqual({
+      passed: 1,
+      total: 2,
+    });
+  });
+
+  it('excludes unparseable (null) faithfulness verdicts from the total', () => {
+    const results = [
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          faithfulnessPassed: true,
+        },
+      },
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          faithfulnessPassed: null,
+        },
+      },
+    ];
+
+    const report = generateEvaluationReport(results);
+
+    expect(report.faithfulness).toEqual({
+      passed: 1,
+      total: 1,
     });
   });
 });

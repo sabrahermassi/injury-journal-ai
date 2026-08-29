@@ -48,6 +48,20 @@ describe('GET / static frontend', () => {
       await prisma.$disconnect();
     }
   });
+
+  it('serves the static app.js bundle', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app).get('/app.js');
+
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/javascript/);
+      expect(response.text).toContain('submitQuestion');
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
 });
 
 describe('POST /ai-agent rate limiting', () => {
