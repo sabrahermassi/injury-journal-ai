@@ -73,7 +73,8 @@ missing-switch-case defect.
 
 **Errors**
 
-Every error body now includes a machine-readable `code` field alongside `error` (issue #123):
+Every error body includes a machine-readable `code` field alongside `error` (issue #123).
+500s further distinguish the failing dependency where the thrown error type allows it (issue #172):
 
 | Status | Body | Trigger |
 |--------|------|---------|
@@ -83,7 +84,10 @@ Every error body now includes a machine-readable `code` field alongside `error` 
 | 400 | `{ "error": "Question exceeds maximum length of 10000 characters", "code": "question_too_long" }` | `question` longer than the 10,000-character limit |
 | 400 | `{ "error": "Invalid injuryId", "code": "invalid_injury_id" }` | `injuryId` present but fails the check above |
 | 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | two-tier limiting (issue #89, refined by #145): a lenient per-IP limiter (40 req/60s) runs before `authenticate` to bound anonymous/invalid-token request volume, and a stricter per-user limiter (20 req/60s, keyed by `req.userId`) runs after — so one client's failed-auth traffic can no longer exhaust another authenticated user's budget on a shared IP. The IP limiter is kept at only 2x the per-user limit, not looser, so it still bounds worst-case LLM/embedding cost-abuse from a multi-account attacker sharing one IP. |
-| 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key, missing `JWT_SECRET`. All still collapse to the single `internal_error` code; it distinguishes 500s from other failure classes but not from each other. |
+| 500 | `{ "error": "Failed to process request", "code": "embedding_service_error" }` | the embedding service call (`src/embeddings/embedding-client.ts`) failed — missing `EMBEDDING_API_KEY`, network/connection failure, non-OK HTTP response, or an invalid/malformed response shape |
+| 500 | `{ "error": "Failed to process request", "code": "database_error" }` | Prisma threw `PrismaClientKnownRequestError` or `PrismaClientInitializationError` (query failure or DB unreachable) |
+| 500 | `{ "error": "Failed to process request", "code": "llm_service_error" }` | the Groq LLM call threw a `Groq.APIError` (or subclass — rate limit, auth, connection, etc.) |
+| 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | fallback for any other unexpected exception, including a missing `JWT_SECRET` in `authenticate.ts` |
 
 `askAgent` destructures `req.body ?? {}`, so a body-less `POST /ai-agent` returns the 400 above
 rather than a 500 (fixed as issue #61).
@@ -119,11 +123,11 @@ limit of `5` for the `rag` intent path.
   `citation-formatter.ts` are not called from any response path. `citation-source-mapper.ts` is
   also unwired, and even if it were, it only maps 2 of the 5 valid `sourceType` values
   (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`).
-- **All 4xx/429 failure modes have a distinct `code` (issue #123), but 500s do not.** A client can
-  now tell "authentication required" from "rate limited" from "question too long" apart, but every
-  500 still reports `code: "internal_error"` regardless of whether the cause was the embedding
-  service being unreachable, a database error, or an LLM call failure — 500 causes are not
-  distinguishable from the response alone.
+- **500 responses distinguish the failing dependency where the thrown error type allows it (issue
+  #172)**, but not further than that: `embedding_service_error` covers every embedding-client
+  failure (missing key, network failure, non-OK response, invalid shape) without distinguishing
+  those from each other, and any exception the controller doesn't recognize (e.g. a missing
+  `JWT_SECRET`) still falls back to the generic `internal_error`.
 
 ## 6. What the frontend will need that the backend doesn't provide yet
 
@@ -144,9 +148,10 @@ This is the most important section — these are gaps, not just documentation de
   separate journal application (#50, closed as out-of-scope).
 - **Pagination or a client-settable retrieval limit.** The `rag` intent path hardcodes `5`
   internally with no way for the frontend to request more, or to page through additional chunks.
-- **Structured error information for 500s specifically.** Issue #123 added a `code` field
-  distinguishing every 4xx/429 case (see §3), but all 500s still share one `internal_error` code —
-  a UI still can't tell "service temporarily unavailable" apart from other internal failures.
+- **Finer-grained 500 codes than the three dependency buckets.** Issue #172 split 500s into
+  `embedding_service_error` / `database_error` / `llm_service_error` / `internal_error` (see §3),
+  but a UI still can't tell e.g. "embedding service unreachable" apart from "embedding service
+  returned a malformed response" — both share `embedding_service_error`.
 - **Conversation/thread state.** Every call is fully stateless — no way to support a multi-turn
   conversation UI without the frontend re-sending full context itself (and there's currently no
   mechanism to do even that).

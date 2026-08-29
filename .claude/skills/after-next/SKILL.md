@@ -11,6 +11,9 @@ If the change affects architecture, system boundaries, data flow, infrastructure
 
 Otherwise, do not read the architecture document.
 
+Read any document at most once per session. For large documents, grep for the relevant section and read
+only that line range rather than the whole file.
+
 Look only for documentation that is now stale because of the completed work.
 
 Check for:
@@ -32,4 +35,8 @@ Wait for my approval before editing.
 
 After approval, make only the approved documentation changes.
 
-Then remind me to run /compact before /next.
+Then remind me to run /clear before /next.
+
+Use `/clear`, not `/compact`, when moving to a new issue. `/compact` keeps a summary and continues the
+same session, so context - and the cache-read cost of every later turn - keeps growing across unrelated
+work. Reserve `/compact` for continuing the *same* task past a context limit.

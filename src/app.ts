@@ -26,6 +26,8 @@ app.use(cors({ origin: allowedOrigins ?? true }));
 
 app.use(express.json());
 
+app.use(express.static('public'));
+
 const rateLimitMessage = {
   error: 'Too many requests, please try again later.',
   code: 'rate_limited' satisfies ApiErrorCode,

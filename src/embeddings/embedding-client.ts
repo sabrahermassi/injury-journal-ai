@@ -1,3 +1,10 @@
+export class EmbeddingServiceError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'EmbeddingServiceError';
+  }
+}
+
 const EMBEDDING_API_URL =
   process.env.EMBEDDING_API_URL ?? 'http://127.0.0.1:8000';
 
@@ -20,7 +27,7 @@ type EmbeddingResponse = {
 
 function validateEmbeddingResponse(data: unknown): EmbeddingResponse {
   if (typeof data !== 'object' || data === null) {
-    throw new Error('Embedding API returned an invalid response');
+    throw new EmbeddingServiceError('Embedding API returned an invalid response');
   }
 
   const response = data as Record<string, unknown>;
@@ -32,7 +39,7 @@ function validateEmbeddingResponse(data: unknown): EmbeddingResponse {
     typeof response.dimension !== 'number' ||
     !Array.isArray(response.embedding)
   ) {
-    throw new Error('Embedding API returned an invalid response');
+    throw new EmbeddingServiceError('Embedding API returned an invalid response');
   }
 
   if (
@@ -42,7 +49,7 @@ function validateEmbeddingResponse(data: unknown): EmbeddingResponse {
       (value) => typeof value === 'number' && Number.isFinite(value),
     )
   ) {
-    throw new Error('Embedding API returned an invalid embedding');
+    throw new EmbeddingServiceError('Embedding API returned an invalid embedding');
   }
 
   return {
@@ -68,7 +75,7 @@ async function postEmbedding(
   const apiKey = process.env.EMBEDDING_API_KEY;
 
   if (!apiKey) {
-    throw new Error('EMBEDDING_API_KEY is not configured');
+    throw new EmbeddingServiceError('EMBEDDING_API_KEY is not configured');
   }
 
   const controller = new AbortController();
@@ -79,23 +86,42 @@ async function postEmbedding(
   );
 
   try {
-    const response = await fetch(`${EMBEDDING_API_URL}${path}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ text }),
-      signal: controller.signal,
-    });
+    let response: Response;
+
+    try {
+      response = await fetch(`${EMBEDDING_API_URL}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      throw new EmbeddingServiceError(message, { cause: error });
+    }
 
     if (!response.ok) {
-      throw new Error(
+      throw new EmbeddingServiceError(
         `Embedding API request failed: ${response.status} ${response.statusText}`,
       );
     }
 
-    const data = await response.json();
+    let data: unknown;
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      throw new EmbeddingServiceError(
+        `Embedding API returned a malformed response: ${message}`,
+        { cause: error },
+      );
+    }
 
     return validateEmbeddingResponse(data);
   } finally {
