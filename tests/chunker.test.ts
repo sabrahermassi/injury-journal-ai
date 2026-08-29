@@ -144,5 +144,6 @@ describe('Document Chunker', () => {
   it('rejects a maxTokens value below one', () => {
     expect(() => chunkDocument(smallDocument, 0)).toThrow();
     expect(() => chunkDocument(smallDocument, -1)).toThrow();
+    expect(() => chunkDocument(smallDocument, NaN)).toThrow();
   });
 });

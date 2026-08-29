@@ -89,7 +89,7 @@ export function chunkDocument(
   document: JournalDocument,
   maxTokens: number = DEFAULT_MAX_TOKENS,
 ): JournalDocument[] {
-  if (maxTokens < 1) {
+  if (!(maxTokens >= 1)) {
     throw new Error(`maxTokens must be at least 1, received ${maxTokens}`);
   }
 
