@@ -8,13 +8,11 @@ function extractBearerToken(header: string | undefined): string | null {
     return null;
   }
 
-  const [scheme, token] = header.split(' ');
+  // RFC 7235: the auth-scheme token is case-insensitive, and the scheme/credentials
+  // separator is defined as OWS (optional whitespace), not a single literal space.
+  const match = /^Bearer\s+(\S+)$/i.exec(header.trim());
 
-  if (scheme !== 'Bearer' || !token) {
-    return null;
-  }
-
-  return token;
+  return match ? match[1] : null;
 }
 
 export function authenticate(req: Request, res: Response, next: NextFunction) {
