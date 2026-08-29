@@ -136,9 +136,13 @@ export function AskForm() {
         return;
       }
 
-      const { injuries: loaded } = (data ?? {}) as { injuries?: Injury[] };
+      const { injuries: loaded } = (data ?? {}) as { injuries?: unknown };
 
-      setInjuries(loaded ?? []);
+      // A 200 does not guarantee the shape -- API_ORIGIN can be repointed at
+      // another service (see next.config.ts). A non-array would throw in the
+      // .find()/.map() below and unmount the form, losing the typed question,
+      // so fall back to an empty list instead.
+      setInjuries(Array.isArray(loaded) ? (loaded as Injury[]) : []);
       setLoadedForToken(trimmedToken);
       // A different token may be a different user, so any previous selection
       // is no longer meaningful.
@@ -221,7 +225,24 @@ export function AskForm() {
         return;
       }
 
-      setResult(data as AgentAnswer);
+      const { answer, citations } = (data ?? {}) as {
+        answer?: unknown;
+        citations?: unknown;
+      };
+
+      // Same reasoning as loadInjuries: a malformed 200 surfaces through the
+      // existing error path rather than throwing while rendering the answer.
+      if (
+        typeof answer !== "string" ||
+        (citations !== undefined && !Array.isArray(citations))
+      ) {
+        setError(
+          `Unexpected response shape from the server (HTTP ${response.status}).`,
+        );
+        return;
+      }
+
+      setResult({ answer, citations: citations as Citation[] | undefined });
     } catch {
       setError("Network error — is the server reachable?");
     } finally {

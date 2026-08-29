@@ -108,6 +108,7 @@ library, design tokens, and patterns exactly. Do not introduce a different
 UI library, styling approach, or component structure than what's documented
 there.
 
-If a needed component isn't covered in UI_GUIDE.md, check the main project
-at `C:/Users/sabra/injury_journal/frontend` (the separate journal app that owns CRUD +
-login, see `docs/02-architecture.md` D10) for a precedent before inventing a new pattern.
+If a needed component isn't covered in UI_GUIDE.md, check the separate journal
+application's frontend (the app that owns CRUD + login, see
+`docs/02-architecture.md` D10) for a precedent before inventing a new pattern.
+It lives in its own repository, not this one.
