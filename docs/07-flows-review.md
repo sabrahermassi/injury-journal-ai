@@ -29,9 +29,10 @@ backend own CRUD" question), not an implementation defect.
 
 **What actually happens, step by step:**
 
-1. `readJournalData()` (`postgres-reader.ts`) — a single `prisma.injury.findMany()` with all four
-   child relations included. **No filtering, no pagination, no "since last run" cursor** — every
-   call reads every injury for every user in the database.
+1. `readJournalData()` (`postgres-reader.ts::readJournalData()`) — a single
+   `prisma.injury.findMany()` with all four child relations included. See that function for
+   current filtering behavior; at this writing it performs a full read of every injury for every
+   user, with no pagination or "since last run" cursor.
 2. `buildJournalDocuments()` (`document-builder.ts`) — deterministic string templates, one
    `JournalDocument` per `Injury` and per child record (symptom, treatment, visit, timeline
    event). **This is not LLM-based extraction** — there's no model call, no structured-output
@@ -63,11 +64,10 @@ the stage level. The divergence is entirely "the orchestrating entrypoint is mis
   reconciles the stale state, not just one that happens to produce the same chunk count).
 - No retry/backoff on the embedding call at all — a single transient failure aborts the whole
   document.
-- `withIngestionLock` is an **in-process only** lock (a plain `Map` in memory). It correctly
-  serializes concurrent calls within one Node process, but provides zero protection if ingestion
-  ever runs as more than one process/instance (e.g. horizontally scaled workers, concurrent Lambda
-  invocations) — worth flagging now since §9 of the architecture doc already raises the
-  service-deployment-shape question for the embedding service, and the same question applies here.
+- `withIngestionLock` (`src/ingestion/ingestion-lock.ts`) is an in-memory `Map`-based lock. See
+  that file for current implementation; at this writing it correctly serializes concurrent calls
+  within one Node process but provides zero protection across processes/instances (e.g.
+  horizontally scaled workers, concurrent Lambda invocations) — tracked as issue #132.
 
 **Missing tests:** no test exercises "embedding service fails partway through a multi-chunk
 document" (the partial-write scenario above). No test exercises true cross-process concurrent
@@ -86,21 +86,17 @@ exists — the documented invariant was never actually verified, and doesn't hol
 
 ## Flow 3 — Search
 
-**What actually happens:** `semanticSearch()` (`retrieval/semantic-search.ts`) calls `embedText()`
-— the **document-side** embedding endpoint — on the user's question, then passes the resulting
+**What actually happens:** `semanticSearch()` (`retrieval/semantic-search.ts`) calls `embedQuery()`
+— the **query-side** embedding endpoint — on the user's question, then passes the resulting
 vector to `searchSimilarChunks()` (`vector-storage.ts`), which runs a plain
 `ORDER BY embedding <=> query LIMIT k` query, filtered by `injuryId` only when provided. No
 similarity threshold, no other metadata filter, no `userId` scoping (see §11 Decision D9).
 
 **What should happen:** the question should be embedded via the query-side prompt
 (`embed_query()` in the Python service), not the document-side one — Qwen3-Embedding-0.6B is
-designed for asymmetric retrieval. This is not a hypothetical: the fix is implemented on PR #55
-(issue #37) — check that PR/issue directly for current status rather than this document, since
-this file describes the codebase as of this review, and that fix has not landed on this branch.
+designed for asymmetric retrieval. This is what the code now does.
 
-**Divergence:** confirmed live bug at the time of this review — every search query is embedded
-with the wrong prompt, degrading retrieval quality for reasons entirely orthogonal to any bug in
-the retrieval query itself.
+**Divergence:** none — resolved (issue #37, landed via PR #55).
 
 **Missing error handling:** `semanticSearch` propagates any `embedText`/DB error unchanged to its
 caller — by design, the collapse into a generic message happens one layer up, in the HTTP
@@ -150,13 +146,12 @@ error propagates unchanged through `answerQuestion` to the controller, which con
 generic `500 { error: "Failed to generate answer" }` — no distinction between "provider down,"
 "invalid credentials," or "rate limited," and no retry at any layer.
 
-**Missing tests — confirmed by direct check, not assumption:** `context-builder.ts`'s empty-input
-behavior (an empty `chunks` array still produces a valid, if minimal, context string — no crash),
-but there is **no test asserting what `answerQuestion` actually does when zero chunks are
-retrieved** (e.g., whether the LLM is still called with an essentially empty `<journal_data>`
-section, and what it tends to answer). This matches the already-tracked roadmap item
-("Add a test for the empty-retrieval path in `answerQuestion`," issue referenced in
-`docs/04-implementation-roadmap.md`'s "do now" list) — confirmed still open, not stale.
+**Tests:** `context-builder.ts`'s empty-input behavior (an empty `chunks` array still produces a
+valid, if minimal, context string — no crash) is tested, and `answerQuestion`'s empty-retrieval
+path is now tested too (`tests/rag-service.test.ts`, "still generates an answer when retrieval
+finds zero chunks") — it confirms the LLM is still called with an essentially empty
+`<journal_data>` section. Resolved (issue #39). No test currently asserts what a *real* LLM tends
+to answer in this scenario beyond the mocked expectation — that would need an LLM integration test.
 
 **Questionable boundary:** none new beyond what §5.3/§5.4 of the architecture doc already state.
 
@@ -171,7 +166,7 @@ Traced directly against the controllers and services, not assumed:
 | **DB fails** | Any Prisma/raw-SQL error (`vector-storage.ts`, `journal-tool.ts`) propagates uncaught up to the same controller-level `catch` → same generic 500. |
 | **Bad/malformed document (ingestion)** | Not directly applicable — `buildJournalDocuments` operates on already-typed Prisma results, not external/untrusted input. The closest analogue, a chunk whose content becomes empty after processing, is covered under Flow 2's chunker finding above. |
 | **Duplicate ingestion** | Handled correctly and idempotently — `storeDocumentChunk`'s `ON CONFLICT (sourceType, sourceId, chunkIndex) DO UPDATE` means re-ingesting the same source record updates existing rows rather than duplicating them, and `deleteDocumentChunksExcept` prunes chunks left over from a run that previously produced more chunks for that record. Verified via `vector-storage.ts` directly, not assumed. |
-| **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty `<journal_data>` section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. `checkContentSafety` runs on the empty string but has nothing to match, so it doesn't short-circuit this case; whether the model actually follows the "say you lack enough information" instruction is unverified — no test covers it (see Flow 4). |
+| **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty `<journal_data>` section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. `checkContentSafety` runs on the empty string but has nothing to match, so it doesn't short-circuit this case; the mocked LLM call is tested for this path (see Flow 4), but whether a *real* model actually follows the "say you lack enough information" instruction is unverified. |
 
 **Cross-cutting observation:** every failure class above collapses into the same generic
 `{ error: "Failed to process request" }` 500 response, with no error code/type. A frontend cannot

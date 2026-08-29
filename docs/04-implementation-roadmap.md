@@ -23,7 +23,7 @@ truth for status; the issues are. Re-sync this file whenever a linked issue's st
   - [x] 2.5 Citations *(generation only — verification not wired in, see below)* (#27)
   - [x] 2.6 Safety Guardrails *(input- and output-side)* (#28, #96)
   - [x] 2.7 AI Agent *(keyword routing, not per-tool authorization)* (#29)
-- [x] Step 3 — Evaluation *(harness exists; two of four dimensions are shallow, one is unimplemented)* (#30)
+- [x] Step 3 — Evaluation *(harness implemented with six evaluation dimensions; see `evaluation/ai-system/` for current coverage)* (#30)
 - [x] Step 4 — Integration Tests (#17)
 
 ### Open / Not Started
