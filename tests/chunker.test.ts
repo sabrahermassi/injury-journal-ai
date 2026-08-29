@@ -121,4 +121,23 @@ describe('Document Chunker', () => {
 
     expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
   });
+
+  it('splits an oversized multi-byte word without corrupting characters', () => {
+    const longWord = '日本語テスト'.repeat(40);
+    const oversizedWordDocument: JournalDocument = {
+      content: `Short intro sentence here. ${longWord} tail.`,
+      metadata: oversizedSentenceDocument.metadata,
+    };
+
+    const chunks = chunkDocument(oversizedWordDocument, 20);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (const chunk of chunks) {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(20);
+      expect(chunk.content).not.toContain('�');
+    }
+
+    expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
+  });
 });

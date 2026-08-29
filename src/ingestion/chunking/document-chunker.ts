@@ -23,12 +23,30 @@ function splitIntoSentences(text: string): string[] {
   );
 }
 
+// Splits on Unicode code-point boundaries and measures each candidate with
+// countTokens, rather than slicing raw BPE token ids: cl100k_base tokens are
+// byte sequences, not character-aligned, so decoding an arbitrary token slice
+// can land mid-character and silently emit replacement characters.
 function splitOversizedWord(word: string, maxTokens: number): string[] {
-  const tokens = encoding.encode(word);
+  const chars = Array.from(word);
   const pieces: string[] = [];
+  let start = 0;
 
-  for (let i = 0; i < tokens.length; i += maxTokens) {
-    pieces.push(encoding.decode(tokens.slice(i, i + maxTokens)));
+  while (start < chars.length) {
+    let lo = start + 1;
+    let hi = chars.length;
+
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (countTokens(chars.slice(start, mid).join('')) <= maxTokens) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    pieces.push(chars.slice(start, lo).join(''));
+    start = lo;
   }
 
   return pieces;
