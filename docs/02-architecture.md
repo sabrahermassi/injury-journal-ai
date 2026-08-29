@@ -741,6 +741,14 @@ quoted), what else was considered, whether it still holds, and whether it should
   built). #50 (`[P10]` journal CRUD + auth endpoints) is closed as out-of-scope under this
   decision; #51 (`[P11]` conversation/thread concept) stays out of scope for now but remains open,
   deferred until frontend work actually starts.
+- **KNOWN TEMPORARY DEVIATION:** a read-only `GET /injuries` (`src/injuries/injuries-controller.ts`)
+  now exists, which this decision would otherwise place out of scope. It was added so the local
+  frontend could offer an injury picker rather than asking the user to type a raw database
+  `injuryId`. It is deliberately minimal — four fields, scoped to the authenticated `userId`, no
+  pagination, no CRUD — and is *not* a reversal of this decision: the separate journal
+  application's own `GET /injuries` supersedes it once the two applications merge, at which point
+  it is deleted. Tracked in #195; also flagged in `docs/05-api-contract.md` §1 and §6. Do not build
+  further endpoints on this precedent.
 - **SHOULD THIS BE REVISITED:** Only if the "existing Injury Journal application" assumption turns
   out to be wrong (e.g. no such external app actually exists yet) — not expected based on the
   current product description.

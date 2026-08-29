@@ -129,7 +129,7 @@ npm start      # runs dist/index.js
 
 ## Usage
 
-The API exposes a single endpoint:
+The API exposes two endpoints, both requiring a bearer token. The main one answers questions:
 
 ```bash
 curl -X POST http://localhost:3000/ai-agent \
@@ -142,13 +142,50 @@ curl -X POST http://localhost:3000/ai-agent \
 `sub` claim, signed with `JWT_SECRET`) — see the Project Status section above for what
 authentication does and doesn't cover yet.
 
-### Minimal frontend
+The second lists the authenticated user's injuries, so a frontend can offer a picker for that
+`injuryId` instead of asking for a raw database id:
 
-A static demo page is served at `http://localhost:3000/` (`public/index.html` +
-`public/app.js`, no build step) once the backend is running. It has a field for the question, an
-optional injury ID, and a bearer token — this repo verifies but does not issue JWTs (a separate
-journal application is expected to own login, see `docs/02-architecture.md` D10), so for local
-testing you need to mint your own token with `JWT_SECRET`:
+```bash
+curl http://localhost:3000/injuries \
+  -H "Authorization: Bearer <JWT signed with JWT_SECRET>"
+```
+
+> `GET /injuries` is temporary and a deliberate deviation from `docs/02-architecture.md` D10. The
+> main journal application's own endpoint supersedes it once the two applications merge, at which
+> point it is deleted — tracked in `#195`. See `docs/05-api-contract.md` §3.
+
+### Frontend
+
+The web UI lives in `frontend/` as a separate Next.js app (App Router, Tailwind v4, shadcn/ui). It
+is its own npm project with its own dependencies, so install once before first use:
+
+```bash
+cd frontend
+npm install
+```
+
+Run it alongside the backend — the API stays on port 3000, the UI on 3001:
+
+```bash
+npm run dev               # in the repo root: Express API on http://localhost:3000
+cd frontend && npm run dev # in a second shell: UI on http://localhost:3001
+```
+
+`frontend/next.config.ts` proxies `/ai-agent` and `/injuries` to the API so the browser stays on one
+origin and no `ALLOWED_ORIGIN`/CORS setup is needed for local development. Point it elsewhere with
+`API_ORIGIN`.
+
+Using the page: paste a bearer token, and when the field loses focus the **Injury** dropdown loads
+that user's injuries from `GET /injuries`. Leave it on *All injuries* to search across all of them,
+or pick one to scope the question to it. Then type a question and press **Ask**.
+
+> `GET /injuries` is temporary. It exists only to populate this dropdown and is superseded by the
+> main journal application's own endpoint once the two applications merge — see `#195` and
+> `docs/02-architecture.md` D10.
+
+This repo verifies but does not issue JWTs (a separate journal application is expected to own login,
+see `docs/02-architecture.md` D10), so for local testing you need to mint your own token with
+`JWT_SECRET`:
 
 ```bash
 JWT_SECRET=<same value as .env> npx tsx -e "
@@ -158,6 +195,18 @@ console.log(jwt.sign({ sub: '1' }, process.env.JWT_SECRET, { algorithm: 'HS256',
 ```
 
 Paste the printed token into the page's token field.
+
+The `sub` claim **is** the user id — `authenticate` reads it as `Number(payload.sub)` and requires a
+positive integer, so `sub: '1'` means "act as user 1". Two things to watch for locally:
+
+- `JWT_SECRET` must be non-empty in `.env`. If it is blank, every request returns
+  `500 internal_error` rather than a 401, because `authenticate` cannot verify anything.
+- `npm run seed:dev` deletes and recreates its users, so Postgres autoincrement keeps climbing —
+  after a few reseeds the seeded users may be `4, 5, 6` rather than `1, 2, 3`. If the injury
+  dropdown loads but is empty, the token is valid for a user id that has no data.
+
+UI conventions (component library, design tokens, spacing, component patterns) are documented in
+`UI_GUIDE.md` — read it before changing anything under `frontend/`.
 
 ## Tests
 
