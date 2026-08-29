@@ -26,17 +26,38 @@ app.use(cors({ origin: allowedOrigins ?? true }));
 
 app.use(express.json());
 
-const aiAgentLimiter = rateLimit({
+const rateLimitMessage = {
+  error: 'Too many requests, please try again later.',
+  code: 'rate_limited' satisfies ApiErrorCode,
+};
+
+// Lenient, keyed by IP (default). Runs before authenticate to bound the cost
+// of an anonymous/invalid-token flood (JWT verification isn't free), not to
+// enforce a user-facing quota — that's userLimiter's job (see #145). Kept at
+// 2x the per-user limit rather than looser still: the original single
+// limiter (#89) was sized to bound per-IP LLM/embedding cost-abuse outright,
+// and this cap is what now stands between that goal and a multi-account
+// attacker sharing one IP, so it deliberately isn't raised further.
+const ipLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage,
+});
+
+// The real per-user quota. Runs after authenticate and keys by req.userId so
+// one client's failed-auth traffic can no longer exhaust another
+// legitimately authenticated user's budget on a shared IP (#145).
+const userLimiter = rateLimit({
   windowMs: 60_000,
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: {
-    error: 'Too many requests, please try again later.',
-    code: 'rate_limited' satisfies ApiErrorCode,
-  },
+  keyGenerator: (req) => String(req.userId),
+  message: rateLimitMessage,
 });
 
-app.use('/ai-agent', aiAgentLimiter, authenticate, aiAgentRouter);
+app.use('/ai-agent', ipLimiter, authenticate, userLimiter, aiAgentRouter);
 
 export default app;

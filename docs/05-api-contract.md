@@ -82,7 +82,7 @@ Every error body now includes a machine-readable `code` field alongside `error` 
 | 400 | `{ "error": "Question is required", "code": "question_required" }` | body present but `question` missing/blank |
 | 400 | `{ "error": "Question exceeds maximum length of 10000 characters", "code": "question_too_long" }` | `question` longer than the 10,000-character limit |
 | 400 | `{ "error": "Invalid injuryId", "code": "invalid_injury_id" }` | `injuryId` present but fails the check above |
-| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | more than 20 requests from the same IP within a 60s window (issue #89) |
+| 429 | `{ "error": "Too many requests, please try again later.", "code": "rate_limited" }` | two-tier limiting (issue #89, refined by #145): a lenient per-IP limiter (40 req/60s) runs before `authenticate` to bound anonymous/invalid-token request volume, and a stricter per-user limiter (20 req/60s, keyed by `req.userId`) runs after — so one client's failed-auth traffic can no longer exhaust another authenticated user's budget on a shared IP. The IP limiter is kept at only 2x the per-user limit, not looser, so it still bounds worst-case LLM/embedding cost-abuse from a multi-account attacker sharing one IP. |
 | 500 | `{ "error": "Failed to process request", "code": "internal_error" }` | catch-all — embedding service down, DB error, LLM call failure/invalid key, missing `JWT_SECRET`. All still collapse to the single `internal_error` code; it distinguishes 500s from other failure classes but not from each other. |
 
 `askAgent` destructures `req.body ?? {}`, so a body-less `POST /ai-agent` returns the 400 above
