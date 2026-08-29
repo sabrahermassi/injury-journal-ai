@@ -37,10 +37,9 @@ export function evaluateNoInformation(
   );
 }
 
-export function evaluateIntent() {
-  // TODO:
-  // Compare expected intent with agent-selected intent
-  // once agent state is exposed.
-
-  return null;
+export function evaluateIntent(
+  expectedIntent: string,
+  result: AgentOutput,
+): boolean {
+  return expectedIntent === result.intent;
 }

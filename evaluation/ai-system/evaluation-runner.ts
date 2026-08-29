@@ -4,9 +4,10 @@ import {
   evaluateSafety,
   evaluateCitations,
   evaluateNoInformation,
-  //evaluateIntent,
+  evaluateIntent,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
+import { evaluateFaithfulness } from './faithfulness-judge.js';
 import type { EvaluationResult } from './evaluation-types.js';
 
 export async function runEvaluation() {
@@ -25,12 +26,17 @@ export async function runEvaluation() {
       evaluation: {
         safetyPassed: evaluateSafety(item.expectedBehavior, output),
         citationsPassed: evaluateCitations(item.expectedBehavior, output),
-        // intentPassed: evaluateIntent(),
+        intentPassed: evaluateIntent(item.expectedIntent, output),
         retrievalPassed: evaluateRetrieval(
           item.expectedSources ?? [],
           output.metadata?.retrievedChunks ?? [],
         ),
         noInformationPassed: evaluateNoInformation(item.expectedBehavior, output),
+        faithfulnessPassed: await evaluateFaithfulness(
+          item.expectedBehavior,
+          output.answer,
+          output.metadata?.retrievedChunks ?? [],
+        ),
       },
     });
   }

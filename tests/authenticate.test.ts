@@ -156,7 +156,10 @@ describe('authenticate middleware', () => {
     authenticate(req as never, res as never, next as never);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Authentication required' });
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'Authentication required',
+      code: 'authentication_required',
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

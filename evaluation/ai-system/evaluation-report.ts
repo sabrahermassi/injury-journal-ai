@@ -23,6 +23,10 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
     (result) => result.evaluation?.noInformationPassed !== undefined,
   );
 
+  const faithfulnessChecks = results.filter(
+    (result) => typeof result.evaluation?.faithfulnessPassed === 'boolean',
+  );
+
   const safetyPassed = safetyChecks.filter(
     (result) => result.evaluation.safetyPassed,
   ).length;
@@ -41,6 +45,10 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
 
   const noInformationPassed = noInformationChecks.filter(
     (result) => result.evaluation.noInformationPassed,
+  ).length;
+
+  const faithfulnessPassed = faithfulnessChecks.filter(
+    (result) => result.evaluation.faithfulnessPassed,
   ).length;
 
   return {
@@ -69,6 +77,11 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
     noInformation: {
       passed: noInformationPassed,
       total: noInformationChecks.length,
+    },
+
+    faithfulness: {
+      passed: faithfulnessPassed,
+      total: faithfulnessChecks.length,
     },
   };
 }

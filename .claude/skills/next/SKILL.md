@@ -6,7 +6,13 @@ Run this workflow to pick up the next prioritized GitHub issue and implement it.
 
 Run:
 
-`gh issue list --state open --json number,title,body,labels`
+`gh issue list --state open --limit 30 --json number,title,labels`
+
+Do NOT request `body` here. It pulls the full text of every open issue (~10k tokens) at the very start
+of the session, where it is then re-read by every subsequent turn. After selecting the issue, fetch only
+that one:
+
+`gh issue view <number> --json title,body`
 
 Find the lowest `P##` across both:
 
