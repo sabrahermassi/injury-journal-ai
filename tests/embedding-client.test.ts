@@ -124,7 +124,7 @@ describe('embedText', () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('throws a descriptive error when the response is not ok', async () => {
+  it('throws a descriptive EmbeddingServiceError when the response is not ok', async () => {
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         ok: false,
@@ -135,23 +135,58 @@ describe('embedText', () => {
 
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const { embedText } = await loadEmbeddingClient();
+    const { embedText, EmbeddingServiceError } = await loadEmbeddingClient();
 
     await expect(embedText('hi')).rejects.toThrow(
       'Embedding API request failed: 500 Internal Server Error',
     );
+    await expect(embedText('hi')).rejects.toBeInstanceOf(EmbeddingServiceError);
   });
 
-  it('propagates network errors thrown by fetch', async () => {
+  it('wraps network errors thrown by fetch in an EmbeddingServiceError', async () => {
     const fetchMock = jest
       .fn<typeof fetch>()
       .mockRejectedValue(new Error('network down'));
 
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const { embedText } = await loadEmbeddingClient();
+    const { embedText, EmbeddingServiceError } = await loadEmbeddingClient();
 
     await expect(embedText('hi')).rejects.toThrow('network down');
+    await expect(embedText('hi')).rejects.toBeInstanceOf(EmbeddingServiceError);
+  });
+
+  it('wraps a malformed (non-JSON) response body in an EmbeddingServiceError', async () => {
+    const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
+      makeResponse({
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON at position 0');
+        },
+      }),
+    );
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const { embedText, EmbeddingServiceError } = await loadEmbeddingClient();
+
+    await expect(embedText('hi')).rejects.toThrow(
+      'Embedding API returned a malformed response',
+    );
+    await expect(embedText('hi')).rejects.toBeInstanceOf(EmbeddingServiceError);
+  });
+
+  it('sets EmbeddingServiceError.name so logs identify the error class', async () => {
+    delete process.env.EMBEDDING_API_KEY;
+
+    const { embedText, EmbeddingServiceError } = await loadEmbeddingClient();
+
+    try {
+      await embedText('hi');
+      throw new Error('expected embedText to reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(EmbeddingServiceError);
+      expect((error as Error).name).toBe('EmbeddingServiceError');
+    }
   });
 
   it('clears the timeout after a successful request', async () => {
@@ -277,18 +312,19 @@ describe('embedText', () => {
     expect(result.embedding).toEqual(TEST_EMBEDDING);
   });
 
-  it('throws without calling fetch when EMBEDDING_API_KEY is not configured', async () => {
+  it('throws an EmbeddingServiceError without calling fetch when EMBEDDING_API_KEY is not configured', async () => {
     delete process.env.EMBEDDING_API_KEY;
 
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
 
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const { embedText } = await loadEmbeddingClient();
+    const { embedText, EmbeddingServiceError } = await loadEmbeddingClient();
 
     await expect(embedText('hi')).rejects.toThrow(
       'EMBEDDING_API_KEY is not configured',
     );
+    await expect(embedText('hi')).rejects.toBeInstanceOf(EmbeddingServiceError);
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -348,7 +384,7 @@ describe('embedQuery', () => {
     );
   });
 
-  it('throws a descriptive error when the response is not ok', async () => {
+  it('throws a descriptive EmbeddingServiceError when the response is not ok', async () => {
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(
       makeResponse({
         ok: false,
@@ -359,25 +395,27 @@ describe('embedQuery', () => {
 
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const { embedQuery } = await loadEmbeddingClient();
+    const { embedQuery, EmbeddingServiceError } = await loadEmbeddingClient();
 
     await expect(embedQuery('hi')).rejects.toThrow(
       'Embedding API request failed: 500 Internal Server Error',
     );
+    await expect(embedQuery('hi')).rejects.toBeInstanceOf(EmbeddingServiceError);
   });
 
-  it('throws without calling fetch when EMBEDDING_API_KEY is not configured', async () => {
+  it('throws an EmbeddingServiceError without calling fetch when EMBEDDING_API_KEY is not configured', async () => {
     delete process.env.EMBEDDING_API_KEY;
 
     const fetchMock = jest.fn<typeof fetch>().mockResolvedValue(makeResponse());
 
     global.fetch = fetchMock as unknown as typeof fetch;
 
-    const { embedQuery } = await loadEmbeddingClient();
+    const { embedQuery, EmbeddingServiceError } = await loadEmbeddingClient();
 
     await expect(embedQuery('hi')).rejects.toThrow(
       'EMBEDDING_API_KEY is not configured',
     );
+    await expect(embedQuery('hi')).rejects.toBeInstanceOf(EmbeddingServiceError);
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
