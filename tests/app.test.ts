@@ -84,7 +84,7 @@ describe('POST /ai-agent rate limiting', () => {
     }
   });
 
-  it('allows up to the configured limit, then returns 429 with a JSON error body', async () => {
+  it('allows a user up to their configured limit, then returns 429 with a JSON error body', async () => {
     const { app, prisma } = await loadApp();
 
     try {
@@ -99,12 +99,99 @@ describe('POST /ai-agent rate limiting', () => {
 
       const limitedResponse = await request(app)
         .post('/ai-agent')
+        .set('Authorization', authHeader)
         .send({ question: SAFETY_BLOCKED_QUESTION });
 
       expect(limitedResponse.status).toBe(429);
       expect(limitedResponse.headers['content-type']).toMatch(
         /application\/json/,
       );
+      expect(limitedResponse.body).toEqual({
+        error: 'Too many requests, please try again later.',
+        code: 'rate_limited',
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('does not let one user exhausting their budget rate-limit a different user on the same IP (#145)', async () => {
+    const { app, prisma } = await loadApp();
+    const otherUserAuthHeader = `Bearer ${signTestToken(2)}`;
+
+    try {
+      for (let i = 0; i < 20; i++) {
+        const response = await request(app)
+          .post('/ai-agent')
+          .set('Authorization', authHeader)
+          .send({ question: SAFETY_BLOCKED_QUESTION });
+
+        expect(response.status).toBe(200);
+      }
+
+      const otherUserResponse = await request(app)
+        .post('/ai-agent')
+        .set('Authorization', otherUserAuthHeader)
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(otherUserResponse.status).toBe(200);
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('does not rate-limit unauthenticated requests against the per-user budget (#145)', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      for (let i = 0; i < 21; i++) {
+        const response = await request(app)
+          .post('/ai-agent')
+          .send({ question: SAFETY_BLOCKED_QUESTION });
+
+        expect(response.status).toBe(401);
+      }
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('reports both the ip and user rate-limit policies in the RateLimit headers', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      const response = await request(app)
+        .post('/ai-agent')
+        .set('Authorization', authHeader)
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(response.status).toBe(200);
+      expect(response.headers.ratelimit).toContain('"ip"');
+      expect(response.headers.ratelimit).toContain('"user"');
+      expect(response.headers['ratelimit-policy']).toContain('"ip"');
+      expect(response.headers['ratelimit-policy']).toContain('"user"');
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('still bounds anonymous request volume via the per-IP limiter (#145)', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      for (let i = 0; i < 40; i++) {
+        const response = await request(app)
+          .post('/ai-agent')
+          .send({ question: SAFETY_BLOCKED_QUESTION });
+
+        expect(response.status).toBe(401);
+      }
+
+      const limitedResponse = await request(app)
+        .post('/ai-agent')
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(limitedResponse.status).toBe(429);
       expect(limitedResponse.body).toEqual({
         error: 'Too many requests, please try again later.',
         code: 'rate_limited',

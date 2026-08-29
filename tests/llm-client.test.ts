@@ -87,6 +87,24 @@ describe('generateAnswer', () => {
     ).rejects.toThrow('LLM returned a malformed response');
   });
 
+  it('throws instead of crashing when choices is missing entirely', async () => {
+    createMock.mockResolvedValue({});
+
+    await expect(
+      generateAnswer('system prompt', 'question'),
+    ).rejects.toThrow('LLM returned a malformed response');
+  });
+
+  it('throws on a choice with non-string content', async () => {
+    createMock.mockResolvedValue({
+      choices: [{ message: { content: 42 } }],
+    });
+
+    await expect(
+      generateAnswer('system prompt', 'question'),
+    ).rejects.toThrow('LLM returned a malformed response');
+  });
+
   it('returns an empty string for a legitimately empty completion', async () => {
     createMock.mockResolvedValue({
       choices: [{ message: { content: '' } }],
