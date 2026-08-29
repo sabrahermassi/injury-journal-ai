@@ -23,6 +23,53 @@ function splitIntoSentences(text: string): string[] {
   );
 }
 
+// Splits on Unicode code-point boundaries and measures each candidate with
+// countTokens, rather than slicing raw BPE token ids: cl100k_base tokens are
+// byte sequences, not character-aligned, so decoding an arbitrary token slice
+// can land mid-character and silently emit replacement characters.
+function splitOversizedWord(word: string, maxTokens: number): string[] {
+  const chars = Array.from(word);
+  const pieces: string[] = [];
+  let start = 0;
+
+  while (start < chars.length) {
+    const remaining = chars.length - start;
+
+    // Exponentially grow the candidate length to bound the search window
+    // near the true boundary first, rather than binary-searching the full
+    // remaining word on every piece — that re-tokenizes long suffixes and
+    // scales quadratically for large whitespace-free inputs.
+    let fit = 1;
+    let probe = 2;
+
+    while (
+      probe <= remaining &&
+      countTokens(chars.slice(start, start + probe).join('')) <= maxTokens
+    ) {
+      fit = probe;
+      probe *= 2;
+    }
+
+    let lo = fit;
+    let hi = Math.min(probe, remaining);
+
+    while (lo < hi) {
+      const mid = lo + Math.ceil((hi - lo) / 2);
+      if (countTokens(chars.slice(start, start + mid).join('')) <= maxTokens) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    const pieceLength = Math.max(lo, 1);
+    pieces.push(chars.slice(start, start + pieceLength).join(''));
+    start += pieceLength;
+  }
+
+  return pieces;
+}
+
 function addChunk(
   chunks: JournalDocument[],
   document: JournalDocument,
@@ -42,6 +89,10 @@ export function chunkDocument(
   document: JournalDocument,
   maxTokens: number = DEFAULT_MAX_TOKENS,
 ): JournalDocument[] {
+  if (!(maxTokens >= 1)) {
+    throw new Error(`maxTokens must be at least 1, received ${maxTokens}`);
+  }
+
   // Keep small journal records intact.
   if (countTokens(document.content) <= maxTokens) {
     return [document];
@@ -109,6 +160,17 @@ export function chunkDocument(
 
         if (countTokens(candidate) <= maxTokens) {
           sentenceChunk = candidate;
+        } else if (countTokens(word) > maxTokens) {
+          if (sentenceChunk) {
+            addChunk(chunks, document, sentenceChunk);
+          }
+
+          const pieces = splitOversizedWord(word, maxTokens);
+          for (const piece of pieces.slice(0, -1)) {
+            addChunk(chunks, document, piece);
+          }
+
+          sentenceChunk = pieces[pieces.length - 1] ?? '';
         } else {
           if (sentenceChunk) {
             addChunk(chunks, document, sentenceChunk);
