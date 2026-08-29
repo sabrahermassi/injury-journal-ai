@@ -34,36 +34,6 @@ async function loadApp() {
   return { app, prisma };
 }
 
-describe('GET / static frontend', () => {
-  it('serves the static index page', async () => {
-    const { app, prisma } = await loadApp();
-
-    try {
-      const response = await request(app).get('/');
-
-      expect(response.status).toBe(200);
-      expect(response.headers['content-type']).toMatch(/text\/html/);
-      expect(response.text).toContain('Injury Journal AI');
-    } finally {
-      await prisma.$disconnect();
-    }
-  });
-
-  it('serves the static app.js bundle', async () => {
-    const { app, prisma } = await loadApp();
-
-    try {
-      const response = await request(app).get('/app.js');
-
-      expect(response.status).toBe(200);
-      expect(response.headers['content-type']).toMatch(/javascript/);
-      expect(response.text).toContain('submitQuestion');
-    } finally {
-      await prisma.$disconnect();
-    }
-  });
-});
-
 describe('POST /ai-agent rate limiting', () => {
   it('does not crash when a reverse proxy sends X-Forwarded-For', async () => {
     // Regression test: express-rate-limit throws if a proxy header is
@@ -82,7 +52,10 @@ describe('POST /ai-agent rate limiting', () => {
     } finally {
       await prisma.$disconnect();
     }
-  });
+    // First loadApp() in this file pays the ESM module-graph cold start
+    // (jest.resetModules() + dynamic import of src/app.ts and Prisma), which
+    // can exceed Jest's 5s default when the full suite runs in parallel.
+  }, 20_000);
 
   it('allows up to the configured limit, then returns 429 with a JSON error body', async () => {
     const { app, prisma } = await loadApp();

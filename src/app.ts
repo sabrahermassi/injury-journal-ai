@@ -26,8 +26,6 @@ app.use(cors({ origin: allowedOrigins ?? true }));
 
 app.use(express.json());
 
-app.use(express.static('public'));
-
 const aiAgentLimiter = rateLimit({
   windowMs: 60_000,
   limit: 20,

@@ -142,13 +142,30 @@ curl -X POST http://localhost:3000/ai-agent \
 `sub` claim, signed with `JWT_SECRET`) — see the Project Status section above for what
 authentication does and doesn't cover yet.
 
-### Minimal frontend
+### Frontend
 
-A static demo page is served at `http://localhost:3000/` (`public/index.html` +
-`public/app.js`, no build step) once the backend is running. It has a field for the question, an
-optional injury ID, and a bearer token — this repo verifies but does not issue JWTs (a separate
-journal application is expected to own login, see `docs/02-architecture.md` D10), so for local
-testing you need to mint your own token with `JWT_SECRET`:
+The web UI lives in `frontend/` as a separate Next.js app (App Router, Tailwind v4, shadcn/ui). It
+is its own npm project with its own dependencies, so install once before first use:
+
+```bash
+cd frontend
+npm install
+```
+
+Run it alongside the backend — the API stays on port 3000, the UI on 3001:
+
+```bash
+npm run dev               # in the repo root: Express API on http://localhost:3000
+cd frontend && npm run dev # in a second shell: UI on http://localhost:3001
+```
+
+`frontend/next.config.ts` proxies `/ai-agent` to the API so the browser stays on one origin and no
+`ALLOWED_ORIGIN`/CORS setup is needed for local development. Point it elsewhere with `API_ORIGIN`.
+
+The page has a field for the question, an optional injury ID, and a bearer token — this repo
+verifies but does not issue JWTs (a separate journal application is expected to own login, see
+`docs/02-architecture.md` D10), so for local testing you need to mint your own token with
+`JWT_SECRET`:
 
 ```bash
 JWT_SECRET=<same value as .env> npx tsx -e "
@@ -158,6 +175,9 @@ console.log(jwt.sign({ sub: '1' }, process.env.JWT_SECRET, { algorithm: 'HS256',
 ```
 
 Paste the printed token into the page's token field.
+
+UI conventions (component library, design tokens, spacing, component patterns) are documented in
+`UI_GUIDE.md` — read it before changing anything under `frontend/`.
 
 ## Tests
 
