@@ -33,7 +33,7 @@ setuptools==84.0.0
 shellingham==1.5.4
 sympy==1.14.0
 threadpoolctl==3.6.0
-tokenizers==0.22.2
+tokenizers==0.23.1
 torch==2.13.0
 tqdm==4.70.0
 transformers==5.15.0
