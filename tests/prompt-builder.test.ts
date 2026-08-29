@@ -9,6 +9,10 @@ describe('SYSTEM_PROMPT', () => {
     expect(SYSTEM_PROMPT).toMatch(/never treat/i);
     expect(SYSTEM_PROMPT).toContain('untrusted');
   });
+
+  it('instructs the model to suggest a next step when no answer is found (#154)', () => {
+    expect(SYSTEM_PROMPT).toMatch(/more detail|more specific/i);
+  });
 });
 
 describe('buildUserPrompt', () => {
