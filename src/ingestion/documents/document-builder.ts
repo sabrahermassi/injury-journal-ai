@@ -189,6 +189,12 @@ function buildTreatmentDocument(
   return parts.join(' ');
 }
 
+// document-chunker.ts's splitIntoFields pattern-matches "Doctor:"/"Clinic:"/
+// "Notes:" (and the other capitalized-label prefixes below and in the other
+// build*Document functions) as field-split boundaries. Changing a label's
+// wording or casing won't break anything, but it will silently stop that
+// field from being a chunk-split boundary — check document-chunker.ts if
+// that matters.
 function buildMedicalVisitDocument(
   visit: InjuryWithRelations['MedicalVisit'][number],
 ): string {

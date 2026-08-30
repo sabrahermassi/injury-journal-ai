@@ -4,8 +4,16 @@ import {
   chunkDocument,
   chunkDocuments,
   QWEN_SAFETY_MARGIN,
+  resolveChunkBudget,
 } from '../src/ingestion/chunking/document-chunker';
-import type { JournalDocument } from '../src/ingestion/documents/document-types';
+import type {
+  DocumentSourceType,
+  JournalDocument,
+} from '../src/ingestion/documents/document-types';
+import {
+  buildJournalDocuments,
+  type InjuryWithRelations,
+} from '../src/ingestion/documents/document-builder';
 
 const encoding = getEncoding('cl100k_base');
 
@@ -356,6 +364,183 @@ describe('Document Chunker', () => {
       chunkDocument(largeDocument, 30, 0);
 
       expect(debugSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('source-type-aware chunking config', () => {
+    // A local, literal config — never SOURCE_TYPE_CHUNK_CONFIG itself, which
+    // is Readonly and shared across the whole module — so this test exercises
+    // resolveChunkBudget's per-sourceType differentiation without mutating
+    // any global state.
+    const localTestConfig: Record<
+      DocumentSourceType,
+      Readonly<{ maxTokens: number; overlapTokens?: number }>
+    > = {
+      injury: { maxTokens: 300 },
+      symptom: { maxTokens: 300 },
+      treatment: { maxTokens: 30, overlapTokens: 0 },
+      medical_visit: { maxTokens: 300, overlapTokens: 5 },
+      timeline_event: { maxTokens: 300 },
+    };
+
+    it('resolves each sourceType to its own configured budget when no override is passed', () => {
+      expect(
+        resolveChunkBudget('treatment', undefined, undefined, localTestConfig),
+      ).toEqual({ maxTokens: 30, overlapTokens: 0 });
+
+      expect(
+        resolveChunkBudget(
+          'medical_visit',
+          undefined,
+          undefined,
+          localTestConfig,
+        ),
+      ).toEqual({ maxTokens: 300, overlapTokens: 5 });
+    });
+
+    it('lets an explicit maxTokens/overlapTokens override the sourceType default', () => {
+      expect(
+        resolveChunkBudget('treatment', 30, 0, localTestConfig),
+      ).toEqual({ maxTokens: 30, overlapTokens: 0 });
+
+      const treatmentVariant: JournalDocument = {
+        ...largeDocument,
+        metadata: { ...largeDocument.metadata, sourceType: 'treatment' },
+      };
+
+      const chunks = chunkDocument(treatmentVariant, 30, 0);
+
+      expect(chunks.length).toBeGreaterThan(1);
+      chunks.forEach((chunk) => {
+        expect(countTokens(chunk.content)).toBeLessThanOrEqual(30);
+      });
+    });
+
+    it('chunkDocument reaches the real SOURCE_TYPE_CHUNK_CONFIG when no arguments are passed', () => {
+      // Wiring smoke test: no other test calls chunkDocument with a single
+      // argument, so this proves resolveChunkBudget is actually threaded
+      // through to the module's real (Readonly) config end-to-end.
+      const chunks = chunkDocument(smallDocument);
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0].content).toBe(smallDocument.content);
+    });
+
+    it('chunkDocuments resolves each document\'s own sourceType config independently', () => {
+      const treatmentVariant: JournalDocument = {
+        ...smallDocument,
+        metadata: { ...smallDocument.metadata, sourceType: 'treatment' },
+      };
+      const medicalVisitVariant: JournalDocument = {
+        ...smallDocument,
+        content: 'A short medical visit summary for this test.',
+        metadata: { ...smallDocument.metadata, sourceType: 'medical_visit' },
+      };
+
+      const chunks = chunkDocuments([treatmentVariant, medicalVisitVariant]);
+
+      expect(chunks).toHaveLength(2);
+      expect(chunks[0].content).toBe(treatmentVariant.content);
+      expect(chunks[1].content).toBe(medicalVisitVariant.content);
+    });
+  });
+
+  describe('field-boundary splitting', () => {
+    const labeledFieldsDocument: JournalDocument = {
+      content:
+        'On 2025-01-15, the user had a medical visit. ' +
+        'Doctor: Dr. Alvarez. ' +
+        'Clinic: Downtown Physical Therapy. ' +
+        'Notes: The patient reported ongoing lower back pain that worsens ' +
+        'with prolonged sitting and standing, and described intermittent ' +
+        'numbness radiating down the left leg during physical activity.',
+      metadata: {
+        userId: 1,
+        injuryId: 1,
+        sourceType: 'medical_visit',
+        sourceId: 5,
+        date: new Date('2025-01-15'),
+      },
+    };
+
+    it('splits an oversized record on labeled-field boundaries before sentence-splitting', () => {
+      const chunks = chunkDocument(labeledFieldsDocument, 20, 0);
+
+      expect(chunks.length).toBeGreaterThan(1);
+
+      // At least one chunk boundary lands on a field label rather than mid
+      // way through the "Notes:" sentence run.
+      expect(
+        chunks.some((chunk) => /^(Doctor|Clinic|Notes):/.test(chunk.content)),
+      ).toBe(true);
+    });
+
+    it('keeps field-split chunks within the token limit', () => {
+      const chunks = chunkDocument(labeledFieldsDocument, 20, 0);
+
+      chunks.forEach((chunk) => {
+        expect(countTokens(chunk.content)).toBeLessThanOrEqual(20);
+      });
+    });
+
+    it('honors overlapTokens across a field-split boundary', () => {
+      const chunks = chunkDocument(labeledFieldsDocument, 25, 8);
+
+      expect(chunks.length).toBeGreaterThan(1);
+
+      let sawOverlap = false;
+      for (let i = 1; i < chunks.length; i++) {
+        if (overlapWordCount(chunks[i - 1].content, chunks[i].content) > 0) {
+          sawOverlap = true;
+        }
+        expect(countTokens(chunks[i].content)).toBeLessThanOrEqual(25);
+      }
+      expect(sawOverlap).toBe(true);
+    });
+
+    it('splits real document-builder.ts output on its own field labels', () => {
+      // Runs actual buildJournalDocuments() output through the chunker,
+      // rather than a hand-typed literal, so a label rename in
+      // document-builder.ts (Doctor:/Clinic:/Notes:) breaks this test
+      // instead of silently degrading to sentence-only splitting.
+      const injuryFixture: InjuryWithRelations = {
+        id: 1,
+        name: 'Lower back strain',
+        bodyArea: 'lower back',
+        side: null,
+        startDate: new Date('2025-01-01'),
+        cause: null,
+        description: null,
+        status: null,
+        userId: 1,
+        Symptom: [],
+        Treatment: [],
+        MedicalVisit: [
+          {
+            id: 7,
+            doctor: 'Dr. Alvarez',
+            clinic: 'Downtown Physical Therapy',
+            date: new Date('2025-01-15'),
+            notes:
+              'The patient reported ongoing lower back pain that worsens ' +
+              'with prolonged sitting and standing, and described ' +
+              'intermittent numbness radiating down the left leg during ' +
+              'physical activity.',
+          },
+        ],
+        TimelineEvent: [],
+      };
+
+      const [medicalVisitDocument] = buildJournalDocuments([
+        injuryFixture,
+      ]).filter((document) => document.metadata.sourceType === 'medical_visit');
+
+      const chunks = chunkDocument(medicalVisitDocument, 20, 0);
+
+      expect(chunks.length).toBeGreaterThan(1);
+      expect(
+        chunks.some((chunk) => /^(Doctor|Clinic|Notes):/.test(chunk.content)),
+      ).toBe(true);
     });
   });
 });
