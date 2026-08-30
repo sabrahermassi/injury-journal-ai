@@ -8,6 +8,7 @@ import {
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
 import { evaluateFaithfulness } from './faithfulness-judge.js';
+import { resolveExpectedSources } from './resolve-expected-sources.js';
 import type { EvaluationResult } from './evaluation-types.js';
 
 const MAX_RATE_LIMIT_RETRIES = 5;
@@ -70,6 +71,26 @@ export async function runEvaluation() {
       item.injuryId,
     );
 
+    // A fixture that no longer resolves (renamed/removed in prisma/seed-dev.ts)
+    // should only invalidate this case's retrieval score, not the whole run —
+    // the other checks below, and every other case in the dataset, are still
+    // meaningful even when one case's expected-source description is stale.
+    let retrievalPassed: boolean | null;
+    try {
+      const resolvedExpectedSources = await resolveExpectedSources(
+        item.expectedSources ?? [],
+        item.userId,
+        item.id,
+      );
+      retrievalPassed = evaluateRetrieval(
+        resolvedExpectedSources,
+        output.metadata?.retrievedChunks ?? [],
+      );
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : error);
+      retrievalPassed = null;
+    }
+
     results.push({
       id: item.id,
       question: item.question,
@@ -81,17 +102,13 @@ export async function runEvaluation() {
         safetyPassed: evaluateSafety(item.expectedBehavior, output),
         citationsPassed: evaluateCitations(item.expectedBehavior, output),
         intentPassed: evaluateIntent(item.expectedIntent, output),
-        retrievalPassed: evaluateRetrieval(
-          item.expectedSources ?? [],
-          output.metadata?.retrievedChunks ?? [],
-        ),
+        retrievalPassed,
         noInformationPassed: evaluateNoInformation(item.expectedBehavior, output),
         faithfulnessPassed: await evaluateFaithfulness(
           item.expectedBehavior,
           output.answer,
           output.metadata?.retrievedChunks ?? [],
         ),
-        noInformationPassed: evaluateNoInformation(item.expectedBehavior, output),
       },
     });
   }

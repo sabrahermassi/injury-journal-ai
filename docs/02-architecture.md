@@ -630,9 +630,13 @@ quoted), what else was considered, whether it still holds, and whether it should
   switching to fixed-size windows, preserving the boundary-respecting behavior above.
 - **CURRENT STATUS:** Still valid and well-tested (`document-chunker.ts` plus
   `docs/03-chunker-architecture.md`'s test list covers boundary cases directly, including overlap).
-  Overlap means adjacent chunks can now return near-duplicate text from retrieval (see D5) — there
-  is no dedup/diversity step downstream, which is an accepted tradeoff for now given the small
-  corpus size, not a bug.
+  Overlap means adjacent chunks can return near-duplicate text from retrieval (see D5); as of #215,
+  `semanticSearch` (`src/retrieval/semantic-search.ts`) over-fetches and, when it finds a run of
+  mutually-adjacent chunks (`sourceType`+`sourceId`+`chunkIndex` within 1 of each other — a pair or
+  longer), still returns every chunk in that run — it just doesn't let the run consume more than
+  one of the `limit` distinct-source slots. Nothing is ever dropped: given this is healthcare
+  journal content, losing a chunk's unique content to save a result slot was judged the wrong
+  tradeoff, so the result can exceed `limit` instead (bounded by the over-fetch pool size, see D5).
 - **SHOULD THIS BE REVISITED:** No.
 - **`DEFAULT_MAX_TOKENS` (300) is now measured, not assumed (#137):** `evaluation/ai-system/chunk-size-sweep.ts`
   (`npm run eval:chunk-size`) re-ingests the seeded dev dataset and re-runs the eval harness at
@@ -689,13 +693,30 @@ quoted), what else was considered, whether it still holds, and whether it should
 - **ALTERNATIVES CONSIDERED:** Hybrid (keyword + vector) search or a cross-encoder rerank stage —
   both still add real complexity and a second scoring signal to tune, for a corpus size where it's
   not yet clear pure vector top-k is actually underperforming; both remain deferred.
-- **CURRENT STATUS:** Chunk overlap (D4, issue #135) can still return two adjacent chunks that share
-  most of their text — there is no near-duplicate suppression, so an overlap-heavy result can cost a
-  query one of its `k` slots on redundant content, independent of the threshold. Worth watching if
-  evaluation surfaces this as a real quality problem.
+- **CURRENT STATUS:** Chunk overlap (D4, issue #135) could return two adjacent chunks that share
+  most of their text, costing a query one of its `k` slots on redundant content, independent of the
+  threshold above. Addressed by #215, deliberately *without* dropping content (given this is
+  healthcare journal data): `semanticSearch` over-fetches (`limit * 2`) and, when it finds a run of
+  mutually-adjacent chunks from the same source, keeps every chunk in the run but only counts the
+  run once toward `limit` — so the result can exceed `limit` rather than ever discarding a chunk's
+  unique content. This is retrieval-side near-duplicate handling, not the threshold/hybrid/rerank
+  additions this decision otherwise covers.
+  Known limitations:
+  - The `limit * 2` over-fetch window is fixed, not adaptive — if most of the over-fetched
+    candidates for a query are mutually adjacent, the result can still land below `limit` distinct
+    sources even though more exist further down the true ranking. No fallback re-query exists for
+    this today; treat it as expected behavior, not a bug, if it shows up in evaluation results.
+  - Because a whole contiguous run collapses into one slot regardless of its length, the result
+    size is bounded by the over-fetch pool size (`limit * 2` per injury query), not by `limit` —
+    a query whose entire over-fetched pool is one long run returns all of it. For the unscoped
+    (multi-injury) path, this also means the #209/D11 "fair share" apportionment is fair in slot
+    count but not necessarily in raw content volume: one matched injury contributing one long run
+    can supply disproportionately more prompt content than another injury's single, non-adjacent
+    chunk, even though both used one "slot."
 - **SHOULD THIS BE REVISITED:** Yes — the `0.7` default specifically, once the evaluation dataset is
   large enough to calibrate it on evidence rather than a conservative guess. Hybrid search and
-  reranking remain deferred as before.
+  reranking remain deferred as before. The near-duplicate handling above is not pending revisit —
+  it's implemented; only its two known limitations remain open watch items.
 
 ### D6 — Hand-written deterministic intent router instead of an agent framework (LangGraph deferred)
 
