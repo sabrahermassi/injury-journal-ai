@@ -16,6 +16,10 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:integration": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration --maxWorkers=1",
     "seed:dev": "tsx prisma/seed-dev.ts",
+    "dev:up": "docker compose up -d --wait && npx prisma generate && npx prisma migrate deploy",
+    "dev:up:seed": "npm run dev:up && cross-env DATABASE_ENV=development SEED_DEV_CONFIRM=true npm run seed:dev",
+    "dev:down": "docker compose down",
+    "dev:reset": "docker compose down --volumes",
     "ingest": "tsx src/ingestion/ingestion-worker.ts",
     "eval:chunk-size": "tsx evaluation/ai-system/chunk-size-sweep.ts",
     "eval:full": "tsx evaluation/ai-system/run-evaluation-once.ts"

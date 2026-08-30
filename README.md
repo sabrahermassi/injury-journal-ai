@@ -41,7 +41,47 @@ and Infrastructure as Code are not yet started. See [docs/04-implementation-road
 
 ## Setup
 
+### Quick start (Docker)
+
+The fastest way to get a working local environment — Docker runs Postgres (with
+`pgvector`) and the embedding service for you.
+
+**Prerequisites:** Docker Desktop (or Docker Engine + the Compose plugin), Node.js 22.
+
+1. `npm install`
+2. Copy `.env.example` to `.env` and fill in `GROQ_API_KEY`, `JWT_SECRET`, and
+   `EMBEDDING_API_KEY`. `DATABASE_URL` can be left at its pre-filled default — it already
+   matches the Postgres container started below.
+3. `npm run dev:up` — starts Postgres and the embedding service in Docker, waits for both
+   to report healthy, then runs `npx prisma generate` and `npx prisma migrate deploy`
+   against the new database.
+
+   The **first** run downloads the embedding model (a few hundred MB) and can take a few
+   minutes; it's cached in a Docker volume afterward, so later runs are fast.
+4. Optionally, instead of step 3, run `npm run dev:up:seed` to also populate sample data.
+   This still requires and sets `DATABASE_ENV=development` and `SEED_DEV_CONFIRM=true`
+   under the hood — it does not weaken any of `prisma/seed-dev.ts`'s existing safety
+   checks (see below), it just supplies the same values you'd type by hand running
+   `npm run seed:dev` directly.
+5. `npm run dev` to start the backend.
+
+Stop the containers with `npm run dev:down` (data and the cached model persist).
+`npm run dev:reset` additionally wipes the Postgres volume and the cached model for a
+completely clean slate.
+
+If you already have a local Postgres listening on 5432 (e.g. a native install from the
+manual steps below), `docker compose up` will fail to bind that port — stop the existing
+Postgres first, or change the port mapping in `docker-compose.yml` and `DATABASE_URL`
+together.
+
+This replaces the manual Postgres + embedding-service setup described in the rest of this
+section with one command. Keep reading below for what `dev:up` does under the hood, how
+to run everything manually instead (e.g. against a non-Docker or remote Postgres), and
+the database-role hardening recommended beyond local dev.
+
 ### Prerequisites
+
+*(Skip this and the following manual steps if you used the Docker quick start above.)*
 
 - Node.js 22 (matches CI)
 - A PostgreSQL database with the `pgvector` extension available (CI uses the `pgvector/pgvector:pg16` image)
@@ -80,6 +120,9 @@ npx prisma generate
 npx prisma migrate deploy
 ```
 
+`npm run dev:up` runs these same two commands automatically against the Docker Postgres
+container (see Quick start above).
+
 ### Database roles and connection hygiene
 
 `npx prisma migrate deploy` needs a schema-owner role (DDL privileges). The role the running app
@@ -114,6 +157,10 @@ Seeding uses two separate scripts, both with hard safety checks against running 
 - `npm run seed:dev` runs `prisma/seed-dev.ts`, which additionally requires `DATABASE_ENV=development`, `SEED_DEV_CONFIRM=true`, and a database named exactly `injury-journal-ai-db`. It resets data with `TRUNCATE ... RESTART IDENTITY`, so `DATABASE_URL` must point at a role that owns the seeded tables or otherwise holds `TRUNCATE` on each of them — the schema-owner role used for `prisma migrate deploy` satisfies this because it owns the tables it creates, but database ownership alone does not grant `TRUNCATE` on tables owned by another role. The minimal `injury_journal_ai_app` role described above is not sufficient for either seed script.
 
 ### Run the embedding service
+
+`npm run dev:up` starts this in Docker automatically (see `src/embeddings/Dockerfile` and
+Quick start above); use the steps below only if you want to run it directly on the host
+instead.
 
 Install the Python dependencies, then start `src/embeddings/embedding_api.py` (a FastAPI app
 exposing `/embed` and `/embed-batch`) on whatever host/port `EMBEDDING_API_URL` points at, e.g.:
