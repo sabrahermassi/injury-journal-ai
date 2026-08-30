@@ -2,6 +2,7 @@ import { getEncoding } from 'js-tiktoken';
 import {
   chunkDocument,
   chunkDocuments,
+  QWEN_SAFETY_MARGIN,
 } from '../src/ingestion/chunking/document-chunker';
 import type { JournalDocument } from '../src/ingestion/documents/document-types';
 
@@ -196,7 +197,7 @@ describe('Document Chunker', () => {
     // tokens on the same text (QWEN_SAFETY_MARGIN = 0.85). Chunks should stay
     // under the reduced effective budget, not just under maxTokens itself.
     const maxTokens = 30;
-    const effectiveMaxTokens = Math.floor(maxTokens * 0.85);
+    const effectiveMaxTokens = Math.floor(maxTokens * QWEN_SAFETY_MARGIN);
 
     const chunks = chunkDocument(largeDocument, maxTokens);
 

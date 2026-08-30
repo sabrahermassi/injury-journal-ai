@@ -15,7 +15,16 @@ const DEFAULT_MAX_TOKENS = 300;
 // cl100k_base (worst-case ratio 1.125). QWEN_SAFETY_MARGIN reduces the
 // effective split budget so a chunk that measures at maxTokens under
 // cl100k_base still stays under maxTokens real Qwen3 tokens. See #136.
-const QWEN_SAFETY_MARGIN = 0.85;
+//
+// This margin is empirical, not a hard guarantee: it's derived from one
+// run over a limited sample and doesn't cover every possible input (e.g.
+// unusual scripts or dense numeric/code content could diverge further).
+// SentenceTransformer.encode() in embedding_service.py truncates silently
+// to the model's max sequence length rather than erroring on overflow, so
+// a rare miss here degrades to truncation, not a crash. Re-run the
+// measurement script and re-derive this constant if MODEL_NAME or its
+// pinned revision changes.
+export const QWEN_SAFETY_MARGIN = 0.85;
 
 const encoding = getEncoding('cl100k_base');
 

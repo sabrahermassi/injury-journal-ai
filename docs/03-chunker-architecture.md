@@ -54,6 +54,15 @@ more tokens than cl100k_base (worst-case ratio 1.125). The chunker applies a
 measuring at `maxTokens` under cl100k_base still stays under `maxTokens`
 real Qwen3 tokens.
 
+This margin is empirical, not a hard guarantee — it's derived from a single
+run over a limited sample and may not cover every input (e.g. unusual
+scripts or dense numeric/code content). As a backstop,
+`SentenceTransformer.encode()` in `embedding_service.py` truncates silently
+to the model's max sequence length rather than erroring on overflow, so a
+rare miss degrades to truncation, not a crash. Re-run the measurement
+script and re-derive `QWEN_SAFETY_MARGIN` if `MODEL_NAME` or its pinned
+revision changes.
+
 # What we should test
 
 ## Small document stays intact
