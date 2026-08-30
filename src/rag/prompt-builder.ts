@@ -18,7 +18,13 @@ injury. Never attribute a fact from one injury's source to a different injury, a
 generalize facts across sources that are labeled with different injuries. If the question asks
 about a specific injury (by name, body area, or context) and no retrieved source is labeled with
 that injury, say the journal data does not contain the needed detail rather than reusing a fact
-from an unrelated injury's source.`;
+from an unrelated injury's source.
+
+When a broad question draws on sources from more than one injury, do not state a single overall
+conclusion or verdict (for example, "overall you are doing well") unless it genuinely holds true
+for every injury a source was retrieved for. If outcomes differ between injuries, summarize each
+injury separately, or say explicitly that the picture varies across injuries, rather than
+generalizing one injury's outcome into an overall assessment.`;
 
 // Neutralizes literal occurrences of the <journal_data>/</journal_data> delimiter tags
 // inside untrusted content before it's wrapped by those same tags. Without this, stored
