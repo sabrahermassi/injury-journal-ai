@@ -639,6 +639,13 @@ quoted), what else was considered, whether it still holds, and whether it should
     than a transient rate limit. Re-run `npm run eval:chunk-size` once quota resets and update this
     note; overlap changes what content lands in each chunk, so it could plausibly shift retrieval
     even though chunk size alone didn't.
+  - **Interaction with #218 (`SOURCE_TYPE_CHUNK_CONFIG`):** the sweep sets an explicit `maxTokens`
+    for every document (uniformly, across all `sourceType`s) via `runIngestion`, which per
+    `docs/03-chunker-architecture.md` overrides `SOURCE_TYPE_CHUNK_CONFIG` entirely — the sweep
+    only answers "what should the one global default be," not "should different sourceTypes use
+    different budgets." `CHUNK_MAX_TOKENS` (see README) is `undefined` unless explicitly set, so
+    real ingestion (`npm run ingest`) still defers to `SOURCE_TYPE_CHUNK_CONFIG` normally; only the
+    sweep (and anyone who sets `CHUNK_MAX_TOKENS`) forces a single value across every sourceType.
 
 ### D5 — Plain top-k cosine retrieval; no similarity threshold, hybrid search, or reranking
 

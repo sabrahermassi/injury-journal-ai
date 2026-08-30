@@ -42,7 +42,7 @@ export interface IngestionResult {
  * happens to documents processed afterward.
  */
 export async function runIngestion(
-  maxTokens: number = CHUNK_MAX_TOKENS,
+  maxTokens: number | undefined = CHUNK_MAX_TOKENS,
 ): Promise<IngestionResult> {
   const injuries = await readJournalData();
 

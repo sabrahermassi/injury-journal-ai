@@ -13,7 +13,7 @@ describe('CHUNK_MAX_TOKENS env parsing', () => {
   });
 
   test.each([
-    [undefined, 300],
+    [undefined, undefined],
     ['300', 300],
     ['150', 150],
     ['1', 1],
