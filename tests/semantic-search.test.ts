@@ -67,6 +67,7 @@ describe('semanticSearch', () => {
       undefined,
       1,
       undefined,
+      undefined,
     );
 
     expect(result).toEqual(chunks);
@@ -126,6 +127,7 @@ describe('semanticSearch', () => {
       undefined,
       1,
       undefined,
+      undefined,
     );
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
@@ -133,6 +135,7 @@ describe('semanticSearch', () => {
       2,
       undefined,
       1,
+      undefined,
       undefined,
     );
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
@@ -141,6 +144,7 @@ describe('semanticSearch', () => {
       2,
       undefined,
       1,
+      undefined,
       undefined,
     );
   });
@@ -181,6 +185,7 @@ describe('semanticSearch', () => {
       5,
       undefined,
       1,
+      undefined,
       undefined,
     );
   });

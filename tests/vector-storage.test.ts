@@ -50,6 +50,7 @@ const {
   deleteDocumentChunksExcept,
   searchSimilarChunks,
   disconnectVectorStorage,
+  DEFAULT_DISTANCE_THRESHOLD,
 } = await import('../src/embeddings/vector-storage.js');
 
 beforeEach(() => {
@@ -173,54 +174,54 @@ describe('searchSimilarChunks', () => {
     await searchSimilarChunks([0.1, 0.2, 0.3], undefined, 7);
 
     expect(queryRawMock).toHaveBeenCalledTimes(1);
-    expect(joinMock).not.toHaveBeenCalled();
+    expect(joinMock).toHaveBeenCalledTimes(1);
 
     const query = queryRawMock.mock.calls[0][0] as SqlResult;
     expect(query.values[0]).toBe('[0.1,0.2,0.3]');
-    expect(query.values[1]).toBe(emptyMarker);
     expect(query.values[2]).toBe('[0.1,0.2,0.3]');
     expect(query.values[3]).toBe(7);
   });
 
-  it('uses no WHERE clause and default limit when neither filter is provided', async () => {
+  it('always applies a distance-threshold filter, defaulting to DEFAULT_DISTANCE_THRESHOLD', async () => {
     await searchSimilarChunks([1]);
-
-    const query = queryRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[1]).toBe(emptyMarker);
-    expect(query.values[3]).toBe(5);
-  });
-
-  it('filters by injuryId only when sourceType is omitted', async () => {
-    await searchSimilarChunks([1], 42);
 
     expect(joinMock).toHaveBeenCalledTimes(1);
     const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
     expect(separator).toBe(' AND ');
     expect(filters).toHaveLength(1);
-    expect(filters[0].values).toEqual([42]);
-    expect(filters[0].strings.join('')).toContain('"injuryId"');
+    expect(filters[0].values).toEqual(['[1]', DEFAULT_DISTANCE_THRESHOLD]);
+    expect(filters[0].strings.join('')).toContain('"embedding" <=>');
 
     const query = queryRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[1]).toEqual({
-      strings: expect.any(Array),
-      values: [joinMock.mock.results[0].value],
-    });
+    expect(query.values[3]).toBe(5);
   });
 
-  it('filters by sourceType only when injuryId is omitted', async () => {
+  it('uses the provided maxDistance instead of the default', async () => {
+    await searchSimilarChunks([1], undefined, 5, undefined, undefined, undefined, 0.3);
+
+    const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(filters[0].values).toEqual(['[1]', 0.3]);
+  });
+
+  it('filters by injuryId in addition to the distance threshold when sourceType is omitted', async () => {
+    await searchSimilarChunks([1], 42);
+
+    expect(joinMock).toHaveBeenCalledTimes(1);
+    const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
+    expect(separator).toBe(' AND ');
+    expect(filters).toHaveLength(2);
+    expect(filters[1].values).toEqual([42]);
+    expect(filters[1].strings.join('')).toContain('"injuryId"');
+  });
+
+  it('filters by sourceType in addition to the distance threshold when injuryId is omitted', async () => {
     await searchSimilarChunks([1], undefined, 5, 'treatment');
 
     expect(joinMock).toHaveBeenCalledTimes(1);
     const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
-    expect(filters).toHaveLength(1);
-    expect(filters[0].values).toEqual(['treatment']);
-    expect(filters[0].strings.join('')).toContain('"sourceType"');
-
-    const query = queryRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[1]).toEqual({
-      strings: expect.any(Array),
-      values: [joinMock.mock.results[0].value],
-    });
+    expect(filters).toHaveLength(2);
+    expect(filters[1].values).toEqual(['treatment']);
+    expect(filters[1].strings.join('')).toContain('"sourceType"');
   });
 
   it('filters by both injuryId and sourceType when both are provided', async () => {
@@ -229,33 +230,21 @@ describe('searchSimilarChunks', () => {
     expect(joinMock).toHaveBeenCalledTimes(1);
     const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
     expect(separator).toBe(' AND ');
-    expect(filters).toHaveLength(2);
-    expect(filters[0].values).toEqual([42]);
-    expect(filters[0].strings.join('')).toContain('"injuryId"');
-    expect(filters[1].values).toEqual(['treatment']);
-    expect(filters[1].strings.join('')).toContain('"sourceType"');
-
-    const query = queryRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[1]).toEqual({
-      strings: expect.any(Array),
-      values: [joinMock.mock.results[0].value],
-    });
+    expect(filters).toHaveLength(3);
+    expect(filters[1].values).toEqual([42]);
+    expect(filters[1].strings.join('')).toContain('"injuryId"');
+    expect(filters[2].values).toEqual(['treatment']);
+    expect(filters[2].strings.join('')).toContain('"sourceType"');
   });
 
-  it('filters by userId only when injuryId and sourceType are omitted', async () => {
+  it('filters by userId in addition to the distance threshold when injuryId and sourceType are omitted', async () => {
     await searchSimilarChunks([1], undefined, 5, undefined, 42);
 
     expect(joinMock).toHaveBeenCalledTimes(1);
     const [filters] = joinMock.mock.calls[0] as [SqlResult[], string];
-    expect(filters).toHaveLength(1);
-    expect(filters[0].values).toEqual([42]);
-    expect(filters[0].strings.join('')).toContain('"userId"');
-
-    const query = queryRawMock.mock.calls[0][0] as SqlResult;
-    expect(query.values[1]).toEqual({
-      strings: expect.any(Array),
-      values: [joinMock.mock.results[0].value],
-    });
+    expect(filters).toHaveLength(2);
+    expect(filters[1].values).toEqual([42]);
+    expect(filters[1].strings.join('')).toContain('"userId"');
   });
 
   it('filters by injuryId, sourceType, and userId together when all are provided', async () => {
@@ -264,13 +253,13 @@ describe('searchSimilarChunks', () => {
     expect(joinMock).toHaveBeenCalledTimes(1);
     const [filters, separator] = joinMock.mock.calls[0] as [SqlResult[], string];
     expect(separator).toBe(' AND ');
-    expect(filters).toHaveLength(3);
-    expect(filters[0].values).toEqual([42]);
-    expect(filters[0].strings.join('')).toContain('"injuryId"');
-    expect(filters[1].values).toEqual(['treatment']);
-    expect(filters[1].strings.join('')).toContain('"sourceType"');
-    expect(filters[2].values).toEqual([7]);
-    expect(filters[2].strings.join('')).toContain('"userId"');
+    expect(filters).toHaveLength(4);
+    expect(filters[1].values).toEqual([42]);
+    expect(filters[1].strings.join('')).toContain('"injuryId"');
+    expect(filters[2].values).toEqual(['treatment']);
+    expect(filters[2].strings.join('')).toContain('"sourceType"');
+    expect(filters[3].values).toEqual([7]);
+    expect(filters[3].strings.join('')).toContain('"userId"');
   });
 });
 

@@ -8,11 +8,20 @@ export async function semanticSearch(
   userId: number,
   limit = 5,
   requestId?: string,
+  maxDistance?: number,
 ) {
   const result = await embedQuery(query, requestId);
 
   if (injuryId !== undefined) {
-    return searchSimilarChunks(result.embedding, injuryId, limit, undefined, userId, requestId);
+    return searchSimilarChunks(
+      result.embedding,
+      injuryId,
+      limit,
+      undefined,
+      userId,
+      requestId,
+      maxDistance,
+    );
   }
 
   // No injury was picked (e.g. no dropdown selection). Pooling every
@@ -44,6 +53,7 @@ export async function semanticSearch(
         undefined,
         userId,
         requestId,
+        maxDistance,
       ),
     ),
   );

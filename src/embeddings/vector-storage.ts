@@ -14,6 +14,18 @@ type SearchSimilarChunk = Pick<
 > & {
   distance: number;
 };
+// pgvector's `<=>` cosine distance operator ranges 0 (identical) to 2
+// (opposite). Passing this as maxDistance disables the cutoff entirely —
+// for callers (like injury-router.ts) that need the full distance spectrum
+// because they apply their own, differently-calibrated distance logic.
+export const MAX_COSINE_DISTANCE = 2;
+
+// Default cosine distance cutoff for searchSimilarChunks. This is a
+// conservative starting point, not a tuned value — issue #122 calls for
+// tuning it against evaluation results once enough labeled retrieval data
+// exists.
+export const DEFAULT_DISTANCE_THRESHOLD = 0.7;
+
 export async function disconnectVectorStorage() {
   await prisma.$disconnect();
 }
@@ -97,18 +109,20 @@ export async function searchSimilarChunks(
   sourceType?: string,
   userId?: number,
   requestId?: string,
+  maxDistance = DEFAULT_DISTANCE_THRESHOLD,
 ) {
   void requestId; // unused for now — reserved for future log correlation (#32)
 
   const vector = `[${embedding.join(',')}]`;
 
-  const filters: Prisma.Sql[] = [];
+  const filters: Prisma.Sql[] = [
+    Prisma.sql`"embedding" <=> ${vector}::vector <= ${maxDistance}`,
+  ];
   if (injuryId !== undefined) filters.push(Prisma.sql`"injuryId" = ${injuryId}`);
   if (sourceType !== undefined) filters.push(Prisma.sql`"sourceType" = ${sourceType}`);
   if (userId !== undefined) filters.push(Prisma.sql`"userId" = ${userId}`);
 
-  const whereClause =
-    filters.length > 0 ? Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}` : Prisma.empty;
+  const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
 
   return prisma.$queryRaw<SearchSimilarChunk[]>(
     Prisma.sql`

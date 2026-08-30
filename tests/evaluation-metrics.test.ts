@@ -66,6 +66,18 @@ describe('evaluation metrics', () => {
     expect(evaluateNoInformation('no_information_found', result)).toBe(true);
   });
 
+  it('passes no-information checks for rag-service.ts\'s fixed no-relevant-context message (#122)', () => {
+    const result: AgentOutput = {
+      answer:
+        'The journal does not contain information that closely matches this question. ' +
+        'Try rephrasing it, or asking about a specific date or injury.',
+      citations: [],
+      intent: 'rag',
+    };
+
+    expect(evaluateNoInformation('no_information_found', result)).toBe(true);
+  });
+
   it('fails no-information checks when the answer contains substantive content', () => {
     const result: AgentOutput = {
       answer: 'You tried physiotherapy on 2025-01-10 with limited improvement.',

@@ -1,4 +1,4 @@
-import { searchSimilarChunks } from '../embeddings/vector-storage.js';
+import { searchSimilarChunks, MAX_COSINE_DISTANCE } from '../embeddings/vector-storage.js';
 import {
   INJURY_MATCH_AMBIGUITY_MARGIN,
   MAX_MATCHED_INJURIES,
@@ -20,6 +20,10 @@ export async function routeInjuries(
   userId: number,
   requestId?: string,
 ): Promise<number[]> {
+  // Bypass the default distance cutoff here: this function's own distance
+  // logic below (INJURY_MATCH_FALLBACK_DISTANCE / ambiguity margin) needs to
+  // see every candidate's distance, including ones a generic threshold would
+  // otherwise drop, to decide whether the question matches any injury at all.
   const injuryChunks = await searchSimilarChunks(
     embedding,
     undefined,
@@ -27,6 +31,7 @@ export async function routeInjuries(
     'injury',
     userId,
     requestId,
+    MAX_COSINE_DISTANCE,
   );
 
   if (injuryChunks.length === 0) {
@@ -45,6 +50,7 @@ export async function routeInjuries(
       undefined,
       userId,
       requestId,
+      MAX_COSINE_DISTANCE,
     );
 
     return [...new Set(anyChunks.map((chunk) => chunk.injuryId))];
