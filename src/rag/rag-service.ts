@@ -27,10 +27,12 @@ export async function answerQuestion(
     };
   }
 
+  let scopedInjuryName: string | undefined;
+
   if (injuryId !== undefined) {
     const injury = await prisma.injury.findFirst({
       where: { id: injuryId, userId },
-      select: { id: true },
+      select: { id: true, name: true },
     });
 
     if (!injury) {
@@ -40,11 +42,31 @@ export async function answerQuestion(
         citations: [],
       };
     }
+
+    scopedInjuryName = injury.name;
   }
 
   const chunks = await semanticSearch(question, injuryId, userId, limit, requestId);
 
-  const context = buildContext(chunks, requestId);
+  const injuryNames = new Map<number, string>();
+
+  if (injuryId !== undefined) {
+    // scopedInjuryName is always set at this point: the ownership check above either
+    // returns early (no injury found) or sets it.
+    injuryNames.set(injuryId, scopedInjuryName as string);
+  } else if (chunks.length > 0) {
+    const injuryIds = [...new Set(chunks.map((chunk) => chunk.injuryId))];
+    const injuries = await prisma.injury.findMany({
+      where: { id: { in: injuryIds }, userId },
+      select: { id: true, name: true },
+    });
+
+    for (const injury of injuries) {
+      injuryNames.set(injury.id, injury.name);
+    }
+  }
+
+  const context = buildContext(chunks, injuryNames, requestId);
 
   const contentSafety = checkContentSafety(context, requestId);
 
@@ -70,7 +92,7 @@ export async function answerQuestion(
     };
   }
 
-  const citations = buildCitations(chunks, requestId);
+  const citations = buildCitations(chunks, injuryNames, requestId);
 
   return {
     answer,

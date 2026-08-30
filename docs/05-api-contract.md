@@ -139,8 +139,11 @@ The four fields are exactly what a picker needs; this is deliberately not a gene
 
 ## 4. Domain objects returned to the frontend
 
-- **Citation** — `{ sourceType: string, sourceId: number, label: string, date?: string }`. Built
-  by `citation-builder.ts`, the only citation module actually wired into a response path.
+- **Citation** — `{ sourceType: string, sourceId: number, label: string, injuryId: number,
+  injuryName?: string, date?: string }`. `injuryName` is present only when the id resolves in the
+  request's injury-name lookup (issue #208); it is always populated for the `injuryId`-scoped path
+  and for an unscoped `rag` query as long as the injury still exists. Built by `citation-builder.ts`,
+  the only citation module actually wired into a response path.
 - **Journal answer** (journal path only) — an LLM-generated prose summary of the `Injury` record
   and its nested `Treatment[]`, `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, built via
   `formatInjuryRecord()` → `checkContentSafety()` → `buildUserPrompt()` → `generateAnswer()`, not
