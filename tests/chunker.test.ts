@@ -2,6 +2,7 @@ import { getEncoding } from 'js-tiktoken';
 import {
   chunkDocument,
   chunkDocuments,
+  QWEN_SAFETY_MARGIN,
 } from '../src/ingestion/chunking/document-chunker';
 import type { JournalDocument } from '../src/ingestion/documents/document-types';
 
@@ -188,6 +189,21 @@ describe('Document Chunker', () => {
     }
 
     expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
+  });
+
+  it('splits against a reduced budget to guard against tokenizer mismatch (#136)', () => {
+    // document-chunker.ts counts tokens with cl100k_base but embeddings use
+    // Qwen3-Embedding-0.6B's own tokenizer, which measured up to ~16.7% more
+    // tokens on the same text (QWEN_SAFETY_MARGIN = 0.82). Chunks should stay
+    // under the reduced effective budget, not just under maxTokens itself.
+    const maxTokens = 30;
+    const effectiveMaxTokens = Math.floor(maxTokens * QWEN_SAFETY_MARGIN);
+
+    const chunks = chunkDocument(largeDocument, maxTokens);
+
+    chunks.forEach((chunk) => {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(effectiveMaxTokens);
+    });
   });
 
   it('rejects a maxTokens value below one', () => {
