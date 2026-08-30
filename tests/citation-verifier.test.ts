@@ -10,6 +10,15 @@ jest.unstable_mockModule('../src/lib/prisma.js', () => ({
     medicalVisit: {
       findFirst: findFirstMock,
     },
+    symptom: {
+      findFirst: findFirstMock,
+    },
+    timelineEvent: {
+      findFirst: findFirstMock,
+    },
+    injury: {
+      findFirst: findFirstMock,
+    },
   },
 }));
 
@@ -122,6 +131,121 @@ describe('citation verifier', () => {
         sourceId: 10,
         injuryId: 1,
         verified: true,
+      },
+    ]);
+  });
+
+  it('verifies a symptom citation', async () => {
+    findFirstMock.mockResolvedValue({
+      id: 7,
+      injuryId: 1,
+      painLevel: 5,
+    });
+
+    const result = await verifyCitations([
+      {
+        sourceType: 'symptom',
+        sourceId: 7,
+        injuryId: 1,
+      },
+    ]);
+
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: {
+        id: 7,
+        injuryId: 1,
+      },
+    });
+
+    expect(result).toEqual([
+      {
+        sourceType: 'symptom',
+        sourceId: 7,
+        injuryId: 1,
+        verified: true,
+      },
+    ]);
+  });
+
+  it('verifies a timeline_event citation', async () => {
+    findFirstMock.mockResolvedValue({
+      id: 3,
+      injuryId: 1,
+      description: 'Surgery scheduled',
+    });
+
+    const result = await verifyCitations([
+      {
+        sourceType: 'timeline_event',
+        sourceId: 3,
+        injuryId: 1,
+      },
+    ]);
+
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: {
+        id: 3,
+        injuryId: 1,
+      },
+    });
+
+    expect(result).toEqual([
+      {
+        sourceType: 'timeline_event',
+        sourceId: 3,
+        injuryId: 1,
+        verified: true,
+      },
+    ]);
+  });
+
+  it('verifies an injury citation where sourceId matches injuryId', async () => {
+    findFirstMock.mockResolvedValue({
+      id: 1,
+      name: 'Sprained ankle',
+    });
+
+    const result = await verifyCitations([
+      {
+        sourceType: 'injury',
+        sourceId: 1,
+        injuryId: 1,
+      },
+    ]);
+
+    expect(findFirstMock).toHaveBeenCalledWith({
+      where: {
+        id: 1,
+      },
+    });
+
+    expect(result).toEqual([
+      {
+        sourceType: 'injury',
+        sourceId: 1,
+        injuryId: 1,
+        verified: true,
+      },
+    ]);
+  });
+
+  it('rejects an injury citation where sourceId does not match injuryId', async () => {
+    const result = await verifyCitations([
+      {
+        sourceType: 'injury',
+        sourceId: 1,
+        injuryId: 2,
+      },
+    ]);
+
+    expect(findFirstMock).not.toHaveBeenCalled();
+
+    expect(result).toEqual([
+      {
+        sourceType: 'injury',
+        sourceId: 1,
+        injuryId: 2,
+        verified: false,
       },
     ]);
   });

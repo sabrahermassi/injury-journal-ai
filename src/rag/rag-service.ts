@@ -3,6 +3,7 @@ import { buildContext } from './context-builder.js';
 import { SYSTEM_PROMPT, buildUserPrompt } from './prompt-builder.js';
 import { generateAnswer } from '../llm/llm-client.js';
 import { buildCitations } from '../rag/citation-builder.js';
+import { verifyCitations } from '../rag/citation-verifier.js';
 import {
   checkSafety,
   checkContentSafety,
@@ -106,7 +107,16 @@ export async function answerQuestion(
     };
   }
 
-  const citations = buildCitations(chunks, injuryNames, requestId);
+  const builtCitations = buildCitations(chunks, injuryNames, requestId);
+  const verifiedCitations = await verifyCitations(builtCitations);
+  const verifiedSourceKeys = new Set(
+    verifiedCitations
+      .filter((citation) => citation.verified)
+      .map((citation) => `${citation.sourceType}:${citation.sourceId}`),
+  );
+  const citations = builtCitations.filter((citation) =>
+    verifiedSourceKeys.has(`${citation.sourceType}:${citation.sourceId}`),
+  );
 
   return {
     answer,
