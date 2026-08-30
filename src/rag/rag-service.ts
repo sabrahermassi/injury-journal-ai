@@ -51,8 +51,8 @@ export async function answerQuestion(
   if (chunks.length === 0) {
     return {
       answer:
-        'No journal entries closely matched this question. Try rephrasing it, ' +
-        'or asking about a specific date or injury.',
+        'The journal does not contain information that closely matches this question. ' +
+        'Try rephrasing it, or asking about a specific date or injury.',
       chunks: [],
       citations: [],
     };

@@ -122,8 +122,7 @@ export async function searchSimilarChunks(
   if (sourceType !== undefined) filters.push(Prisma.sql`"sourceType" = ${sourceType}`);
   if (userId !== undefined) filters.push(Prisma.sql`"userId" = ${userId}`);
 
-  const whereClause =
-    filters.length > 0 ? Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}` : Prisma.empty;
+  const whereClause = Prisma.sql`WHERE ${Prisma.join(filters, ' AND ')}`;
 
   return prisma.$queryRaw<SearchSimilarChunk[]>(
     Prisma.sql`

@@ -306,7 +306,7 @@ describe('rag service', () => {
 
     expect(result.chunks).toEqual([]);
     expect(result.citations).toEqual([]);
-    expect(result.answer).toMatch(/no journal entries/i);
+    expect(result.answer).toMatch(/does not contain/i);
 
     expect(buildContextMock).not.toHaveBeenCalled();
     expect(findManyMock).not.toHaveBeenCalled();
