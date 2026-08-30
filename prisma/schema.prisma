@@ -92,21 +92,24 @@ model User {
 }
 
 model DocumentChunk {
-  id          Int      @id @default(autoincrement())
-  injuryId    Int
-  userId      Int
-  sourceType  String
-  sourceId    Int
-  chunkIndex  Int
-  content     String
-  embedding   Unsupported("vector(1024)")?
-  metadata    Json?
-  createdAt   DateTime @default(now())
+  id                    Int      @id @default(autoincrement())
+  injuryId              Int
+  userId                Int
+  sourceType            String
+  sourceId              Int
+  chunkIndex            Int
+  content               String
+  embedding             Unsupported("vector(1024)")?
+  embeddingModel        String
+  embeddingModelVersion String
+  metadata              Json?
+  createdAt             DateTime @default(now())
 
   Injury Injury @relation(fields: [injuryId], references: [id])
 
   @@index([injuryId])
   @@index([userId])
   @@index([sourceType, sourceId])
+  @@index([embeddingModel, embeddingModelVersion])
   @@unique([sourceType, sourceId, chunkIndex])
 }

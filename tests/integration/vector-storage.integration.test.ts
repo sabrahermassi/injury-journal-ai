@@ -61,6 +61,8 @@ describe('vector storage integration', () => {
       0,
       'Very similar chunk',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -71,6 +73,8 @@ describe('vector storage integration', () => {
       1,
       'Somewhat similar chunk',
       vectorWith(0.7, 0.7, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -81,10 +85,14 @@ describe('vector storage integration', () => {
       2,
       'Unrelated chunk',
       vectorWith(0, 0, 1),
+      'test-model',
+      'v1',
     );
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
       undefined,
       3,
       'vector-storage-integration-test',
@@ -112,6 +120,8 @@ describe('vector storage integration', () => {
       0,
       'chunk 1',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -122,6 +132,8 @@ describe('vector storage integration', () => {
       1,
       'chunk 2',
       vectorWith(0.9, 0.1, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -132,10 +144,14 @@ describe('vector storage integration', () => {
       2,
       'chunk 3',
       vectorWith(0, 1, 0),
+      'test-model',
+      'v1',
     );
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
       undefined,
       2,
       'vector-storage-integration-test',
@@ -153,6 +169,8 @@ describe('vector storage integration', () => {
       0,
       'Injury 1 relevant chunk',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -163,10 +181,14 @@ describe('vector storage integration', () => {
       0,
       'Injury 2 relevant chunk',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
       injuryA.injuryId,
       5,
       'vector-storage-integration-test',
@@ -186,6 +208,8 @@ describe('vector storage integration', () => {
       0,
       'User 1 relevant chunk',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -196,10 +220,14 @@ describe('vector storage integration', () => {
       0,
       'User 2 relevant chunk',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
       undefined,
       5,
       'vector-storage-integration-test',
@@ -220,6 +248,8 @@ describe('vector storage integration', () => {
       0,
       'Own sourceType chunk',
       vectorWith(0, 1, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -230,10 +260,14 @@ describe('vector storage integration', () => {
       0,
       'Foreign sourceType chunk, closer vector',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
       undefined,
       5,
       'vector-storage-integration-test',
@@ -260,6 +294,8 @@ describe('vector storage integration', () => {
       0,
       'Close chunk',
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
     );
 
     await storeDocumentChunk(
@@ -270,10 +306,14 @@ describe('vector storage integration', () => {
       1,
       'Orthogonal chunk',
       vectorWith(0, 1, 0),
+      'test-model',
+      'v1',
     );
 
     const results = await searchSimilarChunks(
       vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
       undefined,
       5,
       'vector-storage-integration-test',
@@ -284,5 +324,46 @@ describe('vector storage integration', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].content).toBe('Close chunk');
+  });
+
+  it('excludes chunks embedded by a different model/version even when their vector is closest (#133)', async () => {
+    await storeDocumentChunk(
+      injuryA.injuryId,
+      injuryA.userId,
+      'vector-storage-integration-test',
+      9,
+      0,
+      'Current-model chunk, farther vector',
+      vectorWith(0.7, 0.7, 0),
+      'test-model',
+      'v1',
+    );
+
+    await storeDocumentChunk(
+      injuryA.injuryId,
+      injuryA.userId,
+      'vector-storage-integration-test',
+      9,
+      1,
+      'Old-model chunk, closest vector',
+      vectorWith(1, 0, 0),
+      'old-model',
+      'v0',
+    );
+
+    const results = await searchSimilarChunks(
+      vectorWith(1, 0, 0),
+      'test-model',
+      'v1',
+      undefined,
+      5,
+      'vector-storage-integration-test',
+      undefined,
+      undefined,
+      MAX_COSINE_DISTANCE,
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].content).toBe('Current-model chunk, farther vector');
   });
 });

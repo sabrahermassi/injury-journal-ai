@@ -39,6 +39,8 @@ const storeDocumentChunkMock =
       chunkIndex: number,
       content: string,
       embedding: number[],
+      embeddingModel: string,
+      embeddingModelVersion: string,
       metadata?: Record<string, unknown>,
     ) => Promise<void>
   >();
@@ -152,11 +154,11 @@ describe('embedAndStoreDocument', () => {
       0,
       'chunk one',
       [1, 1],
+      'test-model',
+      'v1',
       {
         ...document.metadata,
         embedding: {
-          model: 'test-model',
-          modelVersion: 'v1',
           vectorDimension: 2,
           embeddingVersion: 'test-version',
         },
@@ -171,11 +173,11 @@ describe('embedAndStoreDocument', () => {
       1,
       'chunk two',
       [2, 2],
+      'test-model',
+      'v1',
       {
         ...document.metadata,
         embedding: {
-          model: 'test-model',
-          modelVersion: 'v1',
           vectorDimension: 2,
           embeddingVersion: 'test-version',
         },

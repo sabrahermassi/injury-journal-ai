@@ -36,10 +36,12 @@ describe('routeInjuries', () => {
   it('searches only sourceType:injury chunks for this user', async () => {
     searchSimilarChunksMock.mockResolvedValue([injuryChunk(1, 0.1)]);
 
-    await routeInjuries([0.1, 0.2], 7, 'req-1');
+    await routeInjuries([0.1, 0.2], 'test-model', 'v1', 7, 'req-1');
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       undefined,
       50,
       'injury',
@@ -56,7 +58,7 @@ describe('routeInjuries', () => {
       injuryChunk(2, 0.69),
     ]);
 
-    const result = await routeInjuries([0.1, 0.2], 1);
+    const result = await routeInjuries([0.1, 0.2], 'test-model', 'v1', 1);
 
     expect(result).toEqual([3]);
   });
@@ -69,7 +71,7 @@ describe('routeInjuries', () => {
       injuryChunk(4, 0.9),
     ]);
 
-    const result = await routeInjuries([0.1, 0.2], 1);
+    const result = await routeInjuries([0.1, 0.2], 'test-model', 'v1', 1);
 
     expect(result).toEqual([1, 2, 3]);
   });
@@ -77,14 +79,21 @@ describe('routeInjuries', () => {
   it('returns an empty array when the user has no chunks at all', async () => {
     searchSimilarChunksMock.mockResolvedValue([]);
 
-    const result = await routeInjuries([0.1, 0.2], 1);
+    const result = await routeInjuries([0.1, 0.2], 'test-model', 'v1', 1);
 
     expect(result).toEqual([]);
   });
 
   it('falls back to searching any sourceType when the user has chunks but no injury-summary chunk', async () => {
     searchSimilarChunksMock.mockImplementation(
-      async (_embedding, _injuryId, _limit, sourceType: string | undefined) => {
+      async (
+        _embedding,
+        _embeddingModel,
+        _embeddingModelVersion,
+        _injuryId,
+        _limit,
+        sourceType: string | undefined,
+      ) => {
         if (sourceType === 'injury') {
           return [];
         }
@@ -96,12 +105,14 @@ describe('routeInjuries', () => {
       },
     );
 
-    const result = await routeInjuries([0.1, 0.2], 1);
+    const result = await routeInjuries([0.1, 0.2], 'test-model', 'v1', 1);
 
     expect(searchSimilarChunksMock).toHaveBeenCalledTimes(2);
     expect(searchSimilarChunksMock).toHaveBeenNthCalledWith(
       2,
       [0.1, 0.2],
+      'test-model',
+      'v1',
       undefined,
       50,
       undefined,
@@ -120,7 +131,7 @@ describe('routeInjuries', () => {
       injuryChunk(4, 0.95),
     ]);
 
-    const result = await routeInjuries([0.1, 0.2], 1);
+    const result = await routeInjuries([0.1, 0.2], 'test-model', 'v1', 1);
 
     // Beyond MAX_MATCHED_INJURIES (3) and not near-tied — the fallback
     // should still return all 4, not silently drop the 4th.

@@ -34,10 +34,12 @@ describe('DocumentChunk userId backfill migration', () => {
     try {
       const inserted = await prisma.$queryRaw<{ id: number }[]>`
         INSERT INTO "DocumentChunk" (
-          "injuryId", "sourceType", "sourceId", "chunkIndex", "content"
+          "injuryId", "sourceType", "sourceId", "chunkIndex", "content",
+          "embeddingModel", "embeddingModelVersion"
         )
         VALUES (
-          ${injuryId}, 'backfill-migration-test', 1, 0, 'pre-existing chunk'
+          ${injuryId}, 'backfill-migration-test', 1, 0, 'pre-existing chunk',
+          'test-model', 'v1'
         )
         RETURNING "id"
       `;

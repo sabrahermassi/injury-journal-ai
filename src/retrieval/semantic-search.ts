@@ -71,6 +71,8 @@ export async function semanticSearch(
   if (injuryId !== undefined) {
     const chunks = await searchSimilarChunks(
       result.embedding,
+      result.model,
+      result.modelVersion,
       injuryId,
       limit * OVERFETCH_FACTOR,
       undefined,
@@ -87,7 +89,13 @@ export async function semanticSearch(
   // (#209) — route to the injury/injuries the question is actually about
   // first, then reuse the same scoped search used by the explicit-injuryId
   // path above, which is already known to retrieve correctly.
-  const matchedInjuryIds = await routeInjuries(result.embedding, userId, requestId);
+  const matchedInjuryIds = await routeInjuries(
+    result.embedding,
+    result.model,
+    result.modelVersion,
+    userId,
+    requestId,
+  );
 
   if (matchedInjuryIds.length === 0) {
     return [];
@@ -113,6 +121,8 @@ export async function semanticSearch(
     matchedInjuryIds.map((matchedInjuryId) =>
       searchSimilarChunks(
         result.embedding,
+        result.model,
+        result.modelVersion,
         matchedInjuryId,
         perInjuryLimit * OVERFETCH_FACTOR,
         undefined,

@@ -58,10 +58,18 @@ describe('semanticSearch', () => {
       undefined,
     );
 
-    expect(routeInjuriesMock).toHaveBeenCalledWith(embedding, 1, undefined);
+    expect(routeInjuriesMock).toHaveBeenCalledWith(
+      embedding,
+      'test-model',
+      'v1',
+      1,
+      undefined,
+    );
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       embedding,
+      'test-model',
+      'v1',
       9,
       10,
       undefined,
@@ -84,7 +92,12 @@ describe('semanticSearch', () => {
 
     routeInjuriesMock.mockResolvedValue([1, 2]);
 
-    searchSimilarChunksMock.mockImplementation(async (_embedding, matchedInjuryId: number) => {
+    searchSimilarChunksMock.mockImplementation(async (
+      _embedding,
+      _embeddingModel,
+      _embeddingModelVersion,
+      matchedInjuryId: number,
+    ) => {
       if (matchedInjuryId === 1) {
         return [
           { id: 10, injuryId: 1, distance: 0.5 },
@@ -114,7 +127,12 @@ describe('semanticSearch', () => {
 
     routeInjuriesMock.mockResolvedValue([1, 2]);
 
-    searchSimilarChunksMock.mockImplementation(async (_embedding, matchedInjuryId: number) => {
+    searchSimilarChunksMock.mockImplementation(async (
+      _embedding,
+      _embeddingModel,
+      _embeddingModelVersion,
+      matchedInjuryId: number,
+    ) => {
       if (matchedInjuryId === 1) {
         return [
           { id: 10, injuryId: 1, sourceType: 'journal', sourceId: 7, chunkIndex: 2, distance: 0.1 },
@@ -156,6 +174,8 @@ describe('semanticSearch', () => {
     expect(searchSimilarChunksMock).toHaveBeenCalledTimes(3);
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       1,
       4,
       undefined,
@@ -165,6 +185,8 @@ describe('semanticSearch', () => {
     );
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       2,
       4,
       undefined,
@@ -174,6 +196,8 @@ describe('semanticSearch', () => {
     );
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       3,
       4,
       undefined,
@@ -215,6 +239,8 @@ describe('semanticSearch', () => {
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       42,
       10,
       undefined,

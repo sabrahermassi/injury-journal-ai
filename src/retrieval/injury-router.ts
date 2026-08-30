@@ -17,6 +17,8 @@ const INJURY_CANDIDATE_LIMIT = 50;
 // src/config/retrieval.ts for why.
 export async function routeInjuries(
   embedding: number[],
+  embeddingModel: string,
+  embeddingModelVersion: string,
   userId: number,
   requestId?: string,
 ): Promise<number[]> {
@@ -26,6 +28,8 @@ export async function routeInjuries(
   // otherwise drop, to decide whether the question matches any injury at all.
   const injuryChunks = await searchSimilarChunks(
     embedding,
+    embeddingModel,
+    embeddingModelVersion,
     undefined,
     INJURY_CANDIDATE_LIMIT,
     'injury',
@@ -45,6 +49,8 @@ export async function routeInjuries(
     // up empty.
     const anyChunks = await searchSimilarChunks(
       embedding,
+      embeddingModel,
+      embeddingModelVersion,
       undefined,
       INJURY_CANDIDATE_LIMIT,
       undefined,

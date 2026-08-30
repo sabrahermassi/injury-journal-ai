@@ -46,6 +46,8 @@ describe('RAG pipeline integration', () => {
       0,
       'Physiotherapy helped improve my hip pain.',
       vectorWith(1, 0, 0),
+      'test-model',
+      'test-version',
     );
 
     await storeDocumentChunk(
@@ -56,6 +58,8 @@ describe('RAG pipeline integration', () => {
       1,
       'I also received physiotherapy exercises.',
       vectorWith(0.9, 0.1, 0),
+      'test-model',
+      'test-version',
     );
   });
 
@@ -133,6 +137,8 @@ describe('RAG pipeline integration', () => {
         0,
         'Injury: RAG Pipeline Test. Body area: hip.',
         vectorWith(1, 0, 0),
+        'test-model',
+        'test-version',
       );
 
       // The unrelated injury's chunks sit far away in embedding space so
@@ -145,6 +151,8 @@ describe('RAG pipeline integration', () => {
         0,
         'Physical therapy for the shoulder.',
         vectorWith(0, 1, 0),
+        'test-model',
+        'test-version',
       );
 
       const result = await answerQuestion(
