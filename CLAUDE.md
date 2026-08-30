@@ -83,11 +83,21 @@ See `docs/04-implementation-roadmap.md` for known gaps.
 - Do not wire unused citation modules merely because they exist; verify their callers and coverage first.
 - Flag major architectural changes before introducing them unless the task explicitly requires them.
 
-## 9. Project Workflows
+## 9. Commit Messages
+
+Keep commit messages short: a single-line summary under 72 characters,
+imperative mood (e.g. "fix CORS validation" not "fixed" or "fixes").
+No bullet-point body unless the change is genuinely complex and needs
+explanation — most commits should be one line only.
+
+Do not add "Generated with Claude Code," "Co-Authored-By: Claude," or any
+AI-attribution footer to commit messages or PR descriptions.
+
+## 10. Project Workflows
 
 Detailed branching, implementation, review, and shipping procedures are defined in `.claude/skills/`. Follow the relevant Skill when invoked.
 
-## 10. Verification
+## 11. Verification
 
 Before considering code changes complete, run:
 
