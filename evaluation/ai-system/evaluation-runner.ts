@@ -9,6 +9,7 @@ import {
 import { evaluateRetrieval } from './retrieval-metrics.js';
 import { evaluateFaithfulness } from './faithfulness-judge.js';
 import { resolveExpectedSources } from './resolve-expected-sources.js';
+import { evaluateBlendedVerdict } from './blended-verdict-judge.js';
 import type { EvaluationResult } from './evaluation-types.js';
 
 const MAX_RATE_LIMIT_RETRIES = 5;
@@ -105,6 +106,11 @@ export async function runEvaluation() {
         retrievalPassed,
         noInformationPassed: evaluateNoInformation(item.expectedBehavior, output),
         faithfulnessPassed: await evaluateFaithfulness(
+          item.expectedBehavior,
+          output.answer,
+          output.metadata?.retrievedChunks ?? [],
+        ),
+        blendedVerdictPassed: await evaluateBlendedVerdict(
           item.expectedBehavior,
           output.answer,
           output.metadata?.retrievedChunks ?? [],

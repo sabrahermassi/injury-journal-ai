@@ -16,14 +16,6 @@ async function main() {
     } else {
       console.log(`PASS ${result.id}`);
     }
-
-    // No automated evaluator checks the "no single blended overall verdict"
-    // property yet (tracked in #134, alongside adding CI harness execution), so
-    // always print this case's answer for manual review, regardless of whether
-    // the existing pass/fail checks above happened to catch anything.
-    if (result.id === 'rag-overall-blended-verdict-001') {
-      console.log(`  [#210 check] answer: ${result.output.answer}`);
-    }
   }
 
   console.log('--- report ---');

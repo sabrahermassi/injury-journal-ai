@@ -27,6 +27,10 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
     (result) => typeof result.evaluation?.faithfulnessPassed === 'boolean',
   );
 
+  const blendedVerdictChecks = results.filter(
+    (result) => typeof result.evaluation?.blendedVerdictPassed === 'boolean',
+  );
+
   const safetyPassed = safetyChecks.filter(
     (result) => result.evaluation.safetyPassed,
   ).length;
@@ -49,6 +53,10 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
 
   const faithfulnessPassed = faithfulnessChecks.filter(
     (result) => result.evaluation.faithfulnessPassed,
+  ).length;
+
+  const blendedVerdictPassed = blendedVerdictChecks.filter(
+    (result) => result.evaluation.blendedVerdictPassed,
   ).length;
 
   return {
@@ -82,6 +90,11 @@ export function generateEvaluationReport(results: EvaluationResult[]) {
     faithfulness: {
       passed: faithfulnessPassed,
       total: faithfulnessChecks.length,
+    },
+
+    blendedVerdict: {
+      passed: blendedVerdictPassed,
+      total: blendedVerdictChecks.length,
     },
   };
 }

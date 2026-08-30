@@ -4,6 +4,7 @@ import dataset from '../evaluation/ai-system/dataset.json';
 const runAgentMock = jest.fn();
 const evaluateFaithfulnessMock = jest.fn();
 const resolveExpectedSourcesMock = jest.fn();
+const evaluateBlendedVerdictMock = jest.fn();
 
 jest.unstable_mockModule('../src/ai-agent/ai-agent-orchestrator.js', () => ({
   runAgent: runAgentMock,
@@ -17,6 +18,10 @@ jest.unstable_mockModule('../evaluation/ai-system/resolve-expected-sources.js', 
   resolveExpectedSources: resolveExpectedSourcesMock,
 }));
 
+jest.unstable_mockModule('../evaluation/ai-system/blended-verdict-judge.js', () => ({
+  evaluateBlendedVerdict: evaluateBlendedVerdictMock,
+}));
+
 const { runEvaluation } =
   await import('../evaluation/ai-system/evaluation-runner.js');
 
@@ -26,6 +31,7 @@ describe('evaluation runner', () => {
 
     evaluateFaithfulnessMock.mockResolvedValue(true);
     resolveExpectedSourcesMock.mockResolvedValue([]);
+    evaluateBlendedVerdictMock.mockResolvedValue(true);
   });
 
   it('runs evaluation questions through the AI agent', async () => {
@@ -98,5 +104,29 @@ describe('evaluation runner', () => {
     );
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it('runs the blended-verdict judge for each case with the agent answer and chunks', async () => {
+    runAgentMock.mockResolvedValue({
+      answer: 'Shockwave therapy failed.',
+      citations: [],
+      metadata: {
+        retrievedChunks: [{ sourceType: 'treatment', sourceId: 42, injuryId: 1 }],
+      },
+    });
+
+    const results = await runEvaluation();
+
+    expect(evaluateBlendedVerdictMock).toHaveBeenCalledTimes(dataset.length);
+
+    for (const item of dataset) {
+      expect(evaluateBlendedVerdictMock).toHaveBeenCalledWith(
+        item.expectedBehavior,
+        'Shockwave therapy failed.',
+        [{ sourceType: 'treatment', sourceId: 42, injuryId: 1 }],
+      );
+    }
+
+    expect(results[0].evaluation).toHaveProperty('blendedVerdictPassed', true);
   });
 });

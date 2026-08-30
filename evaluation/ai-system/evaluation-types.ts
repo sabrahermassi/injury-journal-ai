@@ -8,6 +8,7 @@ export type AgentOutput = {
     retrievedChunks?: Array<{
       sourceType: string;
       sourceId: number;
+      injuryId: number;
     }>;
   };
 };
@@ -25,5 +26,6 @@ export type EvaluationResult = {
     retrievalPassed: boolean | null;
     noInformationPassed: boolean | null;
     faithfulnessPassed: boolean | null;
+    blendedVerdictPassed: boolean | null;
   };
 };
