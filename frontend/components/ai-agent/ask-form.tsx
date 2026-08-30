@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { SubmitEventHandler } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,9 @@ export function AskForm() {
   const [injuriesLoading, setInjuriesLoading] = useState(false);
   const [injuriesError, setInjuriesError] = useState("");
   const [loadedForToken, setLoadedForToken] = useState("");
+  // Tracks which loadInjuries call is newest, so a response for a
+  // superseded token can't overwrite state after a later request started.
+  const requestRef = useRef(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AgentAnswer | null>(null);
@@ -91,6 +94,11 @@ export function AskForm() {
   // GET /injuries is authenticated, so the list can only be fetched once a
   // token exists. Triggered on blur rather than per keystroke.
   async function loadInjuries() {
+    // Bump before the early returns below too: a blur that gets skipped
+    // (already-loaded token) must still invalidate any older in-flight
+    // request, or that request's late response can overwrite the correct
+    // state the skip just left on screen.
+    const requestId = ++requestRef.current;
     const trimmedToken = token.trim();
 
     if (!trimmedToken) {
@@ -116,12 +124,16 @@ export function AskForm() {
       try {
         data = await response.json();
       } catch {
-        clearInjuries();
-        setInjuriesError(
-          `Could not load injuries: unexpected non-JSON response (HTTP ${response.status}).`,
-        );
+        if (requestId === requestRef.current) {
+          clearInjuries();
+          setInjuriesError(
+            `Could not load injuries: unexpected non-JSON response (HTTP ${response.status}).`,
+          );
+        }
         return;
       }
+
+      if (requestId !== requestRef.current) return;
 
       if (!response.ok) {
         const { error: message, code } = (data ?? {}) as {
@@ -148,9 +160,13 @@ export function AskForm() {
       // is no longer meaningful.
       setInjuryId(ALL_INJURIES);
     } catch {
+      if (requestId !== requestRef.current) return;
       clearInjuries();
       setInjuriesError("Could not load injuries — is the server reachable?");
     } finally {
+      // Unconditional: requestRef is bumped by every call, including ones
+      // that skip below without dispatching a fetch, so a stale request's
+      // own finally may be the only thing left to ever clear the spinner.
       setInjuriesLoading(false);
     }
   }
