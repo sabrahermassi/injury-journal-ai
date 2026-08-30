@@ -137,7 +137,7 @@ describe('embedAndStoreDocument', () => {
 
     await embedAndStoreDocument(document);
 
-    expect(chunkDocumentMock).toHaveBeenCalledWith(document);
+    expect(chunkDocumentMock).toHaveBeenCalledWith(document, undefined);
     expect(embedTextMock).toHaveBeenCalledTimes(2);
     expect(embedTextMock).toHaveBeenNthCalledWith(1, 'chunk one');
     expect(embedTextMock).toHaveBeenNthCalledWith(2, 'chunk two');

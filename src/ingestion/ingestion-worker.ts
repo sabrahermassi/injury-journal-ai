@@ -4,6 +4,7 @@ import { readJournalData } from './reader/postgres-reader.js';
 import { buildJournalDocuments } from './documents/document-builder.js';
 import { embedAndStoreDocument } from './embed-and-store.js';
 import { logError } from '../lib/log-error.js';
+import { CHUNK_MAX_TOKENS } from '../config/chunking.js';
 import type { JournalDocument } from './documents/document-types.js';
 
 export interface IngestionFailure {
@@ -40,7 +41,9 @@ export interface IngestionResult {
  * is already durably committed and stays that way regardless of what
  * happens to documents processed afterward.
  */
-export async function runIngestion(): Promise<IngestionResult> {
+export async function runIngestion(
+  maxTokens: number = CHUNK_MAX_TOKENS,
+): Promise<IngestionResult> {
   const injuries = await readJournalData();
 
   let documents: JournalDocument[];
@@ -63,7 +66,7 @@ export async function runIngestion(): Promise<IngestionResult> {
 
   for (const document of documents) {
     try {
-      await embedAndStoreDocument(document);
+      await embedAndStoreDocument(document, maxTokens);
       result.succeeded += 1;
     } catch (error) {
       logError(

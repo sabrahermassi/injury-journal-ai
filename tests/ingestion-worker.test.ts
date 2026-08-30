@@ -16,7 +16,7 @@ const buildJournalDocumentsMock =
   jest.fn<(injuries: InjuryWithRelations[]) => JournalDocument[]>();
 
 const embedAndStoreDocumentMock =
-  jest.fn<(document: JournalDocument) => Promise<void>>();
+  jest.fn<(document: JournalDocument, maxTokens?: number) => Promise<void>>();
 
 jest.unstable_mockModule('../src/ingestion/reader/postgres-reader.js', () => ({
   readJournalData: readJournalDataMock,
@@ -72,9 +72,9 @@ describe('runIngestion', () => {
     const result = await runIngestion();
 
     expect(embedAndStoreDocumentMock).toHaveBeenCalledTimes(3);
-    expect(embedAndStoreDocumentMock).toHaveBeenNthCalledWith(1, documents[0]);
-    expect(embedAndStoreDocumentMock).toHaveBeenNthCalledWith(2, documents[1]);
-    expect(embedAndStoreDocumentMock).toHaveBeenNthCalledWith(3, documents[2]);
+    expect(embedAndStoreDocumentMock).toHaveBeenNthCalledWith(1, documents[0], 300);
+    expect(embedAndStoreDocumentMock).toHaveBeenNthCalledWith(2, documents[1], 300);
+    expect(embedAndStoreDocumentMock).toHaveBeenNthCalledWith(3, documents[2], 300);
 
     expect(result).toEqual({ total: 3, succeeded: 3, failed: [] });
   });

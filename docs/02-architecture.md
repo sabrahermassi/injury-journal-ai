@@ -623,6 +623,14 @@ quoted), what else was considered, whether it still holds, and whether it should
   is no dedup/diversity step downstream, which is an accepted tradeoff for now given the small
   corpus size, not a bug.
 - **SHOULD THIS BE REVISITED:** No.
+- **`DEFAULT_MAX_TOKENS` (300) is now measured, not assumed (#137):** `evaluation/ai-system/chunk-size-sweep.ts`
+  (`npm run eval:chunk-size`) re-ingests the seeded dev dataset and re-runs the eval harness at
+  maxTokens = 150/300/450/600. Result: retrieval (20/21) and citations (21/21) were identical across
+  all four sizes — most journal records are short enough to fit in one chunk regardless of the
+  limit, so chunk size rarely changes what gets chunked/retrieved for this dataset. Faithfulness
+  (LLM-judged, so somewhat noisy) was 19/21, 21/21, 19/21, 20/21 respectively, with 300 scoring
+  best. No value beat 300 on any metric, so the default was left unchanged. Re-run the sweep if the
+  eval dataset grows to include longer records, or if this stops holding.
 
 ### D5 — Plain top-k cosine retrieval; no similarity threshold, hybrid search, or reranking
 
