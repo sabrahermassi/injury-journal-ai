@@ -111,6 +111,62 @@ describe('RAG pipeline integration', () => {
     expect(mockGenerateAnswer).toHaveBeenCalledTimes(1);
   });
 
+  it('routes an unscoped question to the matching injury and excludes unrelated injuries from citations (#209)', async () => {
+    const otherInjury = await prisma.injury.create({
+      data: {
+        name: 'Unrelated shoulder injury',
+        bodyArea: 'shoulder',
+        startDate: new Date(),
+        userId,
+      },
+    });
+
+    try {
+      // The injury's own summary chunk is what routing compares the
+      // question against — put it close to the question embedding so this
+      // injury is the one selected.
+      await storeDocumentChunk(
+        injuryId,
+        userId,
+        'injury',
+        injuryId,
+        0,
+        'Injury: RAG Pipeline Test. Body area: hip.',
+        vectorWith(1, 0, 0),
+      );
+
+      // The unrelated injury's chunks sit far away in embedding space so
+      // they lose the routing step entirely.
+      await storeDocumentChunk(
+        otherInjury.id,
+        userId,
+        'treatment',
+        1,
+        0,
+        'Physical therapy for the shoulder.',
+        vectorWith(0, 1, 0),
+      );
+
+      const result = await answerQuestion(
+        'What treatments did I have?',
+        undefined,
+        userId,
+        5,
+      );
+
+      expect(result.chunks.length).toBeGreaterThan(0);
+      expect(result.chunks.every((chunk) => chunk.injuryId === injuryId)).toBe(true);
+
+      expect(result.citations.length).toBeGreaterThan(0);
+      expect(result.citations.every((c) => c.sourceType !== 'treatment' || c.sourceId !== 1)).toBe(
+        true,
+      );
+    } finally {
+      await prisma.documentChunk.deleteMany({ where: { injuryId: otherInjury.id } });
+      await prisma.injury.delete({ where: { id: otherInjury.id } });
+    }
+  });
+
   it('blocks diagnosis requests before retrieval or LLM generation', async () => {
     const result = await answerQuestion('Do I have a fracture?', injuryId, userId);
 

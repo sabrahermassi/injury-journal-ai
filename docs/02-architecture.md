@@ -219,11 +219,17 @@ flowchart TD
 
 > **Current status:** "Question Embedding" now uses the query-specific `/embed-query` endpoint as
 > of PR #55 (issue #37) — see §4.2's design-gap note for the merge-status caveat. "Metadata
-> Filtering" is `injuryId` only in production; `searchSimilarChunks` also accepts an optional
-> `sourceType` parameter, but no production caller passes one. `userId` and date-range filters are
-> not implemented (deliberately deferred pending evaluation data, per issue #35). There is no
+> Filtering" is `injuryId` and `userId` in production — `userId` filtering was added for
+> authorization (issue #95, see D10) and is now always passed by `rag-service.ts` as the
+> authenticated caller's id, not an optional filter. `searchSimilarChunks` also accepts an optional
+> `sourceType` parameter; no production caller passed one until #209 (D11), where injury-routing
+> queries `sourceType: 'injury'` chunks specifically. Date-range filtering is still not implemented
+> (deliberately deferred pending evaluation data, per issue #35). There is no
 > similarity threshold — "Top-k Relevant Chunks" really means "Top-k *Nearest* Chunks," which may
 > not be relevant at all if the journal has little or no ingested content for the question asked.
+> As of #209 (see D11), when `injuryId` is omitted this diagram's "Metadata Filtering" step is
+> preceded by an injury-routing step (`injury-router.ts`) that picks the `injuryId`(s) to filter on
+> from the question itself, instead of searching unfiltered across all of a user's injuries.
 
 ### Sequence Diagram
 
@@ -238,14 +244,14 @@ sequenceDiagram
     participant A as Embedding API
     participant E as EmbeddingService
     participant V as Vector storage
-    R->>S: Query, injuryId, limit
+    R->>S: Query, injuryId, userId, limit
     S->>C: embedQuery(query)
     C->>A: POST /embed-query
     A->>E: embed_query(text)
     E-->>A: Normalized query vector
     A-->>C: Embedding response
     C-->>S: Validated embedding
-    S->>V: searchSimilarChunks(vector, injuryId, limit)
+    S->>V: searchSimilarChunks(vector, injuryId, limit, sourceType, userId)
     V-->>S: Similar chunks
     S-->>R: Search results
 ```
@@ -790,3 +796,64 @@ quoted), what else was considered, whether it still holds, and whether it should
 - **SHOULD THIS BE REVISITED:** Only if the "existing Injury Journal application" assumption turns
   out to be wrong (e.g. no such external app actually exists yet) — not expected based on the
   current product description.
+
+### D11 — Unscoped queries route to an injury first, then reuse scoped retrieval (#209)
+
+- **DECISION:** When a question arrives without an `injuryId` (no dropdown selection), retrieval no
+  longer pools every injury's chunks into one top-k. Instead, `semantic-search.ts` first calls
+  `injury-router.ts`'s `routeInjuries()`, which compares the question's embedding against each
+  injury's own single `sourceType: 'injury'` summary chunk (one per injury, from
+  `document-builder.ts`) rather than the full per-record pool. Three outcomes:
+  1. A question with no injury-summary match closer than `INJURY_MATCH_FALLBACK_DISTANCE` (i.e. it
+     isn't clearly about any one injury — a broad "How am I doing overall?" question, see #210) —
+     routes to **all** of the user's injuries rather than an arbitrary subset.
+  2. Otherwise, the best match plus any near-tied injuries within `INJURY_MATCH_AMBIGUITY_MARGIN`,
+     capped at `MAX_MATCHED_INJURIES` (see `src/config/retrieval.ts` for all three constants).
+  3. A single clear winner, no ties — the common case.
+
+  The existing `injuryId`-scoped `searchSimilarChunks` call — already known correct — then runs once
+  per matched injury, each capped at a fair `Math.ceil(limit / matchedInjuryIds.length)` share so no
+  single matched injury's per-record chunks can crowd another out of the final result, and results
+  are merged/truncated to `limit`.
+- **RATIONALE:** Unscoped top-k across all injuries returned citations (and occasionally answer
+  content, #208) from clearly-unrelated injuries. A raw similarity/distance threshold on individual
+  record chunks was tried first and rejected on evidence: calibrated against the seeded dev dataset
+  with real embeddings, same-injury vs. other-injury record-level chunks were heavily interleaved
+  (record text is template-y — "On [date], the user received [X]. Provider: [Y]." — so topic isn't
+  well separated at that granularity), so no cutoff reliably separated them. Injury-level summary
+  chunks separate cleanly by contrast (correct injury was always closest, ~0.07–0.22 cosine-distance
+  gap to the next injury in spot checks), because each `Injury.name`/`bodyArea`/`description` is
+  distinct where individual event records aren't.
+- **RELATION TO D5:** D5 rejects adding a similarity threshold, hybrid search, or reranking *to the
+  per-record retrieval comparison itself* — that rejection stands, and this decision doesn't
+  reintroduce any of the three: no distance cutoff is applied to individual chunks, there's no
+  keyword/BM25 component, and the final chunk list isn't rescored/reordered by anything but the
+  existing `embedding <=> query` distance. This decision instead automates *which injury/injuries to
+  scope to* — the same choice a user already makes via the dropdown — using the same plain top-k
+  mechanism D5 keeps, just against a smaller, cleaner candidate set (one summary chunk per injury).
+- **ALTERNATIVES CONSIDERED:** A raw distance/similarity threshold on retrieved chunks (rejected,
+  see above — empirically doesn't separate injuries on this corpus). Filtering citations post-hoc by
+  answer-text content overlap (would fix citation noise but not #208's answer-text misattribution,
+  and adds a second heuristic instead of fixing retrieval at its source).
+- **CURRENT STATUS:** Implemented for #209. Also reduces (but is not a verified fix for) #208's
+  cross-injury misattribution risk, since both bugs share the same unscoped-pooling root cause —
+  #208 should still be verified independently. `INJURY_MATCH_FALLBACK_DISTANCE` (default 0.62) was
+  measured directly against the seeded dev dataset's real two-injury user via the live embedding
+  service (not guessed): single-injury questions scored 0.32-0.56, broad/non-injury-specific
+  questions scored 0.67-0.82 — the default sits in that gap. Only one user/two injuries were
+  sampled, so this is real-but-thin, not evaluation-validated.
+- **KNOWN LIMITATION (mitigated):** an injury's visibility to unscoped questions would otherwise
+  depend entirely on its one `sourceType: 'injury'` summary chunk having been successfully ingested
+  — `ingestion-worker.ts` embeds/stores each document independently and a single document's failure
+  doesn't abort the run, so a transient failure on just that one document (while the injury's other
+  records succeed) would make the injury invisible to unscoped questions until the next successful
+  ingestion. `routeInjuries()` now falls back to searching the user's chunks of *any* `sourceType`
+  when zero injury-summary chunks exist for them at all, so this degrades to the old (pre-#209)
+  unscoped-pooling behavior only in that narrow case, rather than returning nothing. Caught by CI:
+  `tests/integration/data-isolation.integration.test.ts` seeds chunks directly without an
+  injury-summary chunk and exercises exactly this path.
+- **SHOULD THIS BE REVISITED:** If a user's injury count grows large enough that
+  `INJURY_CANDIDATE_LIMIT` (50, in `injury-router.ts`) stops being "effectively all of a user's
+  injuries," or if evaluation data (once it has broad/multi-injury unscoped cases — see
+  `evaluation/ai-system/dataset.json`'s `rag-unscoped-multi-injury-001`) shows any of the three
+  `src/config/retrieval.ts` constants need recalibrating.

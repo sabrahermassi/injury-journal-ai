@@ -69,6 +69,9 @@ Set the following environment variables (see `.env.example` for a starting point
 | `PORT` | No | Defaults to 3000 |
 | `CHUNK_MAX_TOKENS` | No | Overrides max tokens per document chunk for every `sourceType` during ingestion, bypassing `SOURCE_TYPE_CHUNK_CONFIG`'s per-`sourceType` defaults (`src/ingestion/chunking/document-chunker.ts`). Leave unset to let each `sourceType` use its own configured default (currently 300 for all of them — see `docs/02-architecture.md` D4). |
 | `ALLOWED_ORIGIN` | No | Comma-separated list of allowed CORS origins. Unset reflects the request's own origin (no restriction) — low value until a real frontend is deployed at a known origin, at which point set this to lock CORS down. |
+| `INJURY_MATCH_AMBIGUITY_MARGIN` | No | Defaults to 0.03. Cosine-distance margin used by `src/retrieval/injury-router.ts` to decide which injuries an unscoped question (no `injuryId`) routes to — see `docs/02-architecture.md` D11. |
+| `MAX_MATCHED_INJURIES` | No | Defaults to 3. Caps how many near-tied injuries an unscoped question can route to (`src/retrieval/injury-router.ts`, D11). |
+| `INJURY_MATCH_FALLBACK_DISTANCE` | No | Defaults to 0.62. If no injury's summary chunk beats this cosine distance for an unscoped question, it's treated as not being about any one injury and routes to all of them instead of an arbitrary subset (`src/retrieval/injury-router.ts`, D11). |
 
 ### Database
 
