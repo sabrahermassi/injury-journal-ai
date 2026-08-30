@@ -28,7 +28,11 @@ function splitIntoSentences(text: string): string[] {
 // countTokens, rather than slicing raw BPE token ids: cl100k_base tokens are
 // byte sequences, not character-aligned, so decoding an arbitrary token slice
 // can land mid-character and silently emit replacement characters.
-function splitOversizedWord(word: string, maxTokens: number): string[] {
+function splitOversizedWord(
+  word: string,
+  maxTokens: number,
+  overlapTokens = 0,
+): string[] {
   const chars = Array.from(word);
   const pieces: string[] = [];
   let start = 0;
@@ -64,8 +68,47 @@ function splitOversizedWord(word: string, maxTokens: number): string[] {
     }
 
     const pieceLength = Math.max(lo, 1);
-    pieces.push(chars.slice(start, start + pieceLength).join(''));
-    start += pieceLength;
+    const pieceEnd = start + pieceLength;
+    pieces.push(chars.slice(start, pieceEnd).join(''));
+
+    if (pieceEnd >= chars.length || overlapTokens <= 0) {
+      start = pieceEnd;
+      continue;
+    }
+
+    // Back the next piece's start up by a token-budgeted trailing slice of
+    // this piece, so consecutive pieces honor the same overlap contract as
+    // every other chunk boundary. Capped below pieceLength (not just by
+    // overlapTokens < maxTokens) to guarantee forward progress regardless of
+    // any tokenizer non-monotonicity.
+    let overlapFit = 0;
+    let overlapProbe = 1;
+
+    while (
+      overlapProbe < pieceLength &&
+      countTokens(chars.slice(pieceEnd - overlapProbe, pieceEnd).join('')) <=
+        overlapTokens
+    ) {
+      overlapFit = overlapProbe;
+      overlapProbe *= 2;
+    }
+
+    let overlapLo = overlapFit;
+    let overlapHi = Math.min(overlapProbe, pieceLength - 1);
+
+    while (overlapLo < overlapHi) {
+      const mid = overlapLo + Math.ceil((overlapHi - overlapLo) / 2);
+      if (
+        countTokens(chars.slice(pieceEnd - mid, pieceEnd).join('')) <=
+        overlapTokens
+      ) {
+        overlapLo = mid;
+      } else {
+        overlapHi = mid - 1;
+      }
+    }
+
+    start = pieceEnd - overlapLo;
   }
 
   return pieces;
@@ -226,6 +269,7 @@ export function chunkDocument(
           const pieces = splitOversizedWord(
             wordOverlapSeed ? `${wordOverlapSeed} ${word}` : word,
             maxTokens,
+            overlapTokens,
           );
           for (const piece of pieces.slice(0, -1)) {
             addChunk(chunks, document, piece);
