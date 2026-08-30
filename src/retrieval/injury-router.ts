@@ -30,7 +30,24 @@ export async function routeInjuries(
   );
 
   if (injuryChunks.length === 0) {
-    return [];
+    // This user has no sourceType:'injury' summary chunk to route on at
+    // all — e.g. an injury summary specifically failed to ingest while its
+    // other records succeeded (see the D11 known-limitation note), or a
+    // caller stored chunks directly without going through the full
+    // ingestion pipeline. Don't return nothing: fall back to searching
+    // across whatever injuries the user does have chunks for, so an
+    // unscoped question still finds real data instead of silently coming
+    // up empty.
+    const anyChunks = await searchSimilarChunks(
+      embedding,
+      undefined,
+      INJURY_CANDIDATE_LIMIT,
+      undefined,
+      userId,
+      requestId,
+    );
+
+    return [...new Set(anyChunks.map((chunk) => chunk.injuryId))];
   }
 
   const bestDistance = injuryChunks[0].distance;

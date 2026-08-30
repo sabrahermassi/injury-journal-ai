@@ -67,12 +67,41 @@ describe('routeInjuries', () => {
     expect(result).toEqual([1, 2, 3]);
   });
 
-  it('returns an empty array when the user has no injuries', async () => {
+  it('returns an empty array when the user has no chunks at all', async () => {
     searchSimilarChunksMock.mockResolvedValue([]);
 
     const result = await routeInjuries([0.1, 0.2], 1);
 
     expect(result).toEqual([]);
+  });
+
+  it('falls back to searching any sourceType when the user has chunks but no injury-summary chunk', async () => {
+    searchSimilarChunksMock.mockImplementation(
+      async (_embedding, _injuryId, _limit, sourceType: string | undefined) => {
+        if (sourceType === 'injury') {
+          return [];
+        }
+
+        return [
+          { id: 1, injuryId: 5, sourceType: 'treatment', sourceId: 1, distance: 0.2 },
+          { id: 2, injuryId: 5, sourceType: 'symptom', sourceId: 2, distance: 0.3 },
+        ];
+      },
+    );
+
+    const result = await routeInjuries([0.1, 0.2], 1);
+
+    expect(searchSimilarChunksMock).toHaveBeenCalledTimes(2);
+    expect(searchSimilarChunksMock).toHaveBeenNthCalledWith(
+      2,
+      [0.1, 0.2],
+      undefined,
+      50,
+      undefined,
+      1,
+      undefined,
+    );
+    expect(result).toEqual([5]);
   });
 
   it('falls back to every injury when nothing is a clear match (#210)', async () => {

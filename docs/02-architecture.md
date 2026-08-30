@@ -842,13 +842,16 @@ quoted), what else was considered, whether it still holds, and whether it should
   service (not guessed): single-injury questions scored 0.32-0.56, broad/non-injury-specific
   questions scored 0.67-0.82 — the default sits in that gap. Only one user/two injuries were
   sampled, so this is real-but-thin, not evaluation-validated.
-- **KNOWN LIMITATION:** an injury's visibility to unscoped questions now depends entirely on its one
-  `sourceType: 'injury'` summary chunk having been successfully ingested — `ingestion-worker.ts`
-  embeds/stores each document independently and a single document's failure doesn't abort the run,
-  so a transient failure on just that one document (while the injury's other records succeed) would
-  make the injury invisible to unscoped questions until the next successful ingestion, even though
-  its explicit-`injuryId` dropdown path is unaffected. Not mitigated here; worth a targeted
-  ingestion-health check if it turns out to happen in practice.
+- **KNOWN LIMITATION (mitigated):** an injury's visibility to unscoped questions would otherwise
+  depend entirely on its one `sourceType: 'injury'` summary chunk having been successfully ingested
+  — `ingestion-worker.ts` embeds/stores each document independently and a single document's failure
+  doesn't abort the run, so a transient failure on just that one document (while the injury's other
+  records succeed) would make the injury invisible to unscoped questions until the next successful
+  ingestion. `routeInjuries()` now falls back to searching the user's chunks of *any* `sourceType`
+  when zero injury-summary chunks exist for them at all, so this degrades to the old (pre-#209)
+  unscoped-pooling behavior only in that narrow case, rather than returning nothing. Caught by CI:
+  `tests/integration/data-isolation.integration.test.ts` seeds chunks directly without an
+  injury-summary chunk and exercises exactly this path.
 - **SHOULD THIS BE REVISITED:** If a user's injury count grows large enough that
   `INJURY_CANDIDATE_LIMIT` (50, in `injury-router.ts`) stops being "effectively all of a user's
   injuries," or if evaluation data (once it has broad/multi-injury unscoped cases — see
