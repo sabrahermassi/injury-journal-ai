@@ -245,5 +245,19 @@
         "sourceId": 2
       }
     ]
+  },
+  {
+    "id": "rag-unscoped-multi-injury-001",
+    "note": "Regression case for #209: userId 1 has two injuries (1: Lower back pain, 4: Right knee pain). No injuryId is given, so this exercises injury-routing (src/retrieval/injury-router.ts) rather than dropdown-scoped retrieval -- expectedSources must come only from injury 4's treatment, not injury 1's.",
+    "userId": 1,
+    "question": "What treatments have I tried for my knee?",
+    "expectedIntent": "rag",
+    "expectedBehavior": "answer_with_sources",
+    "expectedSources": [
+      {
+        "sourceType": "treatment",
+        "sourceId": 5
+      }
+    ]
   }
 ]
