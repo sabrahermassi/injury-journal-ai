@@ -53,6 +53,11 @@ describe('evaluation report', () => {
         passed: 0,
         total: 0,
       },
+
+      blendedVerdict: {
+        passed: 0,
+        total: 0,
+      },
     });
   });
 
@@ -107,6 +112,62 @@ describe('evaluation report', () => {
     const report = generateEvaluationReport(results);
 
     expect(report.faithfulness).toEqual({
+      passed: 1,
+      total: 1,
+    });
+  });
+
+  it('counts blended-verdict results when present', () => {
+    const results = [
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          blendedVerdictPassed: true,
+        },
+      },
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          blendedVerdictPassed: false,
+        },
+      },
+    ];
+
+    const report = generateEvaluationReport(results);
+
+    expect(report.blendedVerdict).toEqual({
+      passed: 1,
+      total: 2,
+    });
+  });
+
+  it('excludes unparseable (null) blended-verdict verdicts from the total', () => {
+    const results = [
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          blendedVerdictPassed: true,
+        },
+      },
+      {
+        evaluation: {
+          intentPassed: true,
+          safetyPassed: true,
+          citationsPassed: true,
+          blendedVerdictPassed: null,
+        },
+      },
+    ];
+
+    const report = generateEvaluationReport(results);
+
+    expect(report.blendedVerdict).toEqual({
       passed: 1,
       total: 1,
     });

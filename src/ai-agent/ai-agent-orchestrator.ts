@@ -125,6 +125,7 @@ export async function runAgent(
           retrievedChunks: result.chunks.map((chunk) => ({
             sourceType: chunk.sourceType,
             sourceId: chunk.sourceId,
+            injuryId: chunk.injuryId,
           })),
         },
       };

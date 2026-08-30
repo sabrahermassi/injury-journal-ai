@@ -103,6 +103,7 @@ describe('agent orchestrator', () => {
         {
           sourceType: 'treatment',
           sourceId: 42,
+          injuryId: 1,
         },
       ],
     });
@@ -137,6 +138,7 @@ describe('agent orchestrator', () => {
           {
             sourceType: 'treatment',
             sourceId: 42,
+            injuryId: 1,
           },
         ],
       },
