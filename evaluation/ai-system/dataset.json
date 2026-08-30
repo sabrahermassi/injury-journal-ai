@@ -233,6 +233,15 @@
     ]
   },
   {
+    "id": "rag-cross-injury-001",
+    "note": "Regression fixture for #208. Verified against a real run: top-5 retrieval for this unscoped question pulls the knee injury record and its symptom, but fills the rest of top-5 with Injury 1's unrelated chunks (timeline_event #2, treatment #1, treatment #2) rather than the knee's own treatment (#5, 'Foam rolling and rest') — a pre-existing top-k ranking limitation, same class as rag-treatment-multi-001, tracked by #122/#129, not the #208 bug itself. The #208 fix is what this case actually guards: even with Injury 1's 'Shockwave therapy'/'Physiotherapy' sitting in the retrieved context, the answer must NOT attribute either to the knee — it must say it has no grounded information, matching CLAUDE.md's 'prefer no-information over an unsupported plausible answer'. If a future retrieval/reranking improvement (#122/#129) surfaces treatment #5, expectedBehavior/expectedSources should be updated to 'answer_with_sources' at that point — that would be a strict improvement, not a regression.",
+    "userId": 1,
+    "question": "What treatments have I tried for my knee?",
+    "expectedIntent": "rag",
+    "expectedBehavior": "no_information_found",
+    "expectedSources": []
+  },
+  {
     "id": "citation-001",
     "userId": 1,
     "injuryId": 1,

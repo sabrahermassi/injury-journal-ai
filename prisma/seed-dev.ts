@@ -303,6 +303,62 @@ async function main() {
     },
   });
 
+  // -------------------------
+  // User 1 — second injury (#208 regression fixture)
+  // -------------------------
+  // Deliberately unrelated to "Lower back pain" above, so an unscoped RAG query for
+  // this same user can retrieve chunks from both injuries and the eval harness can
+  // exercise the cross-injury misattribution scenario from #208. Appended after all
+  // other users so it doesn't shift the autoincrement IDs dataset.json already hardcodes.
+  await prisma.injury.create({
+    data: {
+      userId: 1,
+      name: 'Right knee pain',
+      bodyArea: 'Knee',
+      side: 'Right',
+      startDate: new Date('2025-03-20'),
+      cause: 'Running',
+      description: 'Knee pain after increasing running distance',
+      status: 'Active',
+
+      Symptom: {
+        create: [
+          {
+            date: new Date('2025-03-21'),
+            painLevel: 4,
+            location: 'Right knee',
+            trigger: 'Running',
+            duration: 'One hour',
+            notes: 'Mild ache after running.',
+          },
+        ],
+      },
+
+      Treatment: {
+        create: [
+          {
+            name: 'Foam rolling and rest',
+            provider: 'Self-managed',
+            date: new Date('2025-04-05'),
+            cost: 0,
+            outcome: 'Symptoms improved',
+          },
+        ],
+      },
+
+      TimelineEvent: {
+        create: [
+          {
+            type: 'injury',
+            date: new Date('2025-03-20'),
+            description: 'Knee pain began after increasing running distance.',
+            result: null,
+          },
+        ],
+      },
+    },
+  });
+
   console.log('Development database seeded successfully.');
 }
 

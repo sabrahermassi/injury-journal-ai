@@ -1,6 +1,7 @@
 export type RetrievedChunk = {
   sourceType: string;
   sourceId: number;
+  injuryId: number;
   metadata?: unknown;
 };
 
@@ -8,6 +9,8 @@ export type Citation = {
   sourceType: string;
   sourceId: number;
   label: string;
+  injuryId: number;
+  injuryName?: string;
   date?: string;
 };
 
@@ -24,6 +27,7 @@ function formatSourceType(sourceType: string): string {
 
 export function buildCitations(
   chunks: RetrievedChunk[],
+  injuryNames: Map<number, string>,
   requestId?: string,
 ): Citation[] {
   void requestId; // unused for now — reserved for future log correlation (#32)
@@ -44,11 +48,15 @@ export function buildCitations(
         ? (chunk.metadata as Record<string, unknown>)
         : {};
 
+    const injuryName = injuryNames.get(chunk.injuryId);
+
     return [
       {
         sourceType: chunk.sourceType,
         sourceId: chunk.sourceId,
         label: `${formatSourceType(chunk.sourceType)} #${chunk.sourceId}`,
+        injuryId: chunk.injuryId,
+        ...(injuryName !== undefined ? { injuryName } : {}),
         ...(typeof metadata.date === 'string' ? { date: metadata.date } : {}),
       },
     ];

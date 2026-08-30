@@ -6,16 +6,19 @@ describe('citation tool', () => {
       {
         sourceType: 'treatment',
         sourceId: 42,
+        injuryId: 1,
       },
     ];
 
-    const result = citationTool(chunks);
+    const result = citationTool(chunks, new Map([[1, 'Lower back pain']]));
 
     expect(result).toEqual([
       {
         sourceType: 'treatment',
         sourceId: 42,
         label: 'Treatment #42',
+        injuryId: 1,
+        injuryName: 'Lower back pain',
       },
     ]);
   });

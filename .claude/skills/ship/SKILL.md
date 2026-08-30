@@ -63,21 +63,35 @@ If the change affects an architectural decision, also inspect the relevant archi
 
 ### Evaluation dependencies
 
-If the evaluation harness requires a local service:
+This subsection only applies when the change touches retrieval, RAG, embeddings, or safety
+guardrails (per CLAUDE.md §10) — i.e. when the evaluation harness actually needs to run. For any
+other change, skip this subsection entirely.
 
-1. Check whether the service is reachable.
-2. If it is not reachable, check `CLAUDE.md` for the documented start command.
-3. Ask:
+When it does apply, ALWAYS use `evaluation/ai-system/run-full-evaluation.sh` to run the harness —
+do not hand-roll the start/health-check/seed/ingest/run sequence again. It already:
 
-> The embedding service isn't running — want me to start it?
+- starts the local embedding service and confirms it is actually answering (POSTing to
+  `/embed-query`, not just checking the port is open — the process can be listening before it's
+  ready)
+- seeds the dev database and ingests
+- runs the full evaluation dataset once via `npm run eval:full`
+  (`evaluation/ai-system/run-evaluation-once.ts`) and prints per-case pass/fail plus the aggregate
+  report
+- shuts the embedding service back down when done, even on failure
 
-If approved:
+Before running it, check whether the embedding service is already reachable (it may already be
+running, started by me in my own terminal). If so, tell me and ask before starting a competing
+instance on the same port — never kill or replace a service you didn't start yourself without
+checking first.
 
-- start it using the documented command
-- poll until it is reachable
-- then run the evaluation harness
+If the LLM provider rate-limits mid-run, the harness already retries using the `retry-after`
+header. If a daily token quota is exhausted (not a per-minute limit), retrying will not help within
+the same day — report this plainly rather than continuing to retry, and treat prior same-session
+verification (a direct, successful call reproducing the change's behavior) as sufficient rather
+than blocking on a harness run that cannot complete today.
 
-Do not use an arbitrary fixed sleep.
+If `run-full-evaluation.sh` itself needs to change (new steps, a different health-check, etc.),
+edit that file rather than reimplementing its logic inline here or in an ad-hoc script.
 
 If an evaluation partially fails because of an unavailable credential or external service:
 
