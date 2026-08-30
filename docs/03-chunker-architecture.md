@@ -53,7 +53,9 @@ journal-style sample text (matching `SentenceTransformer.encode()`'s
 to ~16.7% more tokens than cl100k_base (worst-case ratio 1.167). The
 chunker applies a `QWEN_SAFETY_MARGIN` (0.82) to the effective split
 budget so a chunk measuring at `maxTokens` under cl100k_base still stays
-under `maxTokens` real Qwen3 tokens.
+under `maxTokens` real Qwen3 tokens. The break-even margin is
+`1/1.167 ≈ 0.857`; 0.82 adds ~5% headroom on top of that to tolerate
+sample-to-sample variance beyond the measured worst case.
 
 This margin is empirical, not a hard guarantee — it's derived from a single
 run over a limited sample and may not cover every input (e.g. unusual

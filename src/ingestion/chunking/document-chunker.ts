@@ -17,6 +17,10 @@ const DEFAULT_MAX_TOKENS = 300;
 // reduces the effective split budget so a chunk that measures at maxTokens
 // under cl100k_base still stays under maxTokens real Qwen3 tokens. See #136.
 //
+// The break-even margin is 1/1.167 ≈ 0.857; 0.82 adds ~5% headroom on top
+// of that to tolerate sample-to-sample variance beyond the measured worst
+// case.
+//
 // This margin is empirical, not a hard guarantee: it's derived from one
 // run over a limited sample and doesn't cover every possible input (e.g.
 // unusual scripts or dense numeric/code content could diverge further).
