@@ -13,6 +13,16 @@ describe('SYSTEM_PROMPT', () => {
   it('instructs the model to suggest a next step when no answer is found (#154)', () => {
     expect(SYSTEM_PROMPT).toMatch(/more detail|more specific/i);
   });
+
+  it('instructs the model not to merge or misattribute facts across different injuries (#208)', () => {
+    expect(SYSTEM_PROMPT).toMatch(/never attribute a fact/i);
+    expect(SYSTEM_PROMPT).toMatch(/never merge or\s+generalize facts/i);
+  });
+
+  it('instructs the model not to state a single overall verdict that does not hold for every injury (#210)', () => {
+    expect(SYSTEM_PROMPT).toMatch(/single overall\s+conclusion or verdict/i);
+    expect(SYSTEM_PROMPT).toMatch(/picture varies across injuries/i);
+  });
 });
 
 describe('buildUserPrompt', () => {
