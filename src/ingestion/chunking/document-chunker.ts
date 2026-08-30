@@ -164,6 +164,21 @@ function getOverlapTail(text: string, overlapTokens: number): string {
   return tail.join(' ');
 }
 
+// Joins `seed` and `content` with `joiner` and falls back to `content` alone
+// if the seeded candidate doesn't fit `effectiveMaxTokens`. `dropped` is true
+// only when a non-empty seed was discarded by that fallback — the boundary
+// this fires at is what #216 asks to make visible via droppedOverlapCount.
+function seedOrFallback(
+  seed: string,
+  content: string,
+  joiner: string,
+  effectiveMaxTokens: number,
+): { chunk: string; dropped: boolean } {
+  const seeded = seed ? `${seed}${joiner}${content}` : content;
+  const fits = countTokens(seeded) <= effectiveMaxTokens;
+  return { chunk: fits ? seeded : content, dropped: Boolean(seed) && !fits };
+}
+
 function addChunk(
   chunks: JournalDocument[],
   document: JournalDocument,
@@ -232,6 +247,12 @@ export function chunkDocument(
   const chunks: JournalDocument[] = [];
   let currentChunk = '';
 
+  // Counts boundaries where a non-empty overlap seed didn't fit alongside
+  // the next paragraph/sentence/word and was silently dropped in favor of
+  // the unseeded content. Logged once at the end so overlap-budget tuning
+  // (overlapTokens too close to effectiveMaxTokens) is debuggable. See #216.
+  let droppedOverlapCount = 0;
+
   for (const paragraph of paragraphs) {
     const paragraphCandidate = currentChunk
       ? `${currentChunk}\n\n${paragraph}`
@@ -253,16 +274,23 @@ export function chunkDocument(
 
     // The paragraph itself fits in one chunk.
     if (countTokens(paragraph) <= effectiveMaxTokens) {
-      const seeded = paragraphOverlapSeed
-        ? `${paragraphOverlapSeed}\n\n${paragraph}`
-        : paragraph;
-      currentChunk =
-        countTokens(seeded) <= effectiveMaxTokens ? seeded : paragraph;
+      const result = seedOrFallback(
+        paragraphOverlapSeed,
+        paragraph,
+        '\n\n',
+        effectiveMaxTokens,
+      );
+      if (result.dropped) {
+        droppedOverlapCount++;
+      }
+      currentChunk = result.chunk;
       continue;
     }
 
     // The paragraph is too large, so split it into sentences. Carry the
     // overlap seed forward as the starting point for the first sentence.
+    // (Not counted as a drop: the seed isn't discarded here, it's fit-checked
+    // against the first sentence inside the loop below.)
     currentChunk = paragraphOverlapSeed;
     const sentences = splitIntoSentences(paragraph);
 
@@ -286,16 +314,22 @@ export function chunkDocument(
 
       // Now we're starting with the sentence alone.
       if (countTokens(sentence) <= effectiveMaxTokens) {
-        const seeded = sentenceOverlapSeed
-          ? `${sentenceOverlapSeed} ${sentence}`
-          : sentence;
-        currentChunk =
-          countTokens(seeded) <= effectiveMaxTokens ? seeded : sentence;
+        const result = seedOrFallback(
+          sentenceOverlapSeed,
+          sentence,
+          ' ',
+          effectiveMaxTokens,
+        );
+        if (result.dropped) {
+          droppedOverlapCount++;
+        }
+        currentChunk = result.chunk;
         continue;
       }
 
       // The sentence itself is too large. Carry the overlap seed forward as
-      // the starting point for the first word.
+      // the starting point for the first word. (Not counted as a drop, same
+      // reasoning as the paragraph-level carry-forward above.)
       const words = sentence.split(/\s+/);
       let sentenceChunk = sentenceOverlapSeed;
 
@@ -328,11 +362,16 @@ export function chunkDocument(
             wordOverlapSeed = getOverlapTail(sentenceChunk, overlapTokens);
           }
 
-          const seeded = wordOverlapSeed
-            ? `${wordOverlapSeed} ${word}`
-            : word;
-          sentenceChunk =
-            countTokens(seeded) <= effectiveMaxTokens ? seeded : word;
+          const result = seedOrFallback(
+            wordOverlapSeed,
+            word,
+            ' ',
+            effectiveMaxTokens,
+          );
+          if (result.dropped) {
+            droppedOverlapCount++;
+          }
+          sentenceChunk = result.chunk;
         }
       }
 
@@ -345,6 +384,14 @@ export function chunkDocument(
   // Save the final chunk.
   if (currentChunk) {
     addChunk(chunks, document, currentChunk);
+  }
+
+  if (droppedOverlapCount > 0) {
+    const boundaryWord =
+      droppedOverlapCount === 1 ? 'boundary' : 'boundaries';
+    console.debug(
+      `chunkDocument: dropped overlap at ${droppedOverlapCount} ${boundaryWord} (seed didn't fit the ${effectiveMaxTokens}-token budget) for ${document.metadata.sourceType} #${document.metadata.sourceId}`,
+    );
   }
 
   return chunks;

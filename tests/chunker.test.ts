@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { getEncoding } from 'js-tiktoken';
 import {
   chunkDocument,
@@ -326,5 +327,35 @@ describe('Document Chunker', () => {
         0,
       );
     }
+  });
+
+  describe('overlap-drop logging (#216)', () => {
+    let debugSpy: jest.SpiedFunction<typeof console.debug>;
+
+    beforeEach(() => {
+      debugSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      debugSpy.mockRestore();
+    });
+
+    it('logs a debug summary when an overlap seed does not fit alongside the next content', () => {
+      // maxTokens: 27 -> effectiveMaxTokens ~22, with overlapTokens: 15 the
+      // seed alone can nearly fill that budget, leaving too little room for
+      // most of this document's ~17-24 token sentences: the seeded
+      // candidate overflows and falls back to unseeded content.
+      chunkDocument(largeDocument, 27, 15);
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.stringContaining('dropped overlap'),
+      );
+    });
+
+    it('does not log when overlapTokens is 0 (no seed to drop)', () => {
+      chunkDocument(largeDocument, 30, 0);
+
+      expect(debugSpy).not.toHaveBeenCalled();
+    });
   });
 });
