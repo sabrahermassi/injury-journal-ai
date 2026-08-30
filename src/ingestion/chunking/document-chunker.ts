@@ -371,9 +371,8 @@ function processSentences(
 // no field boundary exists (the common case for terse records with a
 // single label), defers straight to processSentences — identical to the
 // pre-field-splitting behavior. Mirrors the paragraph-level fit/seed
-// pattern in chunkDocument one level down. Only propagates droppedOverlap
-// from the sentence/word levels below — the field-alone fallback here has
-// the same silent-drop pattern but isn't counted yet; tracked in #221.
+// pattern in chunkDocument one level down, including its own field-alone
+// drop count alongside what's propagated up from the sentence/word levels.
 function processFields(
   chunks: JournalDocument[],
   document: JournalDocument,
@@ -413,13 +412,16 @@ function processFields(
     }
 
     if (countTokens(field) <= effectiveMaxTokens) {
-      // Not counted: see #221 — the field-alone drop case isn't wired into
-      // droppedOverlapCount yet.
-      const seeded = fieldOverlapSeed
-        ? `${fieldOverlapSeed} ${field}`
-        : field;
-      currentChunk =
-        countTokens(seeded) <= effectiveMaxTokens ? seeded : field;
+      const result = seedOrFallback(
+        fieldOverlapSeed,
+        field,
+        ' ',
+        effectiveMaxTokens,
+      );
+      if (result.dropped) {
+        droppedOverlap++;
+      }
+      currentChunk = result.chunk;
       continue;
     }
 
