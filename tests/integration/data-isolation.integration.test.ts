@@ -115,6 +115,7 @@ describe('data isolation regression tests', () => {
       {
         sourceType: 'data-isolation-integration-test',
         sourceId: 1,
+        injuryId: injuryAId,
       },
     ]);
   });

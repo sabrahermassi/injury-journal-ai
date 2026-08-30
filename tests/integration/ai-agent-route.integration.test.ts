@@ -106,6 +106,7 @@ describe('AI agent route integration', () => {
       {
         sourceType: 'treatment',
         sourceId: treatmentId,
+        injuryId,
       },
     ]);
 
