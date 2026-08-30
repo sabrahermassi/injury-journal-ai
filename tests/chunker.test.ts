@@ -2,6 +2,7 @@ import { getEncoding } from 'js-tiktoken';
 import {
   chunkDocument,
   chunkDocuments,
+  QWEN_SAFETY_MARGIN,
 } from '../src/ingestion/chunking/document-chunker';
 import type { JournalDocument } from '../src/ingestion/documents/document-types';
 
@@ -247,6 +248,21 @@ describe('Document Chunker', () => {
     }
   });
 
+  it('splits against a reduced budget to guard against tokenizer mismatch (#136)', () => {
+    // document-chunker.ts counts tokens with cl100k_base but embeddings use
+    // Qwen3-Embedding-0.6B's own tokenizer, which measured up to ~16.7% more
+    // tokens on the same text (QWEN_SAFETY_MARGIN = 0.82). Chunks should stay
+    // under the reduced effective budget, not just under maxTokens itself.
+    const maxTokens = 30;
+    const effectiveMaxTokens = Math.floor(maxTokens * QWEN_SAFETY_MARGIN);
+
+    const chunks = chunkDocument(largeDocument, maxTokens);
+
+    chunks.forEach((chunk) => {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(effectiveMaxTokens);
+    });
+  });
+
   it('rejects a maxTokens value below one', () => {
     expect(() => chunkDocument(smallDocument, 0)).toThrow();
     expect(() => chunkDocument(smallDocument, -1)).toThrow();
@@ -278,7 +294,10 @@ describe('Document Chunker', () => {
   }
 
   it('repeats trailing text from one chunk at the start of the next', () => {
-    const chunks = chunkDocument(largeDocument, 30, 10);
+    // maxTokens: 40 (not 30) leaves enough room under the QWEN_SAFETY_MARGIN-
+    // reduced effective budget (~32 tokens) for a 10-token overlap seed to
+    // fit alongside this document's ~17-24 token sentences.
+    const chunks = chunkDocument(largeDocument, 40, 10);
 
     expect(chunks.length).toBeGreaterThan(1);
 
@@ -290,10 +309,10 @@ describe('Document Chunker', () => {
   });
 
   it('stays within the token limit even with overlap seeded in', () => {
-    const chunks = chunkDocument(largeDocument, 30, 10);
+    const chunks = chunkDocument(largeDocument, 40, 10);
 
     chunks.forEach((chunk) => {
-      expect(countTokens(chunk.content)).toBeLessThanOrEqual(30);
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(40);
     });
   });
 
