@@ -4,9 +4,15 @@ const searchSimilarChunksMock = jest.fn();
 
 jest.unstable_mockModule('../src/embeddings/vector-storage.js', () => ({
   searchSimilarChunks: searchSimilarChunksMock,
+  MAX_COSINE_DISTANCE: 2,
 }));
 
 const { routeInjuries } = await import('../src/retrieval/injury-router.js');
+
+// injury-router.ts bypasses the default distance cutoff by passing pgvector's
+// max possible cosine distance explicitly — kept in sync with
+// MAX_COSINE_DISTANCE in src/embeddings/vector-storage.ts.
+const MAX_COSINE_DISTANCE = 2;
 
 function injuryChunk(injuryId: number, distance: number) {
   return {
@@ -39,6 +45,7 @@ describe('routeInjuries', () => {
       'injury',
       7,
       'req-1',
+      MAX_COSINE_DISTANCE,
     );
   });
 
@@ -100,6 +107,7 @@ describe('routeInjuries', () => {
       undefined,
       1,
       undefined,
+      MAX_COSINE_DISTANCE,
     );
     expect(result).toEqual([5]);
   });

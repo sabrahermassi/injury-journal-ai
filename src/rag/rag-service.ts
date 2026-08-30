@@ -48,6 +48,16 @@ export async function answerQuestion(
 
   const chunks = await semanticSearch(question, injuryId, userId, limit, requestId);
 
+  if (chunks.length === 0) {
+    return {
+      answer:
+        'No journal entries closely matched this question. Try rephrasing it, ' +
+        'or asking about a specific date or injury.',
+      chunks: [],
+      citations: [],
+    };
+  }
+
   const injuryNames = new Map<number, string>();
 
   if (injuryId !== undefined) {

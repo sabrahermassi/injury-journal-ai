@@ -224,9 +224,11 @@ flowchart TD
 > authenticated caller's id, not an optional filter. `searchSimilarChunks` also accepts an optional
 > `sourceType` parameter; no production caller passed one until #209 (D11), where injury-routing
 > queries `sourceType: 'injury'` chunks specifically. Date-range filtering is still not implemented
-> (deliberately deferred pending evaluation data, per issue #35). There is no
-> similarity threshold — "Top-k Relevant Chunks" really means "Top-k *Nearest* Chunks," which may
-> not be relevant at all if the journal has little or no ingested content for the question asked.
+> (deliberately deferred pending evaluation data, per issue #35). As of #122 (see D5), "Top-k
+> Relevant Chunks" is now filtered by a cosine-distance cutoff (`maxDistance` on
+> `searchSimilarChunks`, default `0.7`, not yet evaluation-tuned) before returning — a question with
+> no chunks close enough gets an explicit no-relevant-context answer from `rag-service.ts` instead
+> of an LLM-generated one over irrelevant context.
 > As of #209 (see D11), when `injuryId` is omitted this diagram's "Metadata Filtering" step is
 > preceded by an injury-routing step (`injury-router.ts`) that picks the `injuryId`(s) to filter on
 > from the question itself, instead of searching unfiltered across all of a user's injuries.
@@ -653,32 +655,44 @@ quoted), what else was considered, whether it still holds, and whether it should
     real ingestion (`npm run ingest`) still defers to `SOURCE_TYPE_CHUNK_CONFIG` normally; only the
     sweep (and anyone who sets `CHUNK_MAX_TOKENS`) forces a single value across every sourceType.
 
-### D5 — Plain top-k cosine retrieval; no similarity threshold, hybrid search, or reranking
+### D5 — Top-k cosine retrieval with a similarity threshold; still no hybrid search or reranking
 
-- **DECISION:** Retrieval is `ORDER BY embedding <=> query LIMIT k` with no minimum-similarity
-  cutoff, no keyword/BM25 hybrid component, and no reranking stage.
-- **RATIONALE:** `CLAUDE.md` explicitly lists "hybrid/threshold/rerank retrieval" under "Do NOT
-  introduce," citing evaluation as the reason ("deliberately rejected or deferred"). §5.1 of this
-  document notes the deferral is "pending evaluation data" (issue #35) — i.e., the position is
-  that tuning a threshold or adding rerank without evaluation data to justify it risks solving the
-  wrong problem or optimizing on vibes.
-- **ALTERNATIVES CONSIDERED:** A similarity threshold (return nothing below a cosine-distance
-  cutoff) — would directly help the "no relevant information" case, but requires a calibrated
-  cutoff value the project doesn't have strong evidence for yet (see
-  `evaluation/ai-system/dataset.json` for current case count and coverage). Hybrid (keyword +
-  vector) search or a cross-encoder rerank stage — both add real complexity and a second scoring
-  signal to tune, for a corpus size where it's not yet clear pure vector top-k is actually
-  underperforming.
-- **CURRENT STATUS:** Still valid as a deliberate deferral. Whether the evaluation dataset is now
-  large enough to inform this decision on evidence should be checked against its current size
-  (`evaluation/ai-system/dataset.json`) rather than a number restated here. Since chunk overlap was
-  added (D4, issue #135), `LIMIT k` can return two adjacent chunks that share most of their text —
-  there is no near-duplicate suppression here, so an overlap-heavy result can cost a query one of
-  its `k` slots on redundant content. Worth watching if evaluation surfaces this as a real quality
-  problem; not addressed by this decision today.
-- **SHOULD THIS BE REVISITED:** Maybe — not by implementing threshold/hybrid/rerank now, but by
-  confirming the evaluation dataset is large enough to make this decision on evidence rather than
-  leaving it open indefinitely.
+- **DECISION (updated, issue #122):** Retrieval is `ORDER BY embedding <=> query LIMIT k`, now with
+  a minimum-similarity (maximum cosine-distance) cutoff via `maxDistance` on `searchSimilarChunks`
+  (`src/embeddings/vector-storage.ts`), defaulting to `DEFAULT_DISTANCE_THRESHOLD = 0.7`. When
+  retrieval returns zero chunks — either because nothing exists or because everything found was
+  beyond the cutoff — `rag-service.ts` returns an explicit no-relevant-context answer instead of
+  calling the LLM. There is still no keyword/BM25 hybrid component and no reranking stage.
+- **ORIGINAL RATIONALE (superseded in part):** `CLAUDE.md` listed "hybrid/threshold/rerank
+  retrieval" under "Do NOT introduce," on the grounds that tuning a threshold without evaluation
+  data risks solving the wrong problem or optimizing on vibes. That reasoning is still sound for
+  hybrid search and reranking — both stay deferred. For the threshold specifically, issue #122
+  judged the risk of *no* cutoff (irrelevant chunks silently feeding the LLM, violating CLAUDE.md
+  priority #1) as worse than the risk of an initial, clearly-labeled-as-unproven default.
+- **WHY THE DEFAULT IS 0.7, NOT AN EVALUATION-DERIVED VALUE:** The evaluation dataset is still too
+  small/thin to calibrate a threshold the way D11's `INJURY_MATCH_FALLBACK_DISTANCE` was calibrated
+  (real measured distance clusters). `0.7` is a conservative starting point only — loose enough that
+  it shouldn't cut off distances in the 0.32–0.56 range that D11 measured for genuinely relevant
+  single-injury content. It is not evaluation-backed and should be revisited once the evaluation
+  dataset (`evaluation/ai-system/dataset.json`) is large enough to measure real relevant vs.
+  irrelevant distance clusters for record-level (not injury-summary) retrieval.
+- **INTERACTION WITH D11 (injury routing):** The default threshold applies only to record-level
+  content retrieval, not to `injury-router.ts`'s own `searchSimilarChunks` calls. Injury routing
+  passes `maxDistance: MAX_COSINE_DISTANCE` (2, i.e. no-op) explicitly, because it needs the full
+  distance spectrum for its own calibrated logic
+  (`INJURY_MATCH_FALLBACK_DISTANCE`/ambiguity margin — see D11) — the generic 0.7 cutoff would
+  otherwise silently drop candidates that logic depends on seeing (broad/multi-injury questions were
+  measured at 0.67–0.82 distance).
+- **ALTERNATIVES CONSIDERED:** Hybrid (keyword + vector) search or a cross-encoder rerank stage —
+  both still add real complexity and a second scoring signal to tune, for a corpus size where it's
+  not yet clear pure vector top-k is actually underperforming; both remain deferred.
+- **CURRENT STATUS:** Chunk overlap (D4, issue #135) can still return two adjacent chunks that share
+  most of their text — there is no near-duplicate suppression, so an overlap-heavy result can cost a
+  query one of its `k` slots on redundant content, independent of the threshold. Worth watching if
+  evaluation surfaces this as a real quality problem.
+- **SHOULD THIS BE REVISITED:** Yes — the `0.7` default specifically, once the evaluation dataset is
+  large enough to calibrate it on evidence rather than a conservative guess. Hybrid search and
+  reranking remain deferred as before.
 
 ### D6 — Hand-written deterministic intent router instead of an agent framework (LangGraph deferred)
 

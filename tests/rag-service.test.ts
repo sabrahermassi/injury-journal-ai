@@ -299,44 +299,20 @@ describe('rag service', () => {
     expect(buildCitationsMock).not.toHaveBeenCalled();
   });
 
-  it('still generates an answer when retrieval finds zero chunks', async () => {
+  it('returns an explicit no-relevant-context answer when retrieval finds zero chunks (#122)', async () => {
     semanticSearchMock.mockResolvedValue([]);
-
-    buildContextMock.mockReturnValue('');
-
-    buildUserPromptMock.mockReturnValue('prompt with empty context');
-
-    generateAnswerMock.mockResolvedValue(
-      'I do not have enough information to answer that.',
-    );
-
-    buildCitationsMock.mockReturnValue([]);
 
     const result = await answerQuestion('What treatments have I tried?', undefined, 1);
 
-    expect(buildContextMock).toHaveBeenCalledWith([], new Map(), undefined);
+    expect(result.chunks).toEqual([]);
+    expect(result.citations).toEqual([]);
+    expect(result.answer).toMatch(/no journal entries/i);
 
+    expect(buildContextMock).not.toHaveBeenCalled();
     expect(findManyMock).not.toHaveBeenCalled();
-
-    expect(buildUserPromptMock).toHaveBeenCalledWith(
-      'What treatments have I tried?',
-      '',
-      undefined,
-    );
-
-    expect(generateAnswerMock).toHaveBeenCalledWith(
-      'system prompt',
-      'prompt with empty context',
-      undefined,
-    );
-
-    expect(buildCitationsMock).toHaveBeenCalledWith([], new Map(), undefined);
-
-    expect(result).toEqual({
-      answer: 'I do not have enough information to answer that.',
-      citations: [],
-      chunks: [],
-    });
+    expect(buildUserPromptMock).not.toHaveBeenCalled();
+    expect(generateAnswerMock).not.toHaveBeenCalled();
+    expect(buildCitationsMock).not.toHaveBeenCalled();
   });
 
   it('propagates retrieval errors', async () => {

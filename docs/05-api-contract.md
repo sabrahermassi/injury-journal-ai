@@ -209,11 +209,16 @@ This is the most important section — these are gaps, not just documentation de
   together with its chunk-derived citations in a single JSON object. No frontend consumer exists
   yet to justify the added complexity of streaming. Revisit if/when a frontend is built and latency
   proves to be a real UX problem.
-- **An explicit groundedness/confidence signal.** CLAUDE.md's stated priority — prefer an
-  explicit lack-of-information response over an unsupported plausible answer — is enforced only
-  as a soft instruction inside the LLM prompt (`prompt-builder.ts`), not as a structural check or
-  a field the frontend could branch on (e.g., "zero chunks retrieved" or "low similarity" is not
-  surfaced anywhere in the response).
+- **An explicit groundedness/confidence signal (partially addressed, #122).** CLAUDE.md's stated
+  priority — prefer an explicit lack-of-information response over an unsupported plausible answer —
+  is now enforced structurally for the "nothing close enough was retrieved" case: `searchSimilarChunks`
+  applies a cosine-distance cutoff (`maxDistance`, default `0.7`, not yet evaluation-tuned — see D5
+  in `docs/02-architecture.md`), and `rag-service.ts` returns a fixed no-relevant-context answer with
+  `chunks: []`/`citations: []` when nothing passes it, without calling the LLM. This is still not
+  surfaced as a distinct field the frontend could branch on (e.g. no `metadata.groundedness` flag) —
+  a caller can only infer it from `retrievedChunks` being empty and matching the reserved wording,
+  not from a dedicated signal. The prompt-level soft instruction in `prompt-builder.ts` still remains
+  as a second layer for cases where chunks *are* retrieved but don't actually answer the question.
 
 ## 7. Change discipline
 

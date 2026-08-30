@@ -3,6 +3,7 @@ import {
   searchSimilarChunks,
   storeDocumentChunk,
   disconnectVectorStorage,
+  MAX_COSINE_DISTANCE,
 } from '../../src/embeddings/vector-storage.js';
 import {
   createTestInjury,
@@ -87,6 +88,9 @@ describe('vector storage integration', () => {
       undefined,
       3,
       'vector-storage-integration-test',
+      undefined,
+      undefined,
+      MAX_COSINE_DISTANCE,
     );
 
     expect(results).toHaveLength(3);
@@ -233,6 +237,9 @@ describe('vector storage integration', () => {
       undefined,
       5,
       'vector-storage-integration-test',
+      undefined,
+      undefined,
+      MAX_COSINE_DISTANCE,
     );
 
     expect(results).toHaveLength(1);
@@ -242,5 +249,40 @@ describe('vector storage integration', () => {
       DELETE FROM "DocumentChunk"
       WHERE "sourceType" = 'some-other-source-type'
     `;
+  });
+
+  it('drops chunks beyond maxDistance and keeps ones within it (#122)', async () => {
+    await storeDocumentChunk(
+      injuryA.injuryId,
+      injuryA.userId,
+      'vector-storage-integration-test',
+      8,
+      0,
+      'Close chunk',
+      vectorWith(1, 0, 0),
+    );
+
+    await storeDocumentChunk(
+      injuryA.injuryId,
+      injuryA.userId,
+      'vector-storage-integration-test',
+      8,
+      1,
+      'Orthogonal chunk',
+      vectorWith(0, 1, 0),
+    );
+
+    const results = await searchSimilarChunks(
+      vectorWith(1, 0, 0),
+      undefined,
+      5,
+      'vector-storage-integration-test',
+      undefined,
+      undefined,
+      0.5,
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].content).toBe('Close chunk');
   });
 });

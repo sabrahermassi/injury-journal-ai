@@ -89,8 +89,9 @@ exists — the documented invariant was never actually verified, and doesn't hol
 **What actually happens:** `semanticSearch()` (`retrieval/semantic-search.ts`) calls `embedQuery()`
 — the **query-side** embedding endpoint — on the user's question, then passes the resulting
 vector to `searchSimilarChunks()` (`vector-storage.ts`), which runs a plain
-`ORDER BY embedding <=> query LIMIT k` query, filtered by `injuryId` only when provided. No
-similarity threshold, no other metadata filter, no `userId` scoping (see §11 Decision D9).
+`ORDER BY embedding <=> query LIMIT k` query, filtered by `injuryId` only when provided, plus a
+cosine-distance cutoff (`maxDistance`, default `0.7` — see §11 Decision D5, updated for issue #122).
+No other metadata filter, no `userId` scoping (see §11 Decision D9).
 
 **What should happen:** the question should be embedded via the query-side prompt
 (`embed_query()` in the Python service), not the document-side one — Qwen3-Embedding-0.6B is
