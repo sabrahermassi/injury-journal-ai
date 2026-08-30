@@ -626,13 +626,19 @@ quoted), what else was considered, whether it still holds, and whether it should
 - **`DEFAULT_MAX_TOKENS` (300) is now measured, not assumed (#137):** `evaluation/ai-system/chunk-size-sweep.ts`
   (`npm run eval:chunk-size`) re-ingests the seeded dev dataset and re-runs the eval harness at
   maxTokens = 150/300/450/600 (effective split budgets ~123/246/369/492 after `QWEN_SAFETY_MARGIN`
-  above). Result, verified against the post-safety-margin chunker: retrieval (20/21) and citations
-  (21/21) were identical across all four sizes — most journal records are short enough to fit in
-  one chunk regardless of the limit, so chunk size rarely changes what gets chunked/retrieved for
-  this dataset. Faithfulness (LLM-judged, so somewhat noisy) was 19/21, 21/21, 19/21, 20/21
-  respectively, with 300 scoring best. No value beat 300 on any metric, so the default was left
-  unchanged. Re-run the sweep if the eval dataset grows to include longer records, if
-  `QWEN_SAFETY_MARGIN` changes, or if this stops holding.
+  above). Result, verified against the post-safety-margin chunker (but not yet re-verified against
+  chunk overlap, #214 — see below): retrieval (20/21) and citations (21/21) were identical across
+  all four sizes — most journal records are short enough to fit in one chunk regardless of the
+  limit, so chunk size rarely changes what gets chunked/retrieved for this dataset. Faithfulness
+  (LLM-judged, so somewhat noisy) was 19/21, 21/21, 19/21, 20/21 respectively, with 300 scoring
+  best. No value beat 300 on any metric, so the default was left unchanged. Re-run the sweep if the
+  eval dataset grows to include longer records, if `QWEN_SAFETY_MARGIN` changes, or if this stops
+  holding.
+  - **Pending:** #214 (chunk overlap, default-on) merged after this was last measured. The sweep
+    hasn't been re-run against it yet — the attempt hit Groq's daily token quota (200k TPD) rather
+    than a transient rate limit. Re-run `npm run eval:chunk-size` once quota resets and update this
+    note; overlap changes what content lands in each chunk, so it could plausibly shift retrieval
+    even though chunk size alone didn't.
 
 ### D5 — Plain top-k cosine retrieval; no similarity threshold, hybrid search, or reranking
 
