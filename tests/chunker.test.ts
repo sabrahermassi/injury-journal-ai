@@ -498,6 +498,29 @@ describe('Document Chunker', () => {
       expect(sawOverlap).toBe(true);
     });
 
+    it('logs a dropped-overlap boundary discovered while iterating multiple fields (#216)', () => {
+      // maxTokens: 21 -> effectiveMaxTokens 17. This document has 4 labeled
+      // fields, so processFields takes its multi-field loop (not the
+      // fields.length<=1 shortcut the other overlap-drop tests exercise) and
+      // the oversized "Notes:" field falls through to processSentences,
+      // where a word-level seed doesn't fit alongside the next word. This
+      // specifically covers processFields forwarding processSentences'
+      // droppedOverlap count across loop iterations.
+      const debugSpy = jest
+        .spyOn(console, 'debug')
+        .mockImplementation(() => {});
+
+      try {
+        chunkDocument(labeledFieldsDocument, 21, 16);
+
+        expect(debugSpy).toHaveBeenCalledWith(
+          expect.stringContaining('dropped overlap'),
+        );
+      } finally {
+        debugSpy.mockRestore();
+      }
+    });
+
     it('splits real document-builder.ts output on its own field labels', () => {
       // Runs actual buildJournalDocuments() output through the chunker,
       // rather than a hand-typed literal, so a label rename in
