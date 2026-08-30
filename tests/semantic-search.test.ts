@@ -127,7 +127,12 @@ describe('semanticSearch', () => {
 
     routeInjuriesMock.mockResolvedValue([1, 2]);
 
-    searchSimilarChunksMock.mockImplementation(async (_embedding, matchedInjuryId: number) => {
+    searchSimilarChunksMock.mockImplementation(async (
+      _embedding,
+      _embeddingModel,
+      _embeddingModelVersion,
+      matchedInjuryId: number,
+    ) => {
       if (matchedInjuryId === 1) {
         return [
           { id: 10, injuryId: 1, sourceType: 'journal', sourceId: 7, chunkIndex: 2, distance: 0.1 },
