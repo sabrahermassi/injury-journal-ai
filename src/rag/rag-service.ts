@@ -10,6 +10,10 @@ import {
 } from '../safety/safety-service.js';
 import { prisma } from '../lib/prisma.js';
 
+// `limit` is a target number of distinct sources, not a hard cap on chunks
+// used for grounding — see `semanticSearch`. More chunks than `limit` can be
+// retrieved (and end up in `context`/`citations`) when adjacent near-duplicate
+// chunks are found, since none of their content is ever dropped (#215).
 export async function answerQuestion(
   question: string,
   injuryId: number | undefined,
