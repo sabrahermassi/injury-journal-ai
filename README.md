@@ -56,7 +56,7 @@ npm install
 
 ### Configure environment
 
-Set the following environment variables (see `.env.example` for a starting point — note it does not currently list `EMBEDDING_API_URL`, `EMBEDDING_API_TIMEOUT_MS`, or `PORT`, since all three are optional with defaults):
+Set the following environment variables (see `.env.example` for a starting point — note it does not currently list `EMBEDDING_API_URL`, `EMBEDDING_API_TIMEOUT_MS`, `PORT`, or `CHUNK_MAX_TOKENS`, since all four are optional with defaults):
 
 | Variable | Required | Notes |
 |---|---|---|
@@ -67,6 +67,7 @@ Set the following environment variables (see `.env.example` for a starting point
 | `EMBEDDING_API_URL` | No | Defaults to `http://127.0.0.1:8000` |
 | `EMBEDDING_API_TIMEOUT_MS` | No | Defaults to 30000 |
 | `PORT` | No | Defaults to 3000 |
+| `CHUNK_MAX_TOKENS` | No | Overrides max tokens per document chunk for every `sourceType` during ingestion, bypassing `SOURCE_TYPE_CHUNK_CONFIG`'s per-`sourceType` defaults (`src/ingestion/chunking/document-chunker.ts`). Leave unset to let each `sourceType` use its own configured default (currently 300 for all of them — see `docs/02-architecture.md` D4). |
 | `ALLOWED_ORIGIN` | No | Comma-separated list of allowed CORS origins. Unset reflects the request's own origin (no restriction) — low value until a real frontend is deployed at a known origin, at which point set this to lock CORS down. |
 
 ### Database
@@ -225,3 +226,17 @@ npm run test:integration # runs just the integration suite explicitly/serially
 includes the PostgreSQL + pgvector integration suite — CI provisions a pgvector database
 specifically for this. `npm run test:integration` just runs that same subset explicitly/serially,
 useful for running it in isolation locally.
+
+### Chunk-size evaluation sweep
+
+```bash
+DATABASE_ENV=development npm run eval:chunk-size
+```
+
+Re-ingests the seeded dev dataset and re-runs the AI-system evaluation harness
+(`evaluation/ai-system/`) at several `CHUNK_MAX_TOKENS` candidates, printing a comparison table of
+retrieval/citation/faithfulness pass rates per size. Needs the same setup as `npm run ingest` (a
+seeded `injury-journal-ai-db`, the embedding service running, `GROQ_API_KEY` set) plus
+`DATABASE_ENV=development` as a guard against running it against the wrong database — it re-runs
+ingestion multiple times in a loop, so it's more destructive than a single `npm run ingest`. See
+`docs/02-architecture.md` D4 for the last recorded result.

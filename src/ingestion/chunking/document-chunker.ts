@@ -4,7 +4,7 @@ import type {
   JournalDocument,
 } from '../documents/document-types.js';
 
-const DEFAULT_MAX_TOKENS = 300;
+export const DEFAULT_MAX_TOKENS = 300;
 const DEFAULT_OVERLAP_TOKENS = 50;
 
 // Per-sourceType overrides for chunking budgets. Every entry currently

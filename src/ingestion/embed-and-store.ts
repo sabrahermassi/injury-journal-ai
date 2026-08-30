@@ -10,12 +10,13 @@ import { withIngestionLock } from './ingestion-lock.js';
 
 export async function embedAndStoreDocument(
   document: JournalDocument,
+  maxTokens?: number,
 ): Promise<void> {
   await withIngestionLock(
     document.metadata.sourceType,
     document.metadata.sourceId,
     async () => {
-      const chunks = chunkDocument(document);
+      const chunks = chunkDocument(document, maxTokens);
 
       for (const [chunkIndex, chunk] of chunks.entries()) {
         const embedding = await embedText(chunk.content);
