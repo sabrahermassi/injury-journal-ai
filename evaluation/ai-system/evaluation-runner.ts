@@ -5,7 +5,6 @@ import {
   evaluateCitations,
   evaluateNoInformation,
   evaluateIntent,
-  evaluateNoInformation,
 } from './evaluator-metrics.js';
 import { evaluateRetrieval } from './retrieval-metrics.js';
 import { evaluateFaithfulness } from './faithfulness-judge.js';
