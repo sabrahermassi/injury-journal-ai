@@ -47,7 +47,9 @@ def main() -> None:
 
     for text in load_sample_texts():
         cl100k_count = len(cl100k.encode(text))
-        qwen_count = len(qwen_tokenizer.encode(text, add_special_tokens=False))
+        # add_special_tokens=True to match SentenceTransformer.encode()'s
+        # production default (Qwen's tokenizer appends <|endoftext|>).
+        qwen_count = len(qwen_tokenizer.encode(text, add_special_tokens=True))
 
         if cl100k_count == 0:
             continue

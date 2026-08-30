@@ -48,11 +48,12 @@ tokenizer. No JS package ships Qwen3's exact tokenizer without adding a new
 runtime dependency, so cl100k_base is used as a stand-in.
 
 `src/embeddings/measure_tokenizer_divergence.py` measured the divergence on
-journal-style sample text: Qwen3 tokenizes the same text into up to ~12.5%
-more tokens than cl100k_base (worst-case ratio 1.125). The chunker applies a
-`QWEN_SAFETY_MARGIN` (0.85) to the effective split budget so a chunk
-measuring at `maxTokens` under cl100k_base still stays under `maxTokens`
-real Qwen3 tokens.
+journal-style sample text (matching `SentenceTransformer.encode()`'s
+`add_special_tokens=True` default): Qwen3 tokenizes the same text into up
+to ~16.7% more tokens than cl100k_base (worst-case ratio 1.167). The
+chunker applies a `QWEN_SAFETY_MARGIN` (0.82) to the effective split
+budget so a chunk measuring at `maxTokens` under cl100k_base still stays
+under `maxTokens` real Qwen3 tokens.
 
 This margin is empirical, not a hard guarantee — it's derived from a single
 run over a limited sample and may not cover every input (e.g. unusual

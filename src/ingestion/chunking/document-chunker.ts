@@ -10,11 +10,12 @@ const DEFAULT_MAX_TOKENS = 300;
 // used here as an approximation for counting/splitting purposes only.
 //
 // Measured via src/embeddings/measure_tokenizer_divergence.py against
-// journal-style sample text (see evaluation/embeddings/dataset.json):
-// Qwen3 tokenizes the same text into up to ~12.5% more tokens than
-// cl100k_base (worst-case ratio 1.125). QWEN_SAFETY_MARGIN reduces the
-// effective split budget so a chunk that measures at maxTokens under
-// cl100k_base still stays under maxTokens real Qwen3 tokens. See #136.
+// journal-style sample text (see evaluation/embeddings/dataset.json), with
+// add_special_tokens=True to match SentenceTransformer.encode()'s
+// production default: Qwen3 tokenizes the same text into up to ~16.7% more
+// tokens than cl100k_base (worst-case ratio 1.167). QWEN_SAFETY_MARGIN
+// reduces the effective split budget so a chunk that measures at maxTokens
+// under cl100k_base still stays under maxTokens real Qwen3 tokens. See #136.
 //
 // This margin is empirical, not a hard guarantee: it's derived from one
 // run over a limited sample and doesn't cover every possible input (e.g.
@@ -24,7 +25,7 @@ const DEFAULT_MAX_TOKENS = 300;
 // a rare miss here degrades to truncation, not a crash. Re-run the
 // measurement script and re-derive this constant if MODEL_NAME or its
 // pinned revision changes.
-export const QWEN_SAFETY_MARGIN = 0.85;
+export const QWEN_SAFETY_MARGIN = 0.82;
 
 const encoding = getEncoding('cl100k_base');
 

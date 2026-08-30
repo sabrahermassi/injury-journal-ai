@@ -193,8 +193,8 @@ describe('Document Chunker', () => {
 
   it('splits against a reduced budget to guard against tokenizer mismatch (#136)', () => {
     // document-chunker.ts counts tokens with cl100k_base but embeddings use
-    // Qwen3-Embedding-0.6B's own tokenizer, which measured up to ~12.5% more
-    // tokens on the same text (QWEN_SAFETY_MARGIN = 0.85). Chunks should stay
+    // Qwen3-Embedding-0.6B's own tokenizer, which measured up to ~16.7% more
+    // tokens on the same text (QWEN_SAFETY_MARGIN = 0.82). Chunks should stay
     // under the reduced effective budget, not just under maxTokens itself.
     const maxTokens = 30;
     const effectiveMaxTokens = Math.floor(maxTokens * QWEN_SAFETY_MARGIN);
