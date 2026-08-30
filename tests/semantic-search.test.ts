@@ -308,6 +308,34 @@ describe('semanticSearch', () => {
     ]);
   });
 
+  it('retains a late-ranked adjacent chunk even after the distinct-slot target is reached (#231 review)', async () => {
+    embedQueryMock.mockResolvedValue({
+      embedding: [0.1, 0.2],
+      model: 'test-model',
+      modelVersion: 'v1',
+      dimension: 2,
+      version: 'test-version',
+    });
+
+    searchSimilarChunksMock.mockResolvedValue([
+      { id: 1, sourceType: 'journal', sourceId: 7, chunkIndex: 2, distance: 0.1 },
+      { id: 2, sourceType: 'journal', sourceId: 9, chunkIndex: 0, distance: 0.15 },
+      { id: 3, sourceType: 'journal', sourceId: 7, chunkIndex: 3, distance: 0.2 },
+    ]);
+
+    const result = await semanticSearch('lower back pain', 42, 1, 2);
+
+    // limit=2 is reached by id 1 and id 2 (2 distinct sources). id 3 ranks
+    // last but is adjacent to id 1 (same source, chunkIndex within 1) — it
+    // must still be retained, not dropped just because the distinct target
+    // was already met by earlier, unrelated chunks.
+    expect(result).toEqual([
+      { id: 1, sourceType: 'journal', sourceId: 7, chunkIndex: 2, distance: 0.1 },
+      { id: 2, sourceType: 'journal', sourceId: 9, chunkIndex: 0, distance: 0.15 },
+      { id: 3, sourceType: 'journal', sourceId: 7, chunkIndex: 3, distance: 0.2 },
+    ]);
+  });
+
   it('keeps non-adjacent chunks from the same source', async () => {
     embedQueryMock.mockResolvedValue({
       embedding: [0.1, 0.2],

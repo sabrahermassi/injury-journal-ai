@@ -31,8 +31,6 @@ function capToDistinctLimit<T extends DedupableChunk>(chunks: T[], limit: number
   let distinctCount = 0;
 
   for (const chunk of sorted) {
-    if (distinctCount >= limit) break;
-
     const isAdjacentToKept = kept.some(
       (keptChunk) =>
         keptChunk.sourceType === chunk.sourceType &&
@@ -40,9 +38,15 @@ function capToDistinctLimit<T extends DedupableChunk>(chunks: T[], limit: number
         Math.abs(keptChunk.chunkIndex - chunk.chunkIndex) <= 1,
     );
 
-    kept.push(chunk);
-
-    if (!isAdjacentToKept) {
+    // Adjacency is checked before the limit gate: a later-ranked chunk that's
+    // adjacent to one already kept must never be dropped just because the
+    // distinct-slot target was already reached by earlier, unrelated chunks
+    // (#231 review) — only a genuinely new (non-adjacent) source is subject
+    // to the limit.
+    if (isAdjacentToKept) {
+      kept.push(chunk);
+    } else if (distinctCount < limit) {
+      kept.push(chunk);
       distinctCount += 1;
     }
   }
