@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: injury-journal-ai-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d injury-journal-ai-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  embeddings:
+    build:
+      context: .
+      dockerfile: src/embeddings/Dockerfile
+    # PyTorch/uvicorn can leave zombie child processes that PID 1 won't reap
+    # without an init process -- without this, `docker compose down`/restart
+    # can hang trying to stop the container.
+    init: true
+    ports:
+      - "8000:8000"
+    environment:
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:?Set EMBEDDING_API_KEY in .env before running docker compose up}
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+
+volumes:
+  postgres-data:
+  hf-cache:
