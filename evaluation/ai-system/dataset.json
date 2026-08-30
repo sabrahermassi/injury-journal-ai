@@ -268,5 +268,14 @@
         "sourceId": 5
       }
     ]
+  },
+  {
+    "id": "rag-overall-blended-verdict-001",
+    "note": "Regression case for #210: userId 1's two injuries have divergent outcomes (1: Lower back pain, treatments 'Limited improvement'/'No significant improvement'; 4: Right knee pain, treatment 'Symptoms improved'). A genuinely broad, unscoped question like this should not produce one blended 'overall' verdict that only holds for one injury (e.g. asserting general improvement based on the knee while ignoring the back's lack of progress). No automated evaluator currently checks this property (tracked in #134, alongside adding CI harness execution) -- expectedSources is left empty so retrieval scoring doesn't fail on an unrelated concern; this case is for manual inspection of output.answer against the #210 acceptance criteria.",
+    "userId": 1,
+    "question": "How am I doing overall?",
+    "expectedIntent": "rag",
+    "expectedBehavior": "answer_with_sources",
+    "expectedSources": []
   }
 ]

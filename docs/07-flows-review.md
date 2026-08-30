@@ -116,26 +116,37 @@ query/document embedding-mode gap above).
    with a refusal message, `chunks: []`, `citations: []` — **no retrieval or LLM call happens at
    all** for a blocked question.
 2. `semanticSearch(question, injuryId, limit)` — see Flow 3.
-3. `buildContext(chunks)` — joins raw chunk `content` with `Source N:` headers and `---`
-   separators. **No token-budget check** — if retrieval ever returns many/large chunks, nothing
-   caps the resulting prompt size before it's sent to the LLM.
-4. `checkContentSafety(context)` — regex-based pre-generation check over the assembled retrieval
+3. Injury-name resolution — if `injuryId` was given, the already-fetched ownership-check record
+   supplies its name; otherwise the distinct `injuryId`s across the retrieved `chunks` are looked
+   up (`prisma.injury.findMany`, scoped to `userId`) into an `injuryNames: Map<number, string>` (empty
+   when zero chunks were retrieved). This lookup is unconditional (#225) — unlike an injury-scoped
+   query, an unscoped query's chunk set isn't known to span one injury ahead of time.
+4. `buildContext(chunks, injuryNames)` — labels every source with the injury it belongs to, e.g.
+   `Source 1 (Injury: Lower back pain (#1)):`, then joins with `---` separators (#225 — the id is
+   always included since `Injury.name` has no uniqueness constraint). **No token-budget check** —
+   if retrieval ever returns many/large chunks, nothing caps the resulting prompt size before it's
+   sent to the LLM.
+5. `checkContentSafety(context)` — regex-based pre-generation check over the assembled retrieval
    context (not just the question), added to close a prompt-injection gap where journal-derived
    content had no safety inspection of its own (issue #66). If blocked, returns immediately with a
    refusal message, `chunks: []`, `citations: []` — no LLM call happens.
-5. `buildUserPrompt(question, context)` (`prompt-builder.ts`) — wraps `context` in `<journal_data>`
+6. `buildUserPrompt(question, context)` (`prompt-builder.ts`) — wraps `context` in `<journal_data>`
    delimiters (any literal `<journal_data>`/`</journal_data>` occurring inside `context` itself is
    neutralized first — including whitespace-tolerant variants like `< /journal_data>`, not just the
    exact tag spelling — so stored content can't forge a fake boundary) plus the question. The fixed
    grounding/safety instructions live separately in `SYSTEM_PROMPT`, which explicitly tells the
-   model to treat `<journal_data>` content as untrusted data, never as instructions.
-6. `generateAnswer(systemPrompt, userPrompt)` (`llm-client.ts`) — one Groq chat-completion call
+   model to treat `<journal_data>` content as untrusted data, never as instructions — and (#225,
+   #210) never to attribute or generalize a fact from one injury's labeled sources onto a different
+   injury, and never to state a single "overall" verdict across injuries unless it genuinely holds
+   for every one of them.
+7. `generateAnswer(systemPrompt, userPrompt)` (`llm-client.ts`) — one Groq chat-completion call
    sending `SYSTEM_PROMPT` as the `system` role message and the built user prompt as the `user`
    role message (previously a single combined `user` message); no streaming, no
    timeout configured explicitly (relies on the SDK's default), no retry.
-7. `buildCitations(chunks)` — dedupes by `sourceType:sourceId`, builds a label + optional date
-   from chunk metadata. **Does not consult the generated answer at all** — citations are a
-   provenance list of what was retrieved, not a check of what the LLM actually used or said.
+8. `buildCitations(chunks, injuryNames)` — dedupes by `sourceType:sourceId`, builds a label +
+   optional date from chunk metadata, plus `injuryId`/`injuryName` (#225) so callers can tell which
+   injury a cited source belongs to. **Does not consult the generated answer at all** — citations
+   are a provenance list of what was retrieved, not a check of what the LLM actually used or said.
 
 **What should happen (per docs intent):** `docs/02-architecture.md` §5.3 already documents this
 citation gap accurately (citations aren't fact-checked against the answer). No divergence beyond
