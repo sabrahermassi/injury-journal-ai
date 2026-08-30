@@ -5,6 +5,7 @@ const buildContextMock = jest.fn();
 const buildUserPromptMock = jest.fn();
 const generateAnswerMock = jest.fn();
 const buildCitationsMock = jest.fn();
+const verifyCitationsMock = jest.fn();
 const checkSafetyMock = jest.fn();
 const checkContentSafetyMock = jest.fn();
 const checkAnswerSafetyMock = jest.fn();
@@ -22,6 +23,10 @@ jest.unstable_mockModule('../src/lib/prisma.js', () => ({
 
 jest.unstable_mockModule('../src/rag/citation-builder.js', () => ({
   buildCitations: buildCitationsMock,
+}));
+
+jest.unstable_mockModule('../src/rag/citation-verifier.js', () => ({
+  verifyCitations: verifyCitationsMock,
 }));
 
 jest.unstable_mockModule('../src/retrieval/semantic-search.js', () => ({
@@ -66,6 +71,10 @@ describe('rag service', () => {
     });
 
     findManyMock.mockResolvedValue([]);
+
+    verifyCitationsMock.mockImplementation(async (citations) =>
+      citations.map((citation) => ({ ...citation, verified: true })),
+    );
   });
 
   it('retrieves context builds prompt generates answer and builds citations', async () => {
@@ -194,6 +203,54 @@ describe('rag service', () => {
       citations,
       chunks,
     });
+  });
+
+  it('drops citations that fail verification', async () => {
+    const chunks = [
+      {
+        id: 1,
+        injuryId: 1,
+        sourceType: 'treatment',
+        sourceId: 42,
+        content: 'Shockwave therapy did not help.',
+      },
+      {
+        id: 2,
+        injuryId: 1,
+        sourceType: 'treatment',
+        sourceId: 99,
+        content: 'Stale citation pointing at a deleted treatment.',
+      },
+    ];
+
+    const citations = [
+      {
+        sourceType: 'treatment',
+        sourceId: 42,
+        label: 'Treatment #42',
+        injuryId: 1,
+      },
+      {
+        sourceType: 'treatment',
+        sourceId: 99,
+        label: 'Treatment #99',
+        injuryId: 1,
+      },
+    ];
+
+    semanticSearchMock.mockResolvedValue(chunks);
+    generateAnswerMock.mockResolvedValue('The treatment failed.');
+    buildCitationsMock.mockReturnValue(citations);
+
+    verifyCitationsMock.mockResolvedValue([
+      { ...citations[0], verified: true },
+      { ...citations[1], verified: false },
+    ]);
+
+    const result = await answerQuestion('What treatments failed?', undefined, 1);
+
+    expect(verifyCitationsMock).toHaveBeenCalledWith(citations);
+    expect(result.citations).toEqual([citations[0]]);
   });
 
   it('blocks unsafe diagnosis requests', async () => {

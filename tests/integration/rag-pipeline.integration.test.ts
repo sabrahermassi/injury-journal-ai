@@ -31,6 +31,7 @@ function vectorWith(first: number, second = 0, third = 0): number[] {
 describe('RAG pipeline integration', () => {
   let injuryId: number;
   let userId: number;
+  let treatmentId: number;
 
   beforeAll(async () => {
     const testInjury = await createTestInjury('RAG Pipeline Test');
@@ -38,11 +39,21 @@ describe('RAG pipeline integration', () => {
     injuryId = testInjury.injuryId;
     userId = testInjury.userId;
 
+    const treatment = await prisma.treatment.create({
+      data: {
+        name: 'Physiotherapy',
+        date: new Date(),
+        injuryId,
+      },
+    });
+
+    treatmentId = treatment.id;
+
     await storeDocumentChunk(
       injuryId,
       userId,
-      'rag-pipeline-integration-test',
-      1,
+      'treatment',
+      treatmentId,
       0,
       'Physiotherapy helped improve my hip pain.',
       vectorWith(1, 0, 0),
@@ -53,8 +64,8 @@ describe('RAG pipeline integration', () => {
     await storeDocumentChunk(
       injuryId,
       userId,
-      'rag-pipeline-integration-test',
-      1,
+      'treatment',
+      treatmentId,
       1,
       'I also received physiotherapy exercises.',
       vectorWith(0.9, 0.1, 0),
@@ -64,6 +75,7 @@ describe('RAG pipeline integration', () => {
   });
 
   afterAll(async () => {
+    await prisma.treatment.delete({ where: { id: treatmentId } });
     await deleteTestInjury(injuryId, userId);
     await prisma.$disconnect();
   });
@@ -95,16 +107,16 @@ describe('RAG pipeline integration', () => {
     expect(result.chunks.length).toBeGreaterThan(0);
 
     expect(result.chunks[0]).toMatchObject({
-      sourceType: 'rag-pipeline-integration-test',
-      sourceId: 1,
+      sourceType: 'treatment',
+      sourceId: treatmentId,
     });
 
     expect(result.citations).toHaveLength(1);
 
     expect(result.citations[0]).toMatchObject({
-      sourceType: 'rag-pipeline-integration-test',
-      sourceId: 1,
-      label: 'Rag-pipeline-integration-test #1',
+      sourceType: 'treatment',
+      sourceId: treatmentId,
+      label: `Treatment #${treatmentId}`,
     });
 
     expect(mockEmbedQuery).toHaveBeenCalledWith(
@@ -166,9 +178,7 @@ describe('RAG pipeline integration', () => {
       expect(result.chunks.every((chunk) => chunk.injuryId === injuryId)).toBe(true);
 
       expect(result.citations.length).toBeGreaterThan(0);
-      expect(result.citations.every((c) => c.sourceType !== 'treatment' || c.sourceId !== 1)).toBe(
-        true,
-      );
+      expect(result.citations.every((c) => c.injuryId !== otherInjury.id)).toBe(true);
     } finally {
       await prisma.documentChunk.deleteMany({ where: { injuryId: otherInjury.id } });
       await prisma.injury.delete({ where: { id: otherInjury.id } });

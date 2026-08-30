@@ -143,7 +143,10 @@ The four fields are exactly what a picker needs; this is deliberately not a gene
   injuryName?: string, date?: string }`. `injuryName` is present only when the id resolves in the
   request's injury-name lookup (issue #208); it is always populated for the `injuryId`-scoped path
   and for an unscoped `rag` query as long as the injury still exists. Built by `citation-builder.ts`,
-  the only citation module actually wired into a response path.
+  then filtered by `citation-verifier.ts` (issue #124): a citation is only returned to the caller if
+  its `sourceId`/`injuryId` still resolve to a real row of the matching type (`treatment`,
+  `medical_visit`, `symptom`, `timeline_event`, or `injury`) — guarding against a chunk's metadata
+  drifting from the underlying Prisma row, since the vector store keeps no FK to it.
 - **Journal answer** (journal path only) — an LLM-generated prose summary of the `Injury` record
   and its nested `Treatment[]`, `Symptom[]`, `TimelineEvent[]`, `MedicalVisit[]`, built via
   `formatInjuryRecord()` → `checkContentSafety()` → `buildUserPrompt()` → `generateAnswer()`, not
@@ -164,10 +167,10 @@ The four fields are exactly what a picker needs; this is deliberately not a gene
   `src/ai-assistant/ai-assistant-api.ts` (a thin, otherwise-unused wrapper around `runAgent`). It is
   not reachable from any route. (`src/ai-agent/ai-agent-service.ts`, a dead duplicate of
   `ai-agent-orchestrator.ts`, was removed — issue #46.)
-- **Citation enrichment is unwired and incomplete even if wired.** `citation-verifier.ts` and
-  `citation-formatter.ts` are not called from any response path. `citation-source-mapper.ts` is
-  also unwired, and even if it were, it only maps 2 of the 5 valid `sourceType` values
-  (`treatment`, `medical_visit` — missing `symptom`, `timeline_event`, `injury`).
+- **`citation-formatter.ts` is unwired.** It reshapes a `Citation[]` into a display-friendly
+  `{ title, type, date? }`, but nothing calls it — see issue #237. `citation-source-mapper.ts`, a
+  second overlapping module with no ownership check, was retired as part of #124 rather than
+  extended, since `citation-verifier.ts` now covers the same ground more safely.
 - **500 responses distinguish the failing dependency where the thrown error type allows it (issue
   #172)**, but not further than that: `embedding_service_error` covers every embedding-client
   failure (missing key, network failure, non-OK response, invalid shape) without distinguishing

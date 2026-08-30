@@ -35,6 +35,7 @@ describe('AI agent route integration', () => {
   let injuryId: number;
   let userId: number;
   let authHeader: string;
+  let treatmentId: number;
 
   beforeAll(async () => {
     const testInjury = await createTestInjury('AI Agent Route Test');
@@ -43,11 +44,21 @@ describe('AI agent route integration', () => {
     userId = testInjury.userId;
     authHeader = `Bearer ${signTestToken(userId)}`;
 
+    const treatment = await prisma.treatment.create({
+      data: {
+        name: 'Physiotherapy',
+        date: new Date(),
+        injuryId,
+      },
+    });
+
+    treatmentId = treatment.id;
+
     await storeDocumentChunk(
       injuryId,
       userId,
-      'ai-agent-integration-test',
-      1,
+      'treatment',
+      treatmentId,
       0,
       'Physiotherapy helped improve my hip pain.',
       vectorWith(1, 0, 0),
@@ -57,6 +68,7 @@ describe('AI agent route integration', () => {
   });
 
   afterAll(async () => {
+    await prisma.treatment.delete({ where: { id: treatmentId } });
     await deleteTestInjury(injuryId, userId);
     await prisma.$disconnect();
   });
@@ -92,8 +104,8 @@ describe('AI agent route integration', () => {
 
     expect(response.body.metadata.retrievedChunks).toEqual([
       {
-        sourceType: 'ai-agent-integration-test',
-        sourceId: 1,
+        sourceType: 'treatment',
+        sourceId: treatmentId,
       },
     ]);
 
