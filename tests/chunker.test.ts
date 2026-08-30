@@ -521,6 +521,42 @@ describe('Document Chunker', () => {
       }
     });
 
+    it('logs a dropped-overlap boundary at a field-alone fallback (#221)', () => {
+      // maxTokens: 21 -> effectiveMaxTokens 17. Two labeled fields, each of
+      // which fits effectiveMaxTokens alone (12 and 10 tokens) but not
+      // together (21 tokens combined), forcing a chunk save between them.
+      // With overlapTokens: 10 the carried-forward seed (10 tokens) plus
+      // the second field (10 tokens) exceeds 17, so the drop happens in
+      // processFields' own field-alone fallback — unlike the #216 test
+      // above, this field never falls through to processSentences.
+      const twoFieldDocument: JournalDocument = {
+        content:
+          'Doctor: Dr. Alvarez ran a full physical exam today. ' +
+          'Clinic: Downtown Physical Therapy building on Main.',
+        metadata: {
+          userId: 1,
+          injuryId: 1,
+          sourceType: 'medical_visit',
+          sourceId: 6,
+          date: new Date('2025-01-15'),
+        },
+      };
+
+      const debugSpy = jest
+        .spyOn(console, 'debug')
+        .mockImplementation(() => {});
+
+      try {
+        chunkDocument(twoFieldDocument, 21, 10);
+
+        expect(debugSpy).toHaveBeenCalledWith(
+          expect.stringContaining('dropped overlap'),
+        );
+      } finally {
+        debugSpy.mockRestore();
+      }
+    });
+
     it('splits real document-builder.ts output on its own field labels', () => {
       // Runs actual buildJournalDocuments() output through the chunker,
       // rather than a hand-typed literal, so a label rename in
