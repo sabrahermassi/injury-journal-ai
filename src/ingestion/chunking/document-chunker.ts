@@ -132,6 +132,10 @@ export function chunkDocument(
     );
   }
 
+  if (!document.content.trim()) {
+    return [];
+  }
+
   // Keep small journal records intact.
   if (countTokens(document.content) <= maxTokens) {
     return [document];

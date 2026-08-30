@@ -55,7 +55,7 @@ describe('POST /ai-agent rate limiting', () => {
     // First loadApp() in this file pays the ESM module-graph cold start
     // (jest.resetModules() + dynamic import of src/app.ts and Prisma), which
     // can exceed Jest's 5s default when the full suite runs in parallel.
-  }, 20_000);
+  }, 30_000);
 
   it('allows a user up to their configured limit, then returns 429 with a JSON error body', async () => {
     const { app, prisma } = await loadApp();
@@ -173,6 +173,92 @@ describe('POST /ai-agent rate limiting', () => {
       await prisma.$disconnect();
     }
   });
+});
+
+describe('GET /injuries rate limiting', () => {
+  it('allows a user up to their configured limit, then returns 429 with a JSON error body', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      // Vary X-Forwarded-For per request so the shared, lower-limit (40/min)
+      // ipLimiter never trips first -- this test targets injuriesUserLimiter
+      // (60/min, keyed by userId) specifically.
+      for (let i = 0; i < 60; i++) {
+        const response = await request(app)
+          .get('/injuries')
+          .set('X-Forwarded-For', `10.0.0.${i}`)
+          .set('Authorization', authHeader);
+
+        expect(response.status).toBe(200);
+      }
+
+      const limitedResponse = await request(app)
+        .get('/injuries')
+        .set('X-Forwarded-For', '10.0.0.60')
+        .set('Authorization', authHeader);
+
+      expect(limitedResponse.status).toBe(429);
+      expect(limitedResponse.headers['content-type']).toMatch(
+        /application\/json/,
+      );
+      expect(limitedResponse.body).toEqual({
+        error: 'Too many requests, please try again later.',
+        code: 'rate_limited',
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  }, 20_000);
+
+  it('does not let exhausting /ai-agent rate-limit /injuries for the same user', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      for (let i = 0; i < 20; i++) {
+        const response = await request(app)
+          .post('/ai-agent')
+          .set('Authorization', authHeader)
+          .send({ question: SAFETY_BLOCKED_QUESTION });
+
+        expect(response.status).toBe(200);
+      }
+
+      const injuriesResponse = await request(app)
+        .get('/injuries')
+        .set('Authorization', authHeader);
+
+      expect(injuriesResponse.status).toBe(200);
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  it('does not let exhausting /injuries rate-limit /ai-agent for the same user', async () => {
+    const { app, prisma } = await loadApp();
+
+    try {
+      // Vary X-Forwarded-For per request so the shared ipLimiter (40/min)
+      // doesn't trip before injuriesUserLimiter's 60/min budget is exhausted.
+      for (let i = 0; i < 60; i++) {
+        const response = await request(app)
+          .get('/injuries')
+          .set('X-Forwarded-For', `10.0.0.${i}`)
+          .set('Authorization', authHeader);
+
+        expect(response.status).toBe(200);
+      }
+
+      const aiAgentResponse = await request(app)
+        .post('/ai-agent')
+        .set('X-Forwarded-For', '10.0.0.60')
+        .set('Authorization', authHeader)
+        .send({ question: SAFETY_BLOCKED_QUESTION });
+
+      expect(aiAgentResponse.status).toBe(200);
+    } finally {
+      await prisma.$disconnect();
+    }
+  }, 20_000);
 });
 
 describe('GET /injuries', () => {
