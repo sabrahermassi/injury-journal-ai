@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { getEncoding } from 'js-tiktoken';
 import {
   chunkDocument,
@@ -336,6 +337,36 @@ describe('Document Chunker', () => {
     }
   });
 
+  describe('overlap-drop logging (#216)', () => {
+    let debugSpy: jest.SpiedFunction<typeof console.debug>;
+
+    beforeEach(() => {
+      debugSpy = jest.spyOn(console, 'debug').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      debugSpy.mockRestore();
+    });
+
+    it('logs a debug summary when an overlap seed does not fit alongside the next content', () => {
+      // maxTokens: 27 -> effectiveMaxTokens ~22, with overlapTokens: 15 the
+      // seed alone can nearly fill that budget, leaving too little room for
+      // most of this document's ~17-24 token sentences: the seeded
+      // candidate overflows and falls back to unseeded content.
+      chunkDocument(largeDocument, 27, 15);
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.stringContaining('dropped overlap'),
+      );
+    });
+
+    it('does not log when overlapTokens is 0 (no seed to drop)', () => {
+      chunkDocument(largeDocument, 30, 0);
+
+      expect(debugSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('source-type-aware chunking config', () => {
     // A local, literal config — never SOURCE_TYPE_CHUNK_CONFIG itself, which
     // is Readonly and shared across the whole module — so this test exercises
@@ -465,6 +496,29 @@ describe('Document Chunker', () => {
         expect(countTokens(chunks[i].content)).toBeLessThanOrEqual(25);
       }
       expect(sawOverlap).toBe(true);
+    });
+
+    it('logs a dropped-overlap boundary discovered while iterating multiple fields (#216)', () => {
+      // maxTokens: 21 -> effectiveMaxTokens 17. This document has 4 labeled
+      // fields, so processFields takes its multi-field loop (not the
+      // fields.length<=1 shortcut the other overlap-drop tests exercise) and
+      // the oversized "Notes:" field falls through to processSentences,
+      // where a word-level seed doesn't fit alongside the next word. This
+      // specifically covers processFields forwarding processSentences'
+      // droppedOverlap count across loop iterations.
+      const debugSpy = jest
+        .spyOn(console, 'debug')
+        .mockImplementation(() => {});
+
+      try {
+        chunkDocument(labeledFieldsDocument, 21, 16);
+
+        expect(debugSpy).toHaveBeenCalledWith(
+          expect.stringContaining('dropped overlap'),
+        );
+      } finally {
+        debugSpy.mockRestore();
+      }
     });
 
     it('splits real document-builder.ts output on its own field labels', () => {
