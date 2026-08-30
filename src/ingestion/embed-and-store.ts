@@ -40,9 +40,14 @@ export async function embedAndStoreDocument(
           chunkIndex,
           embeddedDocument.document.content,
           embeddedDocument.embedding,
+          embeddedDocument.embeddingMetadata.model,
+          embeddedDocument.embeddingMetadata.modelVersion,
           {
             ...embeddedDocument.document.metadata,
-            embedding: embeddedDocument.embeddingMetadata,
+            embedding: {
+              vectorDimension: embeddedDocument.embeddingMetadata.vectorDimension,
+              embeddingVersion: embeddedDocument.embeddingMetadata.embeddingVersion,
+            },
           },
         );
       }

@@ -38,6 +38,8 @@ export async function storeDocumentChunk(
   chunkIndex: number,
   content: string,
   embedding: number[],
+  embeddingModel: string,
+  embeddingModelVersion: string,
   metadata?: Record<string, unknown>,
 ): Promise<void> {
   const vector = `[${embedding.join(',')}]`;
@@ -52,6 +54,8 @@ export async function storeDocumentChunk(
         "chunkIndex",
         "content",
         "embedding",
+        "embeddingModel",
+        "embeddingModelVersion",
         "metadata"
       )
       VALUES (
@@ -62,6 +66,8 @@ export async function storeDocumentChunk(
         ${chunkIndex},
         ${content},
         ${vector}::vector,
+        ${embeddingModel},
+        ${embeddingModelVersion},
         ${metadata ? JSON.stringify(metadata) : null}::jsonb
       )
       ON CONFLICT ("sourceType", "sourceId", "chunkIndex")
@@ -70,6 +76,8 @@ export async function storeDocumentChunk(
         "userId" = EXCLUDED."userId",
         "content" = EXCLUDED."content",
         "embedding" = EXCLUDED."embedding",
+        "embeddingModel" = EXCLUDED."embeddingModel",
+        "embeddingModelVersion" = EXCLUDED."embeddingModelVersion",
         "metadata" = EXCLUDED."metadata"
     `,
   );
@@ -104,6 +112,8 @@ export async function deleteDocumentChunksExcept(
 
 export async function searchSimilarChunks(
   embedding: number[],
+  embeddingModel: string,
+  embeddingModelVersion: string,
   injuryId?: number,
   limit = 5,
   sourceType?: string,
@@ -117,6 +127,11 @@ export async function searchSimilarChunks(
 
   const filters: Prisma.Sql[] = [
     Prisma.sql`"embedding" <=> ${vector}::vector <= ${maxDistance}`,
+    // Vectors from a different model (or model version) live in a
+    // different space entirely — comparing them by cosine distance would
+    // be meaningless. Only compare chunks embedded by the same model.
+    Prisma.sql`"embeddingModel" = ${embeddingModel}`,
+    Prisma.sql`"embeddingModelVersion" = ${embeddingModelVersion}`,
   ];
   if (injuryId !== undefined) filters.push(Prisma.sql`"injuryId" = ${injuryId}`);
   if (sourceType !== undefined) filters.push(Prisma.sql`"sourceType" = ${sourceType}`);

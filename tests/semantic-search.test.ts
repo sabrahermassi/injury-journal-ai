@@ -58,10 +58,18 @@ describe('semanticSearch', () => {
       undefined,
     );
 
-    expect(routeInjuriesMock).toHaveBeenCalledWith(embedding, 1, undefined);
+    expect(routeInjuriesMock).toHaveBeenCalledWith(
+      embedding,
+      'test-model',
+      'v1',
+      1,
+      undefined,
+    );
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       embedding,
+      'test-model',
+      'v1',
       9,
       5,
       undefined,
@@ -84,7 +92,12 @@ describe('semanticSearch', () => {
 
     routeInjuriesMock.mockResolvedValue([1, 2]);
 
-    searchSimilarChunksMock.mockImplementation(async (_embedding, matchedInjuryId: number) => {
+    searchSimilarChunksMock.mockImplementation(async (
+      _embedding,
+      _embeddingModel,
+      _embeddingModelVersion,
+      matchedInjuryId: number,
+    ) => {
       if (matchedInjuryId === 1) {
         return [
           { id: 10, injuryId: 1, distance: 0.5 },
@@ -122,6 +135,8 @@ describe('semanticSearch', () => {
     expect(searchSimilarChunksMock).toHaveBeenCalledTimes(3);
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       1,
       2,
       undefined,
@@ -131,6 +146,8 @@ describe('semanticSearch', () => {
     );
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       2,
       2,
       undefined,
@@ -140,6 +157,8 @@ describe('semanticSearch', () => {
     );
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       3,
       2,
       undefined,
@@ -181,6 +200,8 @@ describe('semanticSearch', () => {
 
     expect(searchSimilarChunksMock).toHaveBeenCalledWith(
       [0.1, 0.2],
+      'test-model',
+      'v1',
       42,
       5,
       undefined,

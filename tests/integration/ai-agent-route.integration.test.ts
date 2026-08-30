@@ -51,6 +51,8 @@ describe('AI agent route integration', () => {
       0,
       'Physiotherapy helped improve my hip pain.',
       vectorWith(1, 0, 0),
+      'test-model',
+      'test-version',
     );
   });
 

@@ -232,6 +232,9 @@ flowchart TD
 > As of #209 (see D11), when `injuryId` is omitted this diagram's "Metadata Filtering" step is
 > preceded by an injury-routing step (`injury-router.ts`) that picks the `injuryId`(s) to filter on
 > from the question itself, instead of searching unfiltered across all of a user's injuries.
+> As of #133 (see D12), "Metadata Filtering" also always includes an `embeddingModel`/
+> `embeddingModelVersion` match against the query's own embedding metadata — not optional, and not
+> shown as a separate diagram step since it applies uniformly to every call.
 
 ### Sequence Diagram
 
@@ -253,7 +256,7 @@ sequenceDiagram
     E-->>A: Normalized query vector
     A-->>C: Embedding response
     C-->>S: Validated embedding
-    S->>V: searchSimilarChunks(vector, injuryId, limit, sourceType, userId)
+    S->>V: searchSimilarChunks(vector, embeddingModel, embeddingModelVersion, injuryId, limit, sourceType, userId)
     V-->>S: Similar chunks
     S-->>R: Search results
 ```
@@ -877,3 +880,39 @@ quoted), what else was considered, whether it still holds, and whether it should
   injuries," or if evaluation data (once it has broad/multi-injury unscoped cases — see
   `evaluation/ai-system/dataset.json`'s `rag-unscoped-multi-injury-001`) shows any of the three
   `src/config/retrieval.ts` constants need recalibrating.
+
+### D12 — `embeddingModel`/`embeddingModelVersion` are real, indexed columns on `DocumentChunk`, and `searchSimilarChunks` refuses to compare across them (#133)
+
+- **DECISION:** `DocumentChunk` has two required, indexed columns, `embeddingModel` and
+  `embeddingModelVersion`, recorded at write time from the embedding service's response
+  (`embed-and-store.ts`). `searchSimilarChunks` always filters on both, in addition to its existing
+  `injuryId`/`sourceType`/`userId` filters — a query embedded by one model/version never gets
+  compared by cosine distance against a chunk embedded by a different one.
+- **RATIONALE:** `DocumentChunk.embedding` is `vector(1024)` with nothing else distinguishing which
+  model produced a given vector (see D1/D2). Cosine distance between vectors from two different
+  models is meaningless, but nothing previously stopped it — if the embedding model were ever
+  changed, old and new vectors would silently mix in every search, corrupting rankings with no
+  error. The model/version was already being computed and returned by the embedding service, but
+  only ever landed inside the unindexed `metadata` JSON blob (`embed-and-store.ts`), never
+  consulted by retrieval — the same shape of gap D9 documented for `userId` before #41 fixed it.
+- **ALTERNATIVES CONSIDERED:** Leave it in the JSON blob and rely on operational discipline (e.g. a
+  full re-embed done atomically, with search taken offline during the switch) whenever the model
+  changes — rejected because it turns any future model change into a hard-cutover/downtime event,
+  and provides no protection if that discipline is forgotten. Promoting all four
+  `embed-and-store.ts` metadata fields (`model`, `modelVersion`, `vectorDimension`,
+  `embeddingVersion`) to columns — rejected as unnecessary scope: only `model`/`modelVersion`
+  uniquely identify which weights produced a vector, which is what the guard needs;
+  `vectorDimension`/`embeddingVersion` stay in `metadata`.
+- **CURRENT STATUS:** Implemented. Migration `20260830120000_add_embedding_model_version` backfills
+  existing rows from `metadata.embedding.model`/`.modelVersion`, falling back to the one model this
+  project has ever used in production (`Qwen/Qwen3-Embedding-0.6B`) for any row missing it, before
+  making both columns `NOT NULL`. `searchSimilarChunks`, `storeDocumentChunk`, `routeInjuries`, and
+  `semanticSearch` all thread the values through (see `src/embeddings/vector-storage.ts`,
+  `src/retrieval/injury-router.ts`, `src/retrieval/semantic-search.ts`).
+- **INTERACTION WITH A FUTURE MODEL CHANGE:** Because the guard excludes rather than errors, a model
+  change can now be rolled out as a gradual background re-embed instead of a hard cutover: chunks
+  not yet re-embedded under the new model/version simply stop matching new queries (safe, visible
+  degradation) rather than being compared against vectors they're incompatible with.
+- **SHOULD THIS BE REVISITED:** No — revisit only alongside an actual embedding-model change, at
+  which point the migration's "assume current model" backfill fallback (safe today because only one
+  model has ever been used) should not be reused as-is for backfilling genuinely mixed-model data.

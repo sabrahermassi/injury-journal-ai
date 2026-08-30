@@ -63,6 +63,8 @@ describe('data isolation regression tests', () => {
       0,
       'Chunk belonging to injury A',
       vectorWith(1, 0, 0),
+      'test-model',
+      'test-version',
     );
 
     await storeDocumentChunk(
@@ -73,6 +75,8 @@ describe('data isolation regression tests', () => {
       0,
       'Chunk belonging to injury B',
       vectorWith(1, 0, 0),
+      'test-model',
+      'test-version',
     );
   });
 
