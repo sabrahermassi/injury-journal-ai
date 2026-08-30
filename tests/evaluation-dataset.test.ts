@@ -18,7 +18,11 @@ describe('evaluation dataset', () => {
       if (Array.isArray(sources)) {
         for (const source of sources) {
           expect(source.sourceType).toEqual(expect.stringMatching(/\S+/));
-          expect(source.sourceId).toEqual(expect.anything());
+          expect(source.match).toEqual(expect.stringMatching(/\S+/));
+          if (source.sourceType !== 'injury') {
+            expect(source.injuryId).toEqual(expect.any(Number));
+            expect(source.injuryId).toBeGreaterThan(0);
+          }
         }
       }
     }

@@ -3,6 +3,7 @@ import dataset from '../evaluation/ai-system/dataset.json';
 
 const runAgentMock = jest.fn();
 const evaluateFaithfulnessMock = jest.fn();
+const resolveExpectedSourcesMock = jest.fn();
 
 jest.unstable_mockModule('../src/ai-agent/ai-agent-orchestrator.js', () => ({
   runAgent: runAgentMock,
@@ -10,6 +11,10 @@ jest.unstable_mockModule('../src/ai-agent/ai-agent-orchestrator.js', () => ({
 
 jest.unstable_mockModule('../evaluation/ai-system/faithfulness-judge.js', () => ({
   evaluateFaithfulness: evaluateFaithfulnessMock,
+}));
+
+jest.unstable_mockModule('../evaluation/ai-system/resolve-expected-sources.js', () => ({
+  resolveExpectedSources: resolveExpectedSourcesMock,
 }));
 
 const { runEvaluation } =
@@ -20,6 +25,7 @@ describe('evaluation runner', () => {
     jest.clearAllMocks();
 
     evaluateFaithfulnessMock.mockResolvedValue(true);
+    resolveExpectedSourcesMock.mockResolvedValue([]);
   });
 
   it('runs evaluation questions through the AI agent', async () => {
@@ -68,5 +74,29 @@ describe('evaluation runner', () => {
     }
 
     expect(results[0].evaluation).toHaveProperty('faithfulnessPassed', true);
+  });
+
+  it('contains an expected-source resolution failure to that case instead of aborting the run', async () => {
+    runAgentMock.mockResolvedValue({
+      answer: 'Shockwave therapy failed.',
+      citations: [],
+    });
+
+    resolveExpectedSourcesMock.mockRejectedValueOnce(
+      new Error('no treatment matching "Shockwave therapy" found'),
+    );
+
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const results = await runEvaluation();
+
+    expect(results.length).toBe(dataset.length);
+    expect(results[0].evaluation.retrievalPassed).toBeNull();
+    expect(results[1].evaluation.retrievalPassed).not.toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('no treatment matching "Shockwave therapy" found'),
+    );
+
+    consoleErrorSpy.mockRestore();
   });
 });
