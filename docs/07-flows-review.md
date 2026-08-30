@@ -89,9 +89,10 @@ exists — the documented invariant was never actually verified, and doesn't hol
 **What actually happens:** `semanticSearch()` (`retrieval/semantic-search.ts`) calls `embedQuery()`
 — the **query-side** embedding endpoint — on the user's question, then passes the resulting
 vector to `searchSimilarChunks()` (`vector-storage.ts`), which runs a plain
-`ORDER BY embedding <=> query LIMIT k` query, filtered by `injuryId` only when provided, plus a
-cosine-distance cutoff (`maxDistance`, default `0.7` — see §11 Decision D5, updated for issue #122).
-No other metadata filter, no `userId` scoping (see §11 Decision D9).
+`ORDER BY embedding <=> query LIMIT k` query, filtered by `injuryId` only when provided, by the
+authenticated caller's `userId` (always passed by `semanticSearch`, see §11 Decision D9 — resolved),
+plus a cosine-distance cutoff (`maxDistance`, default `0.7` — see §11 Decision D5, updated for
+issue #122). No other metadata filter.
 
 **What should happen:** the question should be embedded via the query-side prompt
 (`embed_query()` in the Python service), not the document-side one — Qwen3-Embedding-0.6B is
@@ -116,7 +117,10 @@ query/document embedding-mode gap above).
 1. `checkSafety(question)` — regex-based pre-generation check. If blocked, returns immediately
    with a refusal message, `chunks: []`, `citations: []` — **no retrieval or LLM call happens at
    all** for a blocked question.
-2. `semanticSearch(question, injuryId, limit)` — see Flow 3.
+2. `semanticSearch(question, injuryId, limit)` — see Flow 3. If this returns zero chunks (nothing
+   exists, or everything found was beyond the distance cutoff — see D5, issue #122),
+   `answerQuestion` returns immediately with a fixed no-relevant-context message, `chunks: []`,
+   `citations: []` — **no LLM call happens at all** for this case; steps 3-7 below are skipped.
 3. `buildContext(chunks)` — joins raw chunk `content` with `Source N:` headers and `---`
    separators. **No token-budget check** — if retrieval ever returns many/large chunks, nothing
    caps the resulting prompt size before it's sent to the LLM.
@@ -148,11 +152,12 @@ generic `500 { error: "Failed to generate answer" }` — no distinction between 
 "invalid credentials," or "rate limited," and no retry at any layer.
 
 **Tests:** `context-builder.ts`'s empty-input behavior (an empty `chunks` array still produces a
-valid, if minimal, context string — no crash) is tested, and `answerQuestion`'s empty-retrieval
-path is now tested too (`tests/rag-service.test.ts`, "still generates an answer when retrieval
-finds zero chunks") — it confirms the LLM is still called with an essentially empty
-`<journal_data>` section. Resolved (issue #39). No test currently asserts what a *real* LLM tends
-to answer in this scenario beyond the mocked expectation — that would need an LLM integration test.
+valid, if minimal, context string — no crash) is tested, but is now unreachable from
+`answerQuestion` for the zero-chunks case specifically, since that returns before `buildContext` is
+called (issue #122). `answerQuestion`'s empty-retrieval path is tested directly instead
+(`tests/rag-service.test.ts`, "returns an explicit no-relevant-context answer when retrieval finds
+zero chunks (#122)") — it asserts the fixed message and that `buildContext`/`buildUserPrompt`/
+`generateAnswer`/`buildCitations` are never called. Resolved (issue #39).
 
 **Questionable boundary:** none new beyond what §5.3/§5.4 of the architecture doc already state.
 
@@ -167,7 +172,7 @@ Traced directly against the controllers and services, not assumed:
 | **DB fails** | Any Prisma/raw-SQL error (`vector-storage.ts`, `journal-tool.ts`) propagates uncaught up to the same controller-level `catch` → same generic 500. |
 | **Bad/malformed document (ingestion)** | Not directly applicable — `buildJournalDocuments` operates on already-typed Prisma results, not external/untrusted input. The closest analogue, a chunk whose content becomes empty after processing, is covered under Flow 2's chunker finding above. |
 | **Duplicate ingestion** | Handled correctly and idempotently — `storeDocumentChunk`'s `ON CONFLICT (sourceType, sourceId, chunkIndex) DO UPDATE` means re-ingesting the same source record updates existing rows rather than duplicating them, and `deleteDocumentChunksExcept` prunes chunks left over from a run that previously produced more chunks for that record. Verified via `vector-storage.ts` directly, not assumed. |
-| **Empty retrieval result** | `searchSimilarChunks` returns `[]` → `buildContext([])` returns an empty string → the LLM still receives a prompt with an empty `<journal_data>` section and is instructed (in the prompt text only, not structurally) to say it lacks enough information. `checkContentSafety` runs on the empty string but has nothing to match, so it doesn't short-circuit this case; the mocked LLM call is tested for this path (see Flow 4), but whether a *real* model actually follows the "say you lack enough information" instruction is unverified. |
+| **Empty retrieval result** | `searchSimilarChunks` returns `[]` (nothing exists, or nothing passed the distance cutoff — see D5, issue #122) → `answerQuestion` returns a fixed no-relevant-context message directly, `chunks: []`, `citations: []` — `buildContext`, `checkContentSafety`, and `generateAnswer` are never called for this case (see Flow 4). This is now a structural check, not just the prompt-level "say you lack enough information" instruction, which still remains as a second layer for the case where chunks *are* retrieved but don't actually answer the question. |
 
 **Cross-cutting observation:** every failure class above collapses into the same generic
 `{ error: "Failed to process request" }` 500 response, with no error code/type. A frontend cannot

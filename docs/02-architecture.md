@@ -838,13 +838,19 @@ quoted), what else was considered, whether it still holds, and whether it should
   chunks separate cleanly by contrast (correct injury was always closest, ~0.07–0.22 cosine-distance
   gap to the next injury in spot checks), because each `Injury.name`/`bodyArea`/`description` is
   distinct where individual event records aren't.
-- **RELATION TO D5:** D5 rejects adding a similarity threshold, hybrid search, or reranking *to the
-  per-record retrieval comparison itself* — that rejection stands, and this decision doesn't
-  reintroduce any of the three: no distance cutoff is applied to individual chunks, there's no
-  keyword/BM25 component, and the final chunk list isn't rescored/reordered by anything but the
-  existing `embedding <=> query` distance. This decision instead automates *which injury/injuries to
-  scope to* — the same choice a user already makes via the dropdown — using the same plain top-k
-  mechanism D5 keeps, just against a smaller, cleaner candidate set (one summary chunk per injury).
+- **RELATION TO D5:** D5 originally rejected adding a similarity threshold, hybrid search, or
+  reranking *to the per-record retrieval comparison itself*; issue #122 has since added a distance
+  cutoff to that per-record comparison (see D5, updated). This decision (D11) predates that and is
+  unaffected by it: `routeInjuries()`'s own `searchSimilarChunks` calls explicitly pass
+  `MAX_COSINE_DISTANCE` to bypass the cutoff, because injury-summary-chunk routing uses its own
+  calibrated distance logic (`INJURY_MATCH_FALLBACK_DISTANCE`/ambiguity margin, described above) that
+  needs to see the full distance range — not the generic default. There's still no keyword/BM25
+  component here, and the final chunk list isn't rescored/reordered by anything but the existing
+  `embedding <=> query` distance (now filtered by D5's cutoff for individual chunks, same as any
+  other `searchSimilarChunks` caller that doesn't opt out). This decision instead automates *which
+  injury/injuries to scope to* — the same choice a user already makes via the dropdown — using the
+  same plain top-k mechanism, just against a smaller, cleaner candidate set (one summary chunk per
+  injury).
 - **ALTERNATIVES CONSIDERED:** A raw distance/similarity threshold on retrieved chunks (rejected,
   see above — empirically doesn't separate injuries on this corpus). Filtering citations post-hoc by
   answer-text content overlap (would fix citation noise but not #208's answer-text misattribution,
