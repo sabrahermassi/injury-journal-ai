@@ -3,14 +3,40 @@ import { runEvaluation } from './evaluation-runner.js';
 import { generateEvaluationReport } from './evaluation-report.js';
 import { prisma } from '../../src/lib/prisma.js';
 
-// Sweeps maxTokens only, matching the chunker as it exists on main today.
-// PRs #213 (Qwen3 tokenizer safety margin) and #214 (chunk overlap) are open
-// but unmerged as of this writing -- once either lands, extend this sweep to
-// also vary overlapTokens / account for the safety margin rather than
-// treating maxTokens as the only knob.
+// Sweeps maxTokens only. #214 (chunk overlap) is open but unmerged as of
+// this writing -- once it lands, extend this sweep to also vary
+// overlapTokens rather than treating maxTokens as the only knob.
 const CANDIDATE_MAX_TOKENS = [150, 300, 450, 600];
 
+// This re-ingests every document in whatever DATABASE_URL points at, once
+// per candidate. Guarded the same way prisma/seed-dev.ts guards its own
+// destructive dev-only operation, since a misconfigured DATABASE_URL here
+// would otherwise silently re-chunk/re-embed real data multiple times.
+function assertSafeToRunAgainstThisDatabase(): void {
+  if (process.env.DATABASE_ENV !== 'development') {
+    throw new Error(
+      'Refusing to run the chunk-size sweep: DATABASE_ENV must be "development".',
+    );
+  }
+
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error('Refusing to run the chunk-size sweep: DATABASE_URL is not set.');
+  }
+
+  const databaseName = new URL(databaseUrl).pathname.slice(1);
+
+  if (databaseName !== 'injury-journal-ai-db') {
+    throw new Error(
+      `Refusing to run the chunk-size sweep: unexpected database "${databaseName}".`,
+    );
+  }
+}
+
 async function main() {
+  assertSafeToRunAgainstThisDatabase();
+
   const rows: Record<string, string | number>[] = [];
 
   for (const maxTokens of CANDIDATE_MAX_TOKENS) {
