@@ -55,6 +55,15 @@ const oversizedSentenceDocument: JournalDocument = {
 };
 
 describe('Document Chunker', () => {
+  it('returns no chunks for whitespace-only content', () => {
+    const whitespaceDocument: JournalDocument = {
+      ...smallDocument,
+      content: '   \n\t  ',
+    };
+
+    expect(chunkDocument(whitespaceDocument, 100)).toHaveLength(0);
+  });
+
   it('keeps a small document as a single chunk', () => {
     const chunks = chunkDocument(smallDocument, 100);
 
@@ -111,9 +120,7 @@ describe('Document Chunker', () => {
     });
   });
 
-  it.failing('does not create chunks for empty content', () => {
-    // Tracked in #59: chunkDocument currently returns the empty document
-    // unchanged instead of producing zero chunks.
+  it('does not create chunks for empty content', () => {
     const emptyDocument: JournalDocument = {
       ...smallDocument,
       content: '',

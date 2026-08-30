@@ -93,6 +93,10 @@ export function chunkDocument(
     throw new Error(`maxTokens must be at least 1, received ${maxTokens}`);
   }
 
+  if (!document.content.trim()) {
+    return [];
+  }
+
   // Keep small journal records intact.
   if (countTokens(document.content) <= maxTokens) {
     return [document];
