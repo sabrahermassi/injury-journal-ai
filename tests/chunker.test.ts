@@ -190,6 +190,21 @@ describe('Document Chunker', () => {
     expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
   });
 
+  it('splits against a reduced budget to guard against tokenizer mismatch (#136)', () => {
+    // document-chunker.ts counts tokens with cl100k_base but embeddings use
+    // Qwen3-Embedding-0.6B's own tokenizer, which measured up to ~12.5% more
+    // tokens on the same text (QWEN_SAFETY_MARGIN = 0.85). Chunks should stay
+    // under the reduced effective budget, not just under maxTokens itself.
+    const maxTokens = 30;
+    const effectiveMaxTokens = Math.floor(maxTokens * 0.85);
+
+    const chunks = chunkDocument(largeDocument, maxTokens);
+
+    chunks.forEach((chunk) => {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(effectiveMaxTokens);
+    });
+  });
+
   it('rejects a maxTokens value below one', () => {
     expect(() => chunkDocument(smallDocument, 0)).toThrow();
     expect(() => chunkDocument(smallDocument, -1)).toThrow();
