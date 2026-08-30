@@ -146,4 +146,60 @@ describe('Document Chunker', () => {
     expect(() => chunkDocument(smallDocument, -1)).toThrow();
     expect(() => chunkDocument(smallDocument, NaN)).toThrow();
   });
+
+  it('rejects an invalid overlapTokens value', () => {
+    expect(() => chunkDocument(largeDocument, 30, -1)).toThrow();
+    expect(() => chunkDocument(largeDocument, 30, NaN)).toThrow();
+    expect(() => chunkDocument(largeDocument, 30, 30)).toThrow();
+    expect(() => chunkDocument(largeDocument, 30, 40)).toThrow();
+  });
+
+  // Longest run of trailing words in `prev` that also prefixes `curr`.
+  function overlapWordCount(prev: string, curr: string): number {
+    const prevWords = prev.split(/\s+/);
+    const currWords = curr.split(/\s+/);
+    const maxLen = Math.min(prevWords.length, currWords.length);
+
+    for (let len = maxLen; len > 0; len--) {
+      const suffix = prevWords.slice(prevWords.length - len).join(' ');
+      const prefix = currWords.slice(0, len).join(' ');
+      if (suffix === prefix) {
+        return len;
+      }
+    }
+
+    return 0;
+  }
+
+  it('repeats trailing text from one chunk at the start of the next', () => {
+    const chunks = chunkDocument(largeDocument, 30, 10);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (let i = 1; i < chunks.length; i++) {
+      expect(
+        overlapWordCount(chunks[i - 1].content, chunks[i].content),
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('stays within the token limit even with overlap seeded in', () => {
+    const chunks = chunkDocument(largeDocument, 30, 10);
+
+    chunks.forEach((chunk) => {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(30);
+    });
+  });
+
+  it('produces no overlap when overlapTokens is 0', () => {
+    const chunks = chunkDocument(largeDocument, 30, 0);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (let i = 1; i < chunks.length; i++) {
+      expect(overlapWordCount(chunks[i - 1].content, chunks[i].content)).toBe(
+        0,
+      );
+    }
+  });
 });

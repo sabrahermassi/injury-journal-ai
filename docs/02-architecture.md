@@ -602,17 +602,26 @@ quoted), what else was considered, whether it still holds, and whether it should
 
 - **DECISION:** Chunk each `JournalDocument` by first checking if it fits under a token limit
   whole; if not, split by paragraph, then by sentence, then by raw sub-sentence pieces if a single
-  sentence still exceeds the limit — never truncating mid-sentence when avoidable.
+  sentence still exceeds the limit — never truncating mid-sentence when avoidable. Adjacent chunks
+  now also carry a small token-budgeted overlap (issue #135, partial fix of #35): the tail of one
+  chunk is seeded as the start of the next, so content sitting right at a chunk boundary isn't
+  isolated from its surrounding context for embedding similarity matching.
 - **RATIONALE:** Journal entries are short, structured records (a symptom note, a treatment
   entry), not long-form prose — most fit in one chunk unchanged. The recursive strategy preserves
   natural language boundaries for the minority of longer entries, which matters more for citation
-  readability and grounding fidelity than uniform chunk sizing would.
+  readability and grounding fidelity than uniform chunk sizing would. The overlap addition keeps
+  that boundary-respecting strategy but closes the specific gap where a paragraph/sentence/word
+  split still landed a meaningful idea right at a hard cut.
 - **ALTERNATIVES CONSIDERED:** Fixed-size sliding-window chunking (with overlap) — simpler to
   implement and reason about token budgets for, but would routinely cut a single symptom/treatment
   note across chunk boundaries, weakening both retrieval precision and citation coherence for
-  content that's naturally already short.
+  content that's naturally already short. Overlap was added to the recursive strategy instead of
+  switching to fixed-size windows, preserving the boundary-respecting behavior above.
 - **CURRENT STATUS:** Still valid and well-tested (`document-chunker.ts` plus
-  `docs/03-chunker-architecture.md`'s test list covers boundary cases directly).
+  `docs/03-chunker-architecture.md`'s test list covers boundary cases directly, including overlap).
+  Overlap means adjacent chunks can now return near-duplicate text from retrieval (see D5) — there
+  is no dedup/diversity step downstream, which is an accepted tradeoff for now given the small
+  corpus size, not a bug.
 - **SHOULD THIS BE REVISITED:** No.
 
 ### D5 — Plain top-k cosine retrieval; no similarity threshold, hybrid search, or reranking
@@ -633,7 +642,11 @@ quoted), what else was considered, whether it still holds, and whether it should
   underperforming.
 - **CURRENT STATUS:** Still valid as a deliberate deferral. Whether the evaluation dataset is now
   large enough to inform this decision on evidence should be checked against its current size
-  (`evaluation/ai-system/dataset.json`) rather than a number restated here.
+  (`evaluation/ai-system/dataset.json`) rather than a number restated here. Since chunk overlap was
+  added (D4, issue #135), `LIMIT k` can return two adjacent chunks that share most of their text —
+  there is no near-duplicate suppression here, so an overlap-heavy result can cost a query one of
+  its `k` slots on redundant content. Worth watching if evaluation surfaces this as a real quality
+  problem; not addressed by this decision today.
 - **SHOULD THIS BE REVISITED:** Maybe — not by implementing threshold/hybrid/rerank now, but by
   confirming the evaluation dataset is large enough to make this decision on evidence rather than
   leaving it open indefinitely.

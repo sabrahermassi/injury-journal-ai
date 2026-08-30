@@ -68,6 +68,13 @@ It shouldn't cut in the middle of a sentence when the sentence fits within the l
 
 A sentence that exceeds maxTokens must not produce an oversized chunk.
 
+## Adjacent chunks overlap
+
+The trailing text of chunk N reappears at the start of chunk N+1, up to the
+configured overlap budget, so content near a chunk boundary keeps some
+surrounding context. Every chunk must still stay under maxTokens even with
+overlap seeded in, and overlapTokens = 0 disables overlap entirely.
+
 ## Metadata is preserved
 
 Every chunk must retain:

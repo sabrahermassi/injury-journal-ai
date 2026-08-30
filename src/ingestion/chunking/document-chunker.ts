@@ -2,6 +2,7 @@ import { getEncoding } from 'js-tiktoken';
 import type { JournalDocument } from '../documents/document-types.js';
 
 const DEFAULT_MAX_TOKENS = 300;
+const DEFAULT_OVERLAP_TOKENS = 50;
 
 const encoding = getEncoding('cl100k_base');
 
@@ -70,6 +71,28 @@ function splitOversizedWord(word: string, maxTokens: number): string[] {
   return pieces;
 }
 
+// Returns the trailing text of `text` that fits within `overlapTokens`,
+// breaking only on whitespace so it never cuts a word in half — oversized
+// single "words" are already handled separately by splitOversizedWord.
+function getOverlapTail(text: string, overlapTokens: number): string {
+  if (overlapTokens <= 0 || !text) {
+    return '';
+  }
+
+  const words = text.split(/\s+/).filter(Boolean);
+  let tail: string[] = [];
+
+  for (let i = words.length - 1; i >= 0; i--) {
+    const candidate = [words[i], ...tail];
+    if (countTokens(candidate.join(' ')) > overlapTokens) {
+      break;
+    }
+    tail = candidate;
+  }
+
+  return tail.join(' ');
+}
+
 function addChunk(
   chunks: JournalDocument[],
   document: JournalDocument,
@@ -88,9 +111,25 @@ function addChunk(
 export function chunkDocument(
   document: JournalDocument,
   maxTokens: number = DEFAULT_MAX_TOKENS,
+  overlapTokens: number = Math.min(
+    DEFAULT_OVERLAP_TOKENS,
+    Math.floor(maxTokens / 4),
+  ),
 ): JournalDocument[] {
   if (!(maxTokens >= 1)) {
     throw new Error(`maxTokens must be at least 1, received ${maxTokens}`);
+  }
+
+  if (!(overlapTokens >= 0)) {
+    throw new Error(
+      `overlapTokens must be at least 0, received ${overlapTokens}`,
+    );
+  }
+
+  if (overlapTokens >= maxTokens) {
+    throw new Error(
+      `overlapTokens (${overlapTokens}) must be less than maxTokens (${maxTokens})`,
+    );
   }
 
   // Keep small journal records intact.
@@ -114,19 +153,26 @@ export function chunkDocument(
       continue;
     }
 
-    // Save the current chunk before processing the large paragraph.
+    // Save the current chunk before processing the large paragraph, keeping
+    // its trailing text as overlap seed for whatever comes next.
+    let paragraphOverlapSeed = '';
     if (currentChunk) {
       addChunk(chunks, document, currentChunk);
-      currentChunk = '';
+      paragraphOverlapSeed = getOverlapTail(currentChunk, overlapTokens);
     }
 
     // The paragraph itself fits in one chunk.
     if (countTokens(paragraph) <= maxTokens) {
-      currentChunk = paragraph;
+      const seeded = paragraphOverlapSeed
+        ? `${paragraphOverlapSeed}\n\n${paragraph}`
+        : paragraph;
+      currentChunk = countTokens(seeded) <= maxTokens ? seeded : paragraph;
       continue;
     }
 
-    // The paragraph is too large, so split it into sentences.
+    // The paragraph is too large, so split it into sentences. Carry the
+    // overlap seed forward as the starting point for the first sentence.
+    currentChunk = paragraphOverlapSeed;
     const sentences = splitIntoSentences(paragraph);
 
     for (const sentence of sentences) {
@@ -139,21 +185,27 @@ export function chunkDocument(
         continue;
       }
 
-      // Sentence candidate doesn't fit.
+      // Sentence candidate doesn't fit, so save it and keep its trailing
+      // text as overlap seed for whatever comes next.
+      let sentenceOverlapSeed = '';
       if (currentChunk) {
         addChunk(chunks, document, currentChunk);
-        currentChunk = '';
+        sentenceOverlapSeed = getOverlapTail(currentChunk, overlapTokens);
       }
 
       // Now we're starting with the sentence alone.
       if (countTokens(sentence) <= maxTokens) {
-        currentChunk = sentence;
+        const seeded = sentenceOverlapSeed
+          ? `${sentenceOverlapSeed} ${sentence}`
+          : sentence;
+        currentChunk = countTokens(seeded) <= maxTokens ? seeded : sentence;
         continue;
       }
 
-      // The sentence itself is too large.
+      // The sentence itself is too large. Carry the overlap seed forward as
+      // the starting point for the first word.
       const words = sentence.split(/\s+/);
-      let sentenceChunk = '';
+      let sentenceChunk = sentenceOverlapSeed;
 
       for (const word of words) {
         const candidate = sentenceChunk ? `${sentenceChunk} ${word}` : word;
@@ -161,22 +213,32 @@ export function chunkDocument(
         if (countTokens(candidate) <= maxTokens) {
           sentenceChunk = candidate;
         } else if (countTokens(word) > maxTokens) {
+          let wordOverlapSeed = '';
           if (sentenceChunk) {
             addChunk(chunks, document, sentenceChunk);
+            wordOverlapSeed = getOverlapTail(sentenceChunk, overlapTokens);
           }
 
-          const pieces = splitOversizedWord(word, maxTokens);
+          const pieces = splitOversizedWord(
+            wordOverlapSeed ? `${wordOverlapSeed} ${word}` : word,
+            maxTokens,
+          );
           for (const piece of pieces.slice(0, -1)) {
             addChunk(chunks, document, piece);
           }
 
           sentenceChunk = pieces[pieces.length - 1] ?? '';
         } else {
+          let wordOverlapSeed = '';
           if (sentenceChunk) {
             addChunk(chunks, document, sentenceChunk);
+            wordOverlapSeed = getOverlapTail(sentenceChunk, overlapTokens);
           }
 
-          sentenceChunk = word;
+          const seeded = wordOverlapSeed
+            ? `${wordOverlapSeed} ${word}`
+            : word;
+          sentenceChunk = countTokens(seeded) <= maxTokens ? seeded : word;
         }
       }
 
@@ -197,6 +259,12 @@ export function chunkDocument(
 export function chunkDocuments(
   documents: JournalDocument[],
   maxTokens: number = DEFAULT_MAX_TOKENS,
+  overlapTokens: number = Math.min(
+    DEFAULT_OVERLAP_TOKENS,
+    Math.floor(maxTokens / 4),
+  ),
 ): JournalDocument[] {
-  return documents.flatMap((document) => chunkDocument(document, maxTokens));
+  return documents.flatMap((document) =>
+    chunkDocument(document, maxTokens, overlapTokens),
+  );
 }
