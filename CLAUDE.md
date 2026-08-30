@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+Use plain, simple English in all output: short, direct, no filler, no restating what's already known.
+
 ## 1. Project Overview
 
 `injury-journal-ai` is an AI assistant/RAG/agent/safety portfolio project that answers questions grounded in a personal injury journal.
@@ -110,6 +112,8 @@ Run `npm run build` when build or release behavior is affected.
 Changes to retrieval, RAG, embeddings, or safety guardrails also require the evaluation harness.
 Use the relevant Skill for workflow-specific verification. Do not invent commands or scripts that do not exist.
 For setup, development, database, seeding, and embedding-service commands, see `README.md`.
+
+After verification passes, run the `post-fix-review` Skill before committing.
 
 ## UI Guidelines
 
