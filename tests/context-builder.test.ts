@@ -37,8 +37,8 @@ describe('buildContext', () => {
       ]),
     );
 
-    expect(context).toContain('Source 1 (Injury: Lower back pain):');
-    expect(context).toContain('Source 2 (Injury: Right knee pain):');
+    expect(context).toContain('Source 1 (Injury: Lower back pain (#1)):');
+    expect(context).toContain('Source 2 (Injury: Right knee pain (#4)):');
   });
 
   it('falls back to a generic label when the injury name is unknown', () => {
@@ -47,6 +47,22 @@ describe('buildContext', () => {
       new Map(),
     );
 
-    expect(context).toContain('Source 1 (Injury: Injury #7):');
+    expect(context).toContain('Source 1 (Injury: Injury #7 (#7)):');
+  });
+
+  it('appends the injury id even when two injuries share the same name', () => {
+    const context = buildContext(
+      [
+        { content: 'Cortisone shot helped.', injuryId: 2 },
+        { content: 'Physical therapy helped more.', injuryId: 5 },
+      ],
+      new Map([
+        [2, 'Knee pain'],
+        [5, 'Knee pain'],
+      ]),
+    );
+
+    expect(context).toContain('Source 1 (Injury: Knee pain (#2)):');
+    expect(context).toContain('Source 2 (Injury: Knee pain (#5)):');
   });
 });

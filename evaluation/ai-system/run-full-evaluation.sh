@@ -10,9 +10,25 @@ EMBEDDING_URL="${EMBEDDING_API_URL:-http://127.0.0.1:8000}"
 EMBEDDING_PORT="${EMBEDDING_URL##*:}"
 EMBEDDING_LOG="$(mktemp)"
 
+listening_pid() {
+  netstat -ano | awk -v p=":${EMBEDDING_PORT}\$" '$2 ~ p && $4=="LISTENING" {print $NF; exit}'
+}
+
+# On Git Bash/MSYS the PID bash's `$!` reports for a Python/uvicorn child does not reliably
+# match the real Windows PID that ends up listening on the port, so we can't just record `$!`
+# and trust it later. Instead: refuse to start if the port is already occupied by something
+# else, so whatever ends up listening on it afterward is guaranteed to be the service this
+# script itself started — cleanup can then safely kill "whatever is on the port" without risk
+# of taking down an unrelated pre-existing service.
+EXISTING_PID="$(listening_pid)"
+if [ -n "${EXISTING_PID:-}" ]; then
+  echo "port $EMBEDDING_PORT is already in use (pid $EXISTING_PID) — refusing to start a competing embedding service. Stop it first, or run against it directly."
+  exit 1
+fi
+
 kill_embedding_service() {
   local pid
-  pid=$(netstat -ano | awk -v p=":${EMBEDDING_PORT}\$" '$2 ~ p && $4=="LISTENING" {print $NF; exit}')
+  pid=$(listening_pid)
   if [ -n "${pid:-}" ]; then
     echo "=== stopping embedding service (pid $pid) ==="
     taskkill //PID "$pid" //F >/dev/null 2>&1 || true

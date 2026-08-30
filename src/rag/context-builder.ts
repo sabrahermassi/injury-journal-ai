@@ -13,7 +13,10 @@ export function buildContext(
 
   return chunks
     .map((chunk, index) => {
-      const injuryLabel = injuryNames.get(chunk.injuryId) ?? `Injury #${chunk.injuryId}`;
+      // Injury.name has no uniqueness constraint, so two different injuries can share a
+      // name — always include the id so an unscoped query's sources stay distinguishable.
+      const injuryName = injuryNames.get(chunk.injuryId) ?? `Injury #${chunk.injuryId}`;
+      const injuryLabel = `${injuryName} (#${chunk.injuryId})`;
 
       return `
 Source ${index + 1} (Injury: ${injuryLabel}):
