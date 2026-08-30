@@ -179,6 +179,13 @@ tracking issue on what's actually still needed for that work.
 - [x] #59 — `chunkDocument`'s empty-content behavior contradicted
   `docs/03-chunker-architecture.md`'s documented invariant; the fast path now guards empty
   content.
+- [x] Source-type-aware chunking budgets (`SOURCE_TYPE_CHUNK_CONFIG`) and labeled-field
+  boundary splitting in `document-chunker.ts` — see `docs/03-chunker-architecture.md` §"Source-
+  type-aware budgets and labeled-field splitting". Originally flagged speculative/optional (no
+  evidence uniform chunking was hurting retrieval); scoped down to reuse the `Label:` structure
+  `document-builder.ts` already emits rather than inventing new document structure. No GitHub
+  issue — raised and implemented in-session; per-sourceType tuning of the (currently
+  default-matching) config entries should be driven by `evaluation/ai-system/`, not guessed.
 - [x] #60 — Ingestion error handling: investigated, confirmed the existing partial-failure
   behavior (no pruning on a failed run) is already safe; locked in via a regression test, no
   code change needed. Cross-process locking (the other half of #60) remains unaddressed now that

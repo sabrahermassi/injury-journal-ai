@@ -16,10 +16,18 @@
                         YES           NO
                          │             │
                          ▼             ▼
-                    Build chunks   Split sentences
+                    Build chunks   Split labeled fields
                                        │
                                        ▼
-                              Can sentences fit?
+                              Can fields fit?
+                                  /        \
+                                YES         NO
+                                 │           │
+                                 ▼           ▼
+                            Build chunks   Split sentences
+                                               │
+                                               ▼
+                                      Can sentences fit?
                                   /        \
                                 YES         NO
                                  │           │
@@ -65,6 +73,34 @@ to the model's max sequence length rather than erroring on overflow, so a
 rare miss degrades to truncation, not a crash. Re-run the measurement
 script and re-derive `QWEN_SAFETY_MARGIN` if `MODEL_NAME` or its pinned
 revision changes.
+
+## Source-type-aware budgets and labeled-field splitting
+
+`document-builder.ts` never emits blank-line paragraphs — every record is a
+single flat, sentence-joined string with inline labels (`Notes:`,
+`Description:`, `Cause:`, etc.), so the paragraph-split level above almost
+never fires; oversized records used to fall straight through to
+sentence-splitting. Two additive changes target that gap:
+
+- `SOURCE_TYPE_CHUNK_CONFIG` (in `document-chunker.ts`) lets `maxTokens`/
+  `overlapTokens` be tuned per `DocumentSourceType`. `chunkDocument`/
+  `chunkDocuments` fall back to it only when the caller omits an explicit
+  override, so existing callers are unaffected. Every entry currently
+  matches the previous flat defaults — this is a config point for future
+  tuning, not a behavior change on its own.
+- A field-boundary split level sits between paragraph- and
+  sentence-splitting: it splits on a sentence-ending period followed by a
+  capitalized `Label:` (the pattern the builders already produce), so a
+  chunk boundary can land on a field like `Notes:` instead of only ever
+  landing mid-sentence. Falls straight through to sentence-splitting when a
+  paragraph has no such boundary — identical to prior behavior.
+
+Both were flagged speculative/optional going in — there was no evidence
+uniform chunking was hurting retrieval — and were only implemented because
+the label structure already existed in the generated text (no new document
+structure was invented). No `SOURCE_TYPE_CHUNK_CONFIG` entry has been tuned
+away from the shared default yet; that should be driven by the evaluation
+harness (`evaluation/ai-system/`), not guessed.
 
 # What we should test
 
@@ -117,3 +153,20 @@ chunkDocuments() should return JournalDocument[], not JournalDocument[][].
 ## Empty content doesn't create chunks
 
 ## An oversized sentence falls back to smaller pieces
+
+## Source-type chunking config is used when no override is passed
+
+Two documents with the same content but different `sourceType`s, chunked
+via different `SOURCE_TYPE_CHUNK_CONFIG` entries, should produce different
+chunk counts when `chunkDocument` is called with no `maxTokens` argument.
+
+## Explicit maxTokens/overlapTokens still override the source-type default
+
+Passing `maxTokens`/`overlapTokens` explicitly takes precedence over
+`SOURCE_TYPE_CHUNK_CONFIG`, preserving existing call sites' behavior.
+
+## Oversized records split on labeled-field boundaries before sentences
+
+A record with multiple `Label:` fields that exceeds the budget should
+produce a chunk boundary at a field label, not only mid-sentence. Overlap
+and the token ceiling still hold across a field-split boundary.
