@@ -161,7 +161,10 @@ describe('Document Chunker', () => {
       metadata: oversizedSentenceDocument.metadata,
     };
 
-    const chunks = chunkDocument(oversizedWordDocument, 20);
+    // overlapTokens: 0 isolates hard-split correctness from the overlap
+    // feature — with overlap enabled, duplicated text between pieces makes
+    // a naive join()/toContain() check unreliable.
+    const chunks = chunkDocument(oversizedWordDocument, 20, 0);
 
     expect(chunks.length).toBeGreaterThan(1);
 
@@ -179,7 +182,9 @@ describe('Document Chunker', () => {
       metadata: oversizedSentenceDocument.metadata,
     };
 
-    const chunks = chunkDocument(oversizedWordDocument, 20);
+    // overlapTokens: 0 isolates hard-split correctness from the overlap
+    // feature — see the comment on the previous test.
+    const chunks = chunkDocument(oversizedWordDocument, 20, 0);
 
     expect(chunks.length).toBeGreaterThan(1);
 
@@ -189,6 +194,58 @@ describe('Document Chunker', () => {
     }
 
     expect(chunks.map((chunk) => chunk.content).join('')).toContain(longWord);
+  });
+
+  // Longest run of trailing chars in `prev` that also prefixes `curr` —
+  // char-level counterpart of overlapWordCount below, for content with no
+  // whitespace to split on (oversized single "words").
+  function overlapCharCount(prev: string, curr: string): number {
+    const prevChars = Array.from(prev);
+    const currChars = Array.from(curr);
+    const maxLen = Math.min(prevChars.length, currChars.length);
+
+    for (let len = maxLen; len > 0; len--) {
+      const suffix = prevChars.slice(prevChars.length - len).join('');
+      const prefix = currChars.slice(0, len).join('');
+      if (suffix === prefix) {
+        return len;
+      }
+    }
+
+    return 0;
+  }
+
+  it('repeats trailing text between consecutive pieces of an oversized word', () => {
+    // A non-periodic digit sequence: long enough to force several oversized
+    // pieces, but with no repeating pattern that would make the overlap
+    // check below trivially pass regardless of correctness.
+    const longWord = Array.from({ length: 400 }, (_, i) =>
+      String.fromCharCode(48 + ((i * 37 + i * i) % 10)),
+    ).join('');
+    const oversizedWordDocument: JournalDocument = {
+      content: `Short intro sentence here. ${longWord} tail.`,
+      metadata: oversizedSentenceDocument.metadata,
+    };
+
+    const chunks = chunkDocument(oversizedWordDocument, 20, 5);
+
+    expect(chunks.length).toBeGreaterThan(2);
+
+    for (const chunk of chunks) {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(20);
+    }
+
+    // First chunk holds "Short intro sentence here." and the overlap seed
+    // it hands to the first word piece; every piece after that is a pure
+    // slice of longWord, so check overlap across those.
+    const wordPieces = chunks.slice(1, -1);
+    expect(wordPieces.length).toBeGreaterThan(1);
+
+    for (let i = 1; i < wordPieces.length; i++) {
+      expect(
+        overlapCharCount(wordPieces[i - 1].content, wordPieces[i].content),
+      ).toBeGreaterThan(0);
+    }
   });
 
   it('splits against a reduced budget to guard against tokenizer mismatch (#136)', () => {
@@ -210,5 +267,64 @@ describe('Document Chunker', () => {
     expect(() => chunkDocument(smallDocument, 0)).toThrow();
     expect(() => chunkDocument(smallDocument, -1)).toThrow();
     expect(() => chunkDocument(smallDocument, NaN)).toThrow();
+  });
+
+  it('rejects an invalid overlapTokens value', () => {
+    expect(() => chunkDocument(largeDocument, 30, -1)).toThrow();
+    expect(() => chunkDocument(largeDocument, 30, NaN)).toThrow();
+    expect(() => chunkDocument(largeDocument, 30, 30)).toThrow();
+    expect(() => chunkDocument(largeDocument, 30, 40)).toThrow();
+  });
+
+  // Longest run of trailing words in `prev` that also prefixes `curr`.
+  function overlapWordCount(prev: string, curr: string): number {
+    const prevWords = prev.split(/\s+/);
+    const currWords = curr.split(/\s+/);
+    const maxLen = Math.min(prevWords.length, currWords.length);
+
+    for (let len = maxLen; len > 0; len--) {
+      const suffix = prevWords.slice(prevWords.length - len).join(' ');
+      const prefix = currWords.slice(0, len).join(' ');
+      if (suffix === prefix) {
+        return len;
+      }
+    }
+
+    return 0;
+  }
+
+  it('repeats trailing text from one chunk at the start of the next', () => {
+    // maxTokens: 40 (not 30) leaves enough room under the QWEN_SAFETY_MARGIN-
+    // reduced effective budget (~32 tokens) for a 10-token overlap seed to
+    // fit alongside this document's ~17-24 token sentences.
+    const chunks = chunkDocument(largeDocument, 40, 10);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (let i = 1; i < chunks.length; i++) {
+      expect(
+        overlapWordCount(chunks[i - 1].content, chunks[i].content),
+      ).toBeGreaterThan(0);
+    }
+  });
+
+  it('stays within the token limit even with overlap seeded in', () => {
+    const chunks = chunkDocument(largeDocument, 40, 10);
+
+    chunks.forEach((chunk) => {
+      expect(countTokens(chunk.content)).toBeLessThanOrEqual(40);
+    });
+  });
+
+  it('produces no overlap when overlapTokens is 0', () => {
+    const chunks = chunkDocument(largeDocument, 30, 0);
+
+    expect(chunks.length).toBeGreaterThan(1);
+
+    for (let i = 1; i < chunks.length; i++) {
+      expect(overlapWordCount(chunks[i - 1].content, chunks[i].content)).toBe(
+        0,
+      );
+    }
   });
 });
