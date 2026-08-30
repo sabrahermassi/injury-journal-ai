@@ -118,8 +118,9 @@ query/document embedding-mode gap above).
 2. `semanticSearch(question, injuryId, limit)` — see Flow 3.
 3. Injury-name resolution — if `injuryId` was given, the already-fetched ownership-check record
    supplies its name; otherwise the distinct `injuryId`s across the retrieved `chunks` are looked
-   up (`prisma.injury.findMany`, scoped to `userId`) into an `injuryNames: Map<number, string>` (empty
-   when zero chunks were retrieved). This lookup is unconditional (#225) — unlike an injury-scoped
+   up (`prisma.injury.findMany`, scoped to `userId`) into an `injuryNames: Map<number, string>`
+   whenever at least one chunk was retrieved (empty otherwise). This lookup runs with no attempt to
+   skip it when the chunks turn out to share a single injury (#225) — unlike an injury-scoped
    query, an unscoped query's chunk set isn't known to span one injury ahead of time.
 4. `buildContext(chunks, injuryNames)` — labels every source with the injury it belongs to, e.g.
    `Source 1 (Injury: Lower back pain (#1)):`, then joins with `---` separators (#225 — the id is
