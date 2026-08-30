@@ -9,7 +9,8 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 2
+        "injuryId": 1,
+        "match": "Shockwave therapy"
       }
     ]
   },
@@ -23,7 +24,8 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Physiotherapy"
       }
     ]
   },
@@ -37,7 +39,8 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Physiotherapy"
       }
     ]
   },
@@ -52,11 +55,13 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Physiotherapy"
       },
       {
         "sourceType": "treatment",
-        "sourceId": 2
+        "injuryId": 1,
+        "match": "Shockwave therapy"
       }
     ]
   },
@@ -70,11 +75,13 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Physiotherapy"
       },
       {
         "sourceType": "treatment",
-        "sourceId": 2
+        "injuryId": 1,
+        "match": "Shockwave therapy"
       }
     ]
   },
@@ -88,7 +95,8 @@
     "expectedSources": [
       {
         "sourceType": "symptom",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Burning pain after standing for a long time."
       }
     ]
   },
@@ -102,7 +110,8 @@
     "expectedSources": [
       {
         "sourceType": "medical_visit",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Dr. Smith"
       }
     ]
   },
@@ -116,7 +125,7 @@
     "expectedSources": [
       {
         "sourceType": "injury",
-        "sourceId": 1
+        "match": "Lower back pain"
       }
     ]
   },
@@ -228,7 +237,8 @@
     "expectedSources": [
       {
         "sourceType": "medical_visit",
-        "sourceId": 1
+        "injuryId": 1,
+        "match": "Dr. Smith"
       }
     ]
   },
@@ -251,7 +261,8 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 2
+        "injuryId": 1,
+        "match": "Shockwave therapy"
       }
     ]
   },
@@ -265,7 +276,8 @@
     "expectedSources": [
       {
         "sourceType": "treatment",
-        "sourceId": 5
+        "injuryId": 4,
+        "match": "Foam rolling and rest"
       }
     ]
   },
